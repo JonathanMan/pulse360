@@ -70,6 +70,10 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "BAMLC0A0CM":       ("IG OAS (bps)",                          "daily",     5),
     "DFII10":           ("10Y TIPS Real Yield",                    "daily",     5),
     "MORTGAGE30US":     ("30Y Mortgage Rate",                      "weekly",   14),
+    # ── Phase Returns — asset class total return indices ────────────────────
+    "BAMLUT0008TRIV":       ("1-10Y Treasury Total Return Index",   "daily",     5),
+    "BAMLHYH0A0HYM2TRIV":  ("HY Corporate Bond Total Return Index","daily",     5),
+    "GOLDAMGBD228NLBM":    ("Gold Price USD (London AM Fix)",       "daily",     5),
     # ── Tab 6 – Markets (FRED-sourced; sector ETFs via yfinance) ────────────
     "SP500":            ("S&P 500",                                "daily",     5),
     "NASDAQCOM":        ("NASDAQ Composite",                       "daily",     5),
