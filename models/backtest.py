@@ -56,12 +56,16 @@ assert abs(sum(f["weight"] for f in _BT_FEATURES) - 1.0) < 1e-9, "BT weights mus
 
 def _value_at(series: pd.Series, as_of: pd.Timestamp) -> Optional[float]:
     """Last available value on or before as_of."""
+    if series.empty or not isinstance(series.index, pd.DatetimeIndex):
+        return None
     available = series[series.index <= as_of].dropna()
     return float(available.iloc[-1]) if not available.empty else None
 
 
 def _cfnai_at(series: pd.Series, as_of: pd.Timestamp, months: int = 3) -> Optional[float]:
     """3-month trailing average of CFNAI up to as_of."""
+    if series.empty or not isinstance(series.index, pd.DatetimeIndex):
+        return None
     available = series[series.index <= as_of].resample("MS").last().dropna()
     if len(available) < months:
         return None
@@ -70,6 +74,8 @@ def _cfnai_at(series: pd.Series, as_of: pd.Timestamp, months: int = 3) -> Option
 
 def _icsa_yoy_at(series: pd.Series, as_of: pd.Timestamp) -> Optional[float]:
     """4-week average YoY % change in initial claims up to as_of."""
+    if series.empty or not isinstance(series.index, pd.DatetimeIndex):
+        return None
     available = series[series.index <= as_of].dropna()
     if len(available) < 56:
         return None
