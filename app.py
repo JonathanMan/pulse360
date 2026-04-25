@@ -16,25 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Password gate ─────────────────────────────────────────────────────────────
-
-def _check_password() -> bool:
-    if st.session_state.get("authenticated"):
-        return True
-    st.markdown("## 📊 Pulse360")
-    pwd = st.text_input("Password", type="password", key="pw_input")
-    if st.button("Enter"):
-        if pwd == st.secrets.get("APP_PASSWORD", ""):
-            st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.error("Incorrect password.")
-    return False
-
-if not _check_password():
-    st.stop()
-
-# ── Imports (only after auth to keep the login screen fast) ───────────────────
+# ── Imports ───────────────────────────────────────────────────────────────────
 from datetime import date, datetime
 from typing import Optional
 

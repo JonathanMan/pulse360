@@ -24,14 +24,14 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     # ── Recession model inputs ───────────────────────────────────────────────
     "T10Y3M":           ("10Y–3M Treasury Spread",                "daily",     5),
     "SAHMREALTIME":     ("Sahm Rule Recession Indicator",          "monthly",  45),
-    "CFNAI":            ("Chicago Fed National Activity Index",      "monthly",  45),
+    "CFNAI":            ("Chicago Fed National Activity Index",      "monthly",  65),
     "NFCI":             ("Chicago Fed NFCI",                       "weekly",   14),
     "ICSA":             ("Initial Jobless Claims (weekly)",        "weekly",   14),
     "BAMLH0A0HYM2":     ("HY OAS (bps)",                          "daily",     5),
     "NAPM":             ("ISM Manufacturing PMI",                  "monthly",  45),
     # ── Tab 1 – Macro Overview ───────────────────────────────────────────────
-    "A191RL1Q225SBEA":  ("Real GDP Growth QoQ Ann.",               "quarterly",130),
-    "GDPC1":            ("Real GDP Level",                         "quarterly",130),
+    "A191RL1Q225SBEA":  ("Real GDP Growth QoQ Ann.",               "quarterly",220),
+    "GDPC1":            ("Real GDP Level",                         "quarterly",220),
     "USREC":            ("NBER Recession Indicator",               "monthly",   60),
     # ── Tab 2 – Growth & Business Activity ──────────────────────────────────
     "INDPRO":           ("Industrial Production",                  "monthly",  45),
