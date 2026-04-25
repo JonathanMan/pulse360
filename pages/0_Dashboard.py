@@ -36,6 +36,7 @@ from ai.claude_client import (
     stream_chat_response,
 )
 from components.chart_utils import dark_layout, add_nber, chart_meta
+from models.backtest import run_historical_backtest
 
 # ── Compliance disclaimer ─────────────────────────────────────────────────────
 DISCLAIMER = (
@@ -98,8 +99,25 @@ phase_output = classify_cycle_phase(
     nber_active  = nber_active,
 )
 
+# ── Month-over-month probability delta ────────────────────────────────────────
+def _prev_month_prob() -> Optional[float]:
+    """Return last month's recession probability from the cached backtest."""
+    try:
+        bt = run_historical_backtest()
+        if bt.empty or len(bt) < 2:
+            return None
+        return float(bt["probability"].iloc[-2])
+    except Exception:
+        return None
+
+_prev_prob = _prev_month_prob()
+prob_delta: Optional[float] = (
+    round(model_output.probability - _prev_prob, 1)
+    if _prev_prob is not None else None
+)
+
 # ── Persistent overview row ────────────────────────────────────────────────────
-render_overview_row(model_output, phase_output, lei_growth)
+render_overview_row(model_output, phase_output, lei_growth, prob_delta=prob_delta)
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
 tabs = st.tabs([
@@ -265,8 +283,9 @@ with st.sidebar:
     st.metric(
         label="Recession Probability",
         value=f"{model_output.probability:.1f}%",
-        delta=None,
-        help="Weighted logit model output",
+        delta=f"{prob_delta:+.1f}pp MoM" if prob_delta is not None else None,
+        delta_color="inverse",   # red = rising risk, green = falling risk
+        help="Weighted logit model output. Delta = change vs prior month.",
     )
     st.metric(label="Cycle Phase",    value=phase_output.phase)
     st.metric(label="Confidence",     value=f"{tl_emoji} {phase_output.confidence}")

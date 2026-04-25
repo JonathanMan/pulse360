@@ -188,6 +188,7 @@ def render_overview_row(
     model_output: RecessionModelOutput,
     phase_output: CyclePhaseOutput,
     lei_growth:   Optional[float],
+    prob_delta:   Optional[float] = None,
 ) -> None:
     """
     Render the persistent top overview row.
@@ -233,6 +234,17 @@ def render_overview_row(
             use_container_width=True,
             key="overview_gauge",
         )
+        if prob_delta is not None:
+            delta_color  = "#e74c3c" if prob_delta > 0 else "#2ecc71"
+            delta_neutral = "#888888"
+            d_color = delta_color if abs(prob_delta) >= 0.1 else delta_neutral
+            d_arrow = "▲" if prob_delta > 0 else ("▼" if prob_delta < 0 else "─")
+            st.markdown(
+                f"<div style='text-align:center; font-size:13px; color:{d_color}; "
+                f"margin-top:-6px; margin-bottom:4px;'>"
+                f"{d_arrow} {prob_delta:+.1f}pp vs last month</div>",
+                unsafe_allow_html=True,
+            )
         if model_output.has_stale_data:
             st.warning(
                 f"⚠️ Stale: {', '.join(model_output.stale_features)}",
