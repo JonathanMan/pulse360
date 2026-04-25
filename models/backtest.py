@@ -30,7 +30,6 @@ from models.recession_model import (
     _stress_nfci,
     _stress_claims_yoy,
     _stress_hy_oas,
-    _stress_ism,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,11 +39,12 @@ logger = logging.getLogger(__name__)
 _BT_FEATURES = [
     {"name": "10Y–3M Treasury Spread", "series_id": "T10Y3M",        "weight": 0.30, "stress_fn": _stress_t10y3m,    "derived": None},
     {"name": "Sahm Rule",              "series_id": "SAHMREALTIME",   "weight": 0.20, "stress_fn": _stress_sahm,      "derived": None},
-    {"name": "CFNAI (Activity Index)", "series_id": "CFNAI",          "weight": 0.15, "stress_fn": _stress_cfnai,     "derived": "cfnai"},
+    {"name": "CFNAI (Activity Index)", "series_id": "CFNAI",          "weight": 0.20, "stress_fn": _stress_cfnai,     "derived": "cfnai"},  # 0.15→0.20, absorbed NAPM
     {"name": "Chicago Fed NFCI",       "series_id": "NFCI",           "weight": 0.10, "stress_fn": _stress_nfci,      "derived": None},
     {"name": "Initial Claims YoY",     "series_id": "ICSA",           "weight": 0.10, "stress_fn": _stress_claims_yoy,"derived": "icsa_yoy"},
     {"name": "High-Yield OAS",         "series_id": "BAMLH0A0HYM2",  "weight": 0.10, "stress_fn": _stress_hy_oas,    "derived": None},
-    {"name": "ISM Manufacturing PMI",  "series_id": "NAPM",           "weight": 0.05, "stress_fn": _stress_ism,       "derived": None},
+    # NAPM (ISM Manufacturing PMI) removed from FRED ~2024 due to ISM licensing.
+    # Its 5% weight was redistributed to CFNAI above.
 ]
 
 assert abs(sum(f["weight"] for f in _BT_FEATURES) - 1.0) < 1e-9, "BT weights must sum to 1.0"

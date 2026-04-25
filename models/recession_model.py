@@ -204,7 +204,7 @@ _FEATURES = [
     {
         "name":      "CFNAI (Activity Index)",
         "series_id": "CFNAI",
-        "weight":    0.15,
+        "weight":    0.20,   # increased from 0.15 — absorbed ISM PMI weight (NAPM removed from FRED)
         "stress_fn": _stress_cfnai,
         "get_value": lambda inp: compute_cfnai_signal(inp["CFNAI"]["data"]),
         "get_date":  lambda inp: inp["CFNAI"]["last_date"],
@@ -237,15 +237,8 @@ _FEATURES = [
         "get_date":  lambda inp: inp["BAMLH0A0HYM2"]["last_date"],
         "get_stale": lambda inp: (inp["BAMLH0A0HYM2"]["is_stale"], inp["BAMLH0A0HYM2"].get("stale_message")),
     },
-    {
-        "name":      "ISM Manufacturing PMI",
-        "series_id": "NAPM",
-        "weight":    0.05,
-        "stress_fn": _stress_ism,
-        "get_value": lambda inp: inp["NAPM"]["last_value"],
-        "get_date":  lambda inp: inp["NAPM"]["last_date"],
-        "get_stale": lambda inp: (inp["NAPM"]["is_stale"], inp["NAPM"].get("stale_message")),
-    },
+    # ISM Manufacturing PMI (NAPM) was removed from FRED by ISM due to licensing
+    # restrictions (as of ~2024). Its 5% weight was redistributed to CFNAI above.
 ]
 
 assert abs(sum(f["weight"] for f in _FEATURES) - 1.0) < 1e-9, "Feature weights must sum to 1.0"

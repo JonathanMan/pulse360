@@ -33,9 +33,9 @@ def render_tab2(model_output, phase_output) -> None:
     # ── Fetch data ────────────────────────────────────────────────────────────
     indpro = fetch_series("INDPRO",  start_date=start)
     tcu    = fetch_series("TCU",     start_date=start)
-    napm   = fetch_series("NAPM",    start_date=start)
-    nmfci  = fetch_series("NMFCI",   start_date=start)
     adxtno = fetch_series("ADXTNO",  start_date=start)
+    # Note: NAPM (ISM Mfg PMI) and NMFCI (ISM Services PMI) were removed from
+    # FRED by ISM due to data licensing restrictions (~2024). Not fetchable.
 
     # ── Row 1: Industrial Production | Capacity Utilization ──────────────────
     col1, col2 = st.columns(2)
@@ -69,32 +69,26 @@ def render_tab2(model_output, phase_output) -> None:
             st.plotly_chart(fig, use_container_width=True, key="tab2_tcu")
         chart_meta(tcu, decimals=1)
 
-    # ── Row 2: ISM Manufacturing + Services PMI ───────────────────────────────
-    st.markdown("##### ISM PMI — Manufacturing vs Services")
-    if not napm["data"].empty or not nmfci["data"].empty:
-        fig = go.Figure()
-        if not napm["data"].empty:
-            fig.add_trace(go.Scatter(
-                x=napm["data"].index, y=napm["data"].values,
-                mode="lines", line={"color": "#3498db", "width": 2},
-                name="ISM Manufacturing",
-            ))
-        if not nmfci["data"].empty:
-            fig.add_trace(go.Scatter(
-                x=nmfci["data"].index, y=nmfci["data"].values,
-                mode="lines", line={"color": "#e67e22", "width": 2, "dash": "dot"},
-                name="ISM Services",
-            ))
-        fig = threshold_line(fig, 50, "50 — expansion/contraction", "#e74c3c", "dash")
-        fig = add_nber(fig, start_date=start)
-        fig = dark_layout(fig, yaxis_title="PMI Index")
-        st.plotly_chart(fig, use_container_width=True, key="tab2_ism")
-
-    col3, col4 = st.columns(2)
-    with col3:
-        chart_meta(napm, decimals=1)
-    with col4:
-        chart_meta(nmfci, decimals=1)
+    # ── Row 2: ISM PMI notice ─────────────────────────────────────────────────
+    st.markdown("##### ISM PMI — Manufacturing &amp; Services")
+    st.markdown(
+        """
+        <div style="background:#1a1a2e; border:1px solid #444; border-left:3px solid #f39c12;
+                    border-radius:6px; padding:12px 16px; color:#bbb; font-size:13px;">
+            <strong style="color:#f39c12;">⚠ Data unavailable via FRED</strong><br>
+            ISM removed its Manufacturing and Services PMI data from the FRED API in 2024
+            due to licensing restrictions. These series (<code>NAPM</code>, <code>NMFCI</code>)
+            can no longer be fetched programmatically for free.<br><br>
+            <strong style="color:#ccc;">Alternatives:</strong>
+            The <strong>Industrial Production Index</strong> (row above) and
+            <strong>Durable Goods Orders</strong> (row below) capture overlapping manufacturing
+            cycle signals. For live PMI data, see
+            <a href="https://www.ismworld.org" target="_blank" style="color:#3498db;">ismworld.org</a>
+            or subscribe to a data vendor.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # ── Row 3: Durable Goods Orders ───────────────────────────────────────────
     st.markdown("##### Durable Goods Orders ex-Defense ex-Aircraft (ADXTNO)")
@@ -125,16 +119,7 @@ def render_tab2(model_output, phase_output) -> None:
                 f"{tcu['last_value']:.1f}% · "
                 f"{'above 80% ceiling' if tcu['last_value'] >= 80 else 'below 80% ceiling'}"
             )
-        if napm["last_value"] is not None:
-            tab_readings["ISM Manufacturing PMI"] = (
-                f"{napm['last_value']:.1f} · "
-                f"{'expansion' if napm['last_value'] > 50 else 'contraction'} territory"
-            )
-        if nmfci["last_value"] is not None:
-            tab_readings["ISM Services PMI"] = (
-                f"{nmfci['last_value']:.1f} · "
-                f"{'expansion' if nmfci['last_value'] > 50 else 'contraction'} territory"
-            )
+        # ISM PMI (NAPM, NMFCI) no longer available via FRED — omitted from AI context
         if adxtno["last_value"] is not None:
             tab_readings["Durable Goods ex-def ex-aircraft"] = (
                 f"{adxtno['last_value']:.1f} (level)"

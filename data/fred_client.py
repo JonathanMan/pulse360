@@ -28,7 +28,8 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "NFCI":             ("Chicago Fed NFCI",                       "weekly",   14),
     "ICSA":             ("Initial Jobless Claims (weekly)",        "weekly",   14),
     "BAMLH0A0HYM2":     ("HY OAS (bps)",                          "daily",     5),
-    "NAPM":             ("ISM Manufacturing PMI",                  "monthly",  45),
+    # Note: NAPM (ISM Manufacturing PMI) was removed from FRED by ISM due to
+    # licensing restrictions. Its 5% model weight was redistributed to CFNAI.
     # ── Tab 1 – Macro Overview ───────────────────────────────────────────────
     "A191RL1Q225SBEA":  ("Real GDP Growth QoQ Ann.",               "quarterly",220),
     "GDPC1":            ("Real GDP Level",                         "quarterly",220),
@@ -36,7 +37,7 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     # ── Tab 2 – Growth & Business Activity ──────────────────────────────────
     "INDPRO":           ("Industrial Production",                  "monthly",  45),
     "TCU":              ("Capacity Utilization",                   "monthly",  45),
-    "NMFCI":            ("ISM Services PMI",                       "monthly",  45),
+    # Note: NMFCI (ISM Services PMI) was never a valid FRED series / removed.
     "ADXTNO":           ("Durable Goods ex-def ex-aircraft",       "monthly",  45),
     # ── Tab 3 – Labor Market ─────────────────────────────────────────────────
     "UNRATE":           ("Unemployment Rate (U-3)",                "monthly",  45),
@@ -241,5 +242,5 @@ def fetch_model_inputs() -> dict:
     Returns a dict of series_id → fetch_series() result for all 7 model inputs.
     Uses start_date="1990-01-01" for longer history on model calculations.
     """
-    model_ids = ["T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA", "BAMLH0A0HYM2", "NAPM"]
+    model_ids = ["T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA", "BAMLH0A0HYM2"]
     return {sid: fetch_series(sid, start_date="1990-01-01") for sid in model_ids}
