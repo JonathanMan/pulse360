@@ -53,8 +53,10 @@ if bt_df.empty:
 phase_labels = label_phases(bt_df, usrec_series)
 
 # Serialise for cache key (compute_phase_returns needs JSON-serialisable args)
-prob_json   = bt_df["probability"].to_json()
-phase_json  = phase_labels.to_json()
+# Use ISO date format to avoid pd.read_json misinterpreting epoch-ms integers
+# as file paths in newer pandas versions.
+prob_json   = bt_df["probability"].to_json(date_format="iso")
+phase_json  = phase_labels.to_json(date_format="iso")
 
 with st.spinner("Computing return statistics by phase…"):
     results = compute_phase_returns(

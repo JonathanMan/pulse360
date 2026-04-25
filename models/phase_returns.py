@@ -23,6 +23,7 @@ window, so this is an in-sample calibration check, not out-of-sample validation.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Optional
 
@@ -187,9 +188,12 @@ def compute_phase_returns(
           "coverage":       dict[asset_name -> {"start": str, "n_months": int}],
         }
     """
-    # Re-deserialise phase labels from JSON
-    phase_series = pd.read_json(phase_labels_json, typ="series")
-    phase_series.index = pd.DatetimeIndex(phase_series.index)
+    # Re-deserialise phase labels from JSON.
+    # Use json.loads + pd.Series to avoid pd.read_json treating the string as
+    # a file path in newer pandas versions (FileNotFoundError on Streamlit Cloud).
+    _raw = json.loads(phase_labels_json)
+    phase_series = pd.Series(_raw)
+    phase_series.index = pd.to_datetime(phase_series.index)  # handles ISO strings
 
     long_start = "1990-01-01"
     asset_returns: dict[str, pd.Series] = {}
