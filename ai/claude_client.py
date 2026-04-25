@@ -1,0 +1,214 @@
+"""
+Pulse360 — Claude API Client
+==============================
+Handles all Anthropic API calls for the AI layer:
+  • get_daily_briefing()       → cached 6h, returns markdown string
+  • get_investment_implications() → cached 2h per tab, returns prose string
+  • stream_chat_response()     → streaming generator for the chat sidebar
+"""
+
+from __future__ import annotations
+
+import hashlib
+import logging
+from datetime import date
+from typing import Generator, Optional
+
+import streamlit as st
+import anthropic
+
+from ai.prompts import (
+    BRIEFING_SYSTEM,
+    DISCLAIMER,
+    IMPLICATIONS_SYSTEM,
+    build_briefing_prompt,
+    build_chat_system_prompt,
+    build_implications_prompt,
+)
+
+logger = logging.getLogger(__name__)
+
+SONNET  = "claude-sonnet-4-5"
+HAIKU   = "claude-haiku-4-5-20251001"
+
+
+@st.cache_resource(show_spinner=False)
+def _get_client() -> anthropic.Anthropic:
+    return anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Daily briefing  (cached 6 hours — one API call per 6h window)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=21600, show_spinner=False)   # 6 hours
+def get_daily_briefing(
+    date_str: str,
+    cycle_phase: str,
+    phase_confidence: str,
+    recession_probability: float,
+    traffic_light: str,
+    feature_contributions: list[dict],
+    lei_growth: Optional[float],
+    unrate: Optional[float],
+    nber_active: bool,
+    recent_crossings: Optional[list[str]] = None,
+    recent_releases: Optional[list[str]] = None,
+) -> str:
+    """
+    Generate the daily macro briefing via Claude Sonnet.
+    Cached for 6 hours — will not re-call the API within that window.
+
+    Returns:
+        Markdown string (the briefing + disclaimer), or an error message.
+    """
+    user_prompt = build_briefing_prompt(
+        date_str              = date_str,
+        cycle_phase           = cycle_phase,
+        phase_confidence      = phase_confidence,
+        recession_probability = recession_probability,
+        traffic_light         = traffic_light,
+        feature_contributions = feature_contributions,
+        lei_growth            = lei_growth,
+        unrate                = unrate,
+        nber_active           = nber_active,
+        recent_crossings      = recent_crossings,
+        recent_releases       = recent_releases,
+    )
+
+    try:
+        client   = _get_client()
+        response = client.messages.create(
+            model      = SONNET,
+            max_tokens = 1024,
+            system     = BRIEFING_SYSTEM,
+            messages   = [{"role": "user", "content": user_prompt}],
+        )
+        text = response.content[0].text.strip()
+        return text + DISCLAIMER
+
+    except Exception as exc:
+        logger.error("get_daily_briefing failed: %s", exc)
+        return f"⚠️ Briefing unavailable: {exc}\n\n{DISCLAIMER}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Investment Implications  (cached 2 hours per tab)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=7200, show_spinner=False)   # 2 hours
+def get_investment_implications(
+    tab_key: str,
+    cycle_phase: str,
+    recession_probability: float,
+    traffic_light: str,
+    tab_readings: dict[str, str],
+    phase_notes: Optional[str] = None,
+) -> str:
+    """
+    Generate the Investment Implications callout for a specific tab.
+    Cached for 2 hours — readings won't change faster than that.
+
+    Args:
+        tab_key:     One of: macro, growth, labor, inflation, monetary,
+                     markets, housing, global
+        tab_readings: Dict of {indicator_label: formatted_value_string}
+                     e.g. {"ISM Manufacturing PMI (NAPM)": "48.2 — contraction"}
+
+    Returns:
+        Prose string (3–4 sentences + disclaimer), or an error message.
+    """
+    user_prompt = build_implications_prompt(
+        tab_key               = tab_key,
+        cycle_phase           = cycle_phase,
+        recession_probability = recession_probability,
+        traffic_light         = traffic_light,
+        tab_readings          = tab_readings,
+        phase_notes           = phase_notes,
+    )
+
+    try:
+        client   = _get_client()
+        response = client.messages.create(
+            model      = HAIKU,
+            max_tokens = 300,
+            system     = IMPLICATIONS_SYSTEM,
+            messages   = [{"role": "user", "content": user_prompt}],
+        )
+        text = response.content[0].text.strip()
+        return text + DISCLAIMER
+
+    except Exception as exc:
+        logger.error("get_investment_implications(%s) failed: %s", tab_key, exc)
+        return f"⚠️ Implications unavailable: {exc}\n\n{DISCLAIMER}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Chat sidebar  (streaming, no cache — always live)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def stream_chat_response(
+    messages: list[dict],               # [{role: user|assistant, content: str}, ...]
+    cycle_phase: str,
+    recession_probability: float,
+    traffic_light: str,
+    feature_summary: list[dict],
+    active_tab: str,
+    lei_growth: Optional[float],
+) -> Generator[str, None, None]:
+    """
+    Stream a chat response from Claude Haiku.
+
+    Args:
+        messages:     Conversation history (last 5 turns max, enforced by caller)
+        ...rest:      Current dashboard state, injected into system prompt
+
+    Yields:
+        Text chunks as they stream from the API.
+    """
+    system_prompt = build_chat_system_prompt(
+        cycle_phase           = cycle_phase,
+        recession_probability = recession_probability,
+        traffic_light         = traffic_light,
+        feature_summary       = feature_summary,
+        active_tab            = active_tab,
+        lei_growth            = lei_growth,
+    )
+
+    try:
+        client = _get_client()
+        with client.messages.stream(
+            model      = HAIKU,
+            max_tokens = 512,
+            system     = system_prompt,
+            messages   = messages[-10:],   # cap at 10 turns to control context cost
+        ) as stream:
+            for text_chunk in stream.text_stream:
+                yield text_chunk
+
+    except Exception as exc:
+        logger.error("stream_chat_response failed: %s", exc)
+        yield f"\n\n⚠️ Chat unavailable: {exc}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: format feature contributions for prompt injection
+# ─────────────────────────────────────────────────────────────────────────────
+
+def format_features_for_prompt(features: list) -> list[dict]:
+    """
+    Convert FeatureContribution dataclass instances to plain dicts
+    for JSON-serialisable prompt injection (required for @st.cache_data).
+    """
+    return [
+        {
+            "name":              f.name,
+            "series_id":         f.series_id,
+            "weight":            f.weight,
+            "current_value":     f.current_value,
+            "stress_score":      f.stress_score,
+            "contribution":      f.contribution,
+            "signal_description": f.signal_description,
+        }
+        for f in features
+    ]
