@@ -24,7 +24,7 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     # ── Recession model inputs ───────────────────────────────────────────────
     "T10Y3M":           ("10Y–3M Treasury Spread",                "daily",     5),
     "SAHMREALTIME":     ("Sahm Rule Recession Indicator",          "monthly",  45),
-    "USSLIND":          ("Conference Board LEI",                   "monthly",  45),
+    "USALOLITONOSTSAM": ("OECD Composite Leading Indicator (US)",   "monthly",  45),
     "NFCI":             ("Chicago Fed NFCI",                       "weekly",   14),
     "ICSA":             ("Initial Jobless Claims (weekly)",        "weekly",   14),
     "BAMLH0A0HYM2":     ("HY OAS (bps)",                          "daily",     5),
@@ -223,5 +223,5 @@ def fetch_model_inputs() -> dict:
     Returns a dict of series_id → fetch_series() result for all 7 model inputs.
     Uses start_date="1990-01-01" for longer history on model calculations.
     """
-    model_ids = ["T10Y3M", "SAHMREALTIME", "USSLIND", "NFCI", "ICSA", "BAMLH0A0HYM2", "NAPM"]
+    model_ids = ["T10Y3M", "SAHMREALTIME", "USALOLITONOSTSAM", "NFCI", "ICSA", "BAMLH0A0HYM2", "NAPM"]
     return {sid: fetch_series(sid, start_date="1990-01-01") for sid in model_ids}

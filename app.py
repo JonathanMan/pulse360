@@ -106,7 +106,7 @@ with st.spinner("Loading economic data…"):
     model_inputs = fetch_model_inputs()
 
 model_output = run_recession_model(model_inputs)
-lei_growth   = compute_lei_growth(model_inputs["USSLIND"]["data"])
+lei_growth   = compute_lei_growth(model_inputs["USALOLITONOSTSAM"]["data"])
 
 unrate_result = fetch_series("UNRATE", start_date="2010-01-01")
 unrate_data   = unrate_result["data"] if not unrate_result["data"].empty else None
@@ -167,7 +167,7 @@ with tabs[0]:
 
     gdp_lvl  = fetch_series("GDPC1",            start_date=tw_start)
     gdp_gr   = fetch_series("A191RL1Q225SBEA",   start_date=tw_start)
-    lei_res  = fetch_series("USSLIND",           start_date=tw_start)
+    lei_res  = fetch_series("USALOLITONOSTSAM",  start_date=tw_start)
 
     col1, col2 = st.columns(2)
 
@@ -202,7 +202,7 @@ with tabs[0]:
         _chart_meta(gdp_gr)
 
     # LEI
-    st.markdown("##### Conference Board Leading Economic Index")
+    st.markdown("##### OECD Composite Leading Indicator (US)")
     if not lei_res["data"].empty:
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -215,7 +215,7 @@ with tabs[0]:
                       annotation_text="Long-run avg", annotation_font_color="#666")
         fig = add_nber(fig, start_date=tw_start)
         fig = dark_layout(fig, yaxis_title="Index Level")
-        st.plotly_chart(fig, use_container_width=True, key="lei_chart")
+        st.plotly_chart(fig, use_container_width=True, key="tab1_lei")
     _chart_meta(lei_res)
 
     # Macro Overview Investment Implications

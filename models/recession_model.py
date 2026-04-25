@@ -197,12 +197,12 @@ _FEATURES = [
     },
     {
         "name":      "LEI 6-Month Growth",
-        "series_id": "USSLIND",
+        "series_id": "USALOLITONOSTSAM",
         "weight":    0.15,
         "stress_fn": _stress_lei,
-        "get_value": lambda inp: compute_lei_growth(inp["USSLIND"]["data"]),
-        "get_date":  lambda inp: inp["USSLIND"]["last_date"],
-        "get_stale": lambda inp: (inp["USSLIND"]["is_stale"], inp["USSLIND"].get("stale_message")),
+        "get_value": lambda inp: compute_lei_growth(inp["USALOLITONOSTSAM"]["data"]),
+        "get_date":  lambda inp: inp["USALOLITONOSTSAM"]["last_date"],
+        "get_stale": lambda inp: (inp["USALOLITONOSTSAM"]["is_stale"], inp["USALOLITONOSTSAM"].get("stale_message")),
     },
     {
         "name":      "Chicago Fed NFCI",
