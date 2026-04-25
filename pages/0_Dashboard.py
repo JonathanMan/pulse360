@@ -276,22 +276,65 @@ with tabs[7]:
 # ══════════════════════════════════════════════════════════════════════════════
 
 with st.sidebar:
-    # ── Quick Stats ──────────────────────────────────────────────────────────
-    st.markdown("### 📊 Quick Stats")
-    tl_colors = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
-    tl_emoji  = tl_colors.get(model_output.traffic_light, "⚪")
-    st.metric(
-        label="Recession Probability",
-        value=f"{model_output.probability:.1f}%",
-        delta=f"{prob_delta:+.1f}pp MoM" if prob_delta is not None else None,
-        delta_color="inverse",   # red = rising risk, green = falling risk
-        help="Weighted logit model output. Delta = change vs prior month.",
+    # ── Quick Stats (compact card) ───────────────────────────────────────────
+    tl_color  = {"green": "#2ecc71", "yellow": "#f39c12", "red": "#e74c3c"}.get(
+        model_output.traffic_light, "#888"
     )
-    st.metric(label="Cycle Phase",    value=phase_output.phase)
-    st.metric(label="Confidence",     value=f"{tl_emoji} {phase_output.confidence}")
+    delta_html = ""
+    if prob_delta is not None:
+        d_color = "#e74c3c" if prob_delta > 0 else "#2ecc71"
+        d_arrow = "▲" if prob_delta > 0 else "▼"
+        delta_html = (
+            f'<span style="font-size:11px;color:{d_color};margin-left:6px;">'
+            f'{d_arrow} {prob_delta:+.1f}pp MoM</span>'
+        )
+    cfnai_html = ""
     if lei_growth is not None:
-        st.metric(label="CFNAI (3M avg)", value=f"{lei_growth:+.3f}",
-                  help="Chicago Fed National Activity Index. >0 = above trend, <-0.70 = recession signal.")
+        c_color = "#2ecc71" if lei_growth > 0 else "#e74c3c"
+        cfnai_html = (
+            f'<div style="display:flex;justify-content:space-between;'
+            f'padding:4px 0;border-top:1px solid #2a2a3a;">'
+            f'<span style="color:#888;font-size:12px;">CFNAI 3M avg</span>'
+            f'<span style="color:{c_color};font-size:12px;font-weight:600;">'
+            f'{lei_growth:+.3f}</span></div>'
+        )
+    conf_color = {"High": "#2ecc71", "Medium": "#f39c12", "Low": "#e74c3c"}.get(
+        phase_output.confidence, "#888"
+    )
+    st.markdown(
+        f"""
+        <div style="background:#1a1a2e;border:1px solid #333;border-radius:10px;
+                    padding:10px 14px;margin-bottom:8px;">
+          <div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:600;
+                      letter-spacing:.05em;">📊 QUICK STATS</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;
+                      padding:4px 0;border-top:1px solid #2a2a3a;">
+            <span style="color:#888;font-size:12px;">Recession Prob.</span>
+            <span>
+              <span style="color:{tl_color};font-size:18px;font-weight:700;">
+                {model_output.probability:.1f}%
+              </span>{delta_html}
+            </span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      padding:4px 0;border-top:1px solid #2a2a3a;">
+            <span style="color:#888;font-size:12px;">Cycle Phase</span>
+            <span style="color:#fff;font-size:13px;font-weight:600;">
+              {phase_output.emoji} {phase_output.phase}
+            </span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      padding:4px 0;border-top:1px solid #2a2a3a;">
+            <span style="color:#888;font-size:12px;">Confidence</span>
+            <span style="color:{conf_color};font-size:12px;font-weight:600;">
+              {phase_output.confidence}
+            </span>
+          </div>
+          {cfnai_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("---")
 
