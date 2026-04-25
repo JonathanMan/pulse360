@@ -147,6 +147,68 @@ def get_investment_implications(
 # Chat sidebar  (streaming, no cache — always live)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def stream_scenario_analysis(
+    scenario_inputs: list[dict],
+    probability: float,
+    traffic_light: str,
+    cycle_phase: str,
+) -> Generator[str, None, None]:
+    """
+    Stream a professional macro interpretation of a hypothetical scenario.
+
+    Args:
+        scenario_inputs: list of dicts with keys:
+            name, weight, formatted_value, stress, contribution, description
+        probability:   model output 0–100
+        traffic_light: "green" | "yellow" | "red"
+        cycle_phase:   e.g. "Mid Expansion"
+
+    Yields:
+        Text chunks as they stream from Claude Haiku.
+    """
+    lines = "\n".join([
+        f"  • {inp['name']} ({inp['weight']*100:.0f}% weight): "
+        f"{inp['formatted_value']} — stress {inp['stress']:.2f} — {inp['description']}"
+        for inp in scenario_inputs
+    ])
+
+    user_prompt = (
+        f"Scenario inputs:\n{lines}\n\n"
+        f"Model output:\n"
+        f"  • Recession probability: {probability:.1f}%\n"
+        f"  • Traffic light: {traffic_light.upper()}\n"
+        f"  • Cycle phase: {cycle_phase}\n\n"
+        "Provide a 3–4 sentence professional macro interpretation. Cover: "
+        "(1) which inputs are driving the signal most, "
+        "(2) what this combination suggests about the economic outlook, "
+        "(3) key risks and what to watch for next. "
+        "Plain prose, no bullet points, probabilistic not certain."
+    )
+
+    system_prompt = (
+        "You are the Pulse360 macro analysis engine. You interpret economic indicator "
+        "scenarios for professional investors and macro analysts. Write in plain English — "
+        "analyst tone, action-oriented, probabilistic not certain. 3–4 sentences max. "
+        "No bullet points. Never give specific buy/sell advice. "
+        "Always end with a one-sentence reminder that this is educational analysis, "
+        "not investment advice."
+    )
+
+    try:
+        client = _get_client()
+        with client.messages.stream(
+            model      = HAIKU,
+            max_tokens = 350,
+            system     = system_prompt,
+            messages   = [{"role": "user", "content": user_prompt}],
+        ) as stream:
+            for chunk in stream.text_stream:
+                yield chunk
+    except Exception as exc:
+        logger.error("stream_scenario_analysis failed: %s", exc)
+        yield f"\n\n⚠️ Analysis unavailable: {exc}"
+
+
 def stream_chat_response(
     messages: list[dict],               # [{role: user|assistant, content: str}, ...]
     cycle_phase: str,
