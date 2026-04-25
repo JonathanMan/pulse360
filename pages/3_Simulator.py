@@ -25,12 +25,6 @@ from models.recession_model import (
 )
 from ai.claude_client import stream_scenario_analysis
 
-st.set_page_config(
-    page_title="Pulse360 · Simulator",
-    page_icon="🎛️",
-    layout="wide",
-)
-
 st.markdown("""
 <style>
     .stApp { background-color: #0e1117; }

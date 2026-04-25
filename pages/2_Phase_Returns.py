@@ -22,12 +22,6 @@ from models.phase_returns import (
 )
 from components.chart_utils import dark_layout, add_nber
 
-st.set_page_config(
-    page_title="Pulse360 · Phase Returns",
-    page_icon="📊",
-    layout="wide",
-)
-
 st.markdown("""
 <style>
     .stApp { background-color: #0e1117; }

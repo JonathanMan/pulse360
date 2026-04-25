@@ -19,13 +19,7 @@ from models.backtest import (
 )
 from components.chart_utils import dark_layout, add_nber
 
-st.set_page_config(
-    page_title="Pulse360 · Backtest",
-    page_icon="📉",
-    layout="wide",
-)
-
-# ── Dark-theme CSS (mirrors app.py) ──────────────────────────────────────────
+# ── Dark-theme CSS ───────────────────────────────────────────────────────────
 st.markdown("""
 <style>
     .stApp { background-color: #0e1117; }
