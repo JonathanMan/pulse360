@@ -121,21 +121,17 @@ def render_tab6(model_output, phase_output) -> None:
 
     # ── Row 3: Sector ETF Returns ─────────────────────────────────────────────
     st.markdown("##### Sector ETF Performance — 1-Month Returns")
-    sector_data = fetch_sector_returns(period_days=22)
+    sector_data = fetch_sector_returns(period_days=22)   # returns pd.DataFrame
 
-    if sector_data:
-        labels  = [v["name"][:20] for v in sector_data.values()]
-        returns = [v["return_pct"] for v in sector_data.values()]
+    if not sector_data.empty:
+        labels  = sector_data["Sector"].str[:20].tolist()
+        returns = sector_data["Return (%)"].tolist()
         colors  = ["#2ecc71" if r >= 0 else "#e74c3c" for r in returns]
 
-        # Sort by return descending
-        sorted_pairs = sorted(zip(returns, labels, colors), reverse=True)
-        returns_s, labels_s, colors_s = zip(*sorted_pairs)
-
         fig = go.Figure(go.Bar(
-            x=list(returns_s), y=list(labels_s),
+            x=returns, y=labels,
             orientation="h",
-            marker_color=list(colors_s),
+            marker_color=colors,
             name="1-Month Return %",
         ))
         fig.add_vline(x=0, line_dash="dash", line_color="#555", line_width=1)
@@ -148,27 +144,29 @@ def render_tab6(model_output, phase_output) -> None:
 
     # ── Shiller CAPE (if available) ───────────────────────────────────────────
     st.markdown("##### Shiller CAPE Ratio (P/E 10)")
-    cape = fetch_shiller_cape()
-    if cape is not None and not cape.empty:
+    cape = fetch_shiller_cape()   # returns dict with "data", "last_value", etc.
+    cape_series = cape.get("data", pd.Series(dtype=float))
+    if cape["last_value"] is not None and not cape_series.empty:
         fig = go.Figure()
-        # Filter to window start if possible
-        cape_filtered = cape[cape.index >= start] if not cape.empty else cape
-        if not cape_filtered.empty:
-            fig.add_trace(go.Scatter(
-                x=cape_filtered.index, y=cape_filtered.values,
-                mode="lines", line={"color": "#f39c12", "width": 2},
-                name="CAPE",
-            ))
-            long_run_avg = cape.mean()
-            fig = threshold_line(fig, long_run_avg, f"Long-run avg: {long_run_avg:.1f}", "#888", "dot")
-            fig = threshold_line(fig, 25, "25 — historically elevated", "#e74c3c", "dot")
-            fig = dark_layout(fig, yaxis_title="CAPE Ratio")
-            st.plotly_chart(fig, use_container_width=True, key="tab6_cape")
-            latest = cape_filtered.iloc[-1] if not cape_filtered.empty else None
-            if latest:
-                st.caption(f"Shiller CAPE · Current: **{latest:.1f}** · Long-run avg: {long_run_avg:.1f}")
+        cape_filtered = cape_series[cape_series.index >= pd.Timestamp(start)]
+        if cape_filtered.empty:
+            cape_filtered = cape_series
+        fig.add_trace(go.Scatter(
+            x=cape_filtered.index, y=cape_filtered.values,
+            mode="lines", line={"color": "#f39c12", "width": 2},
+            name="CAPE",
+        ))
+        long_run_avg = float(cape_series.mean())
+        fig = threshold_line(fig, long_run_avg, f"Long-run avg: {long_run_avg:.1f}", "#888", "dot")
+        fig = threshold_line(fig, 25, "25 — historically elevated", "#e74c3c", "dot")
+        fig = dark_layout(fig, yaxis_title="CAPE Ratio")
+        st.plotly_chart(fig, use_container_width=True, key="tab6_cape")
+        st.caption(
+            f"Shiller CAPE · Current: **{cape['last_value']:.1f}** · "
+            f"Long-run avg: {long_run_avg:.1f} · As of: {cape['last_date']}"
+        )
     else:
-        st.info("Shiller CAPE data unavailable (requires internet access to Yale).")
+        st.info(f"Shiller CAPE data unavailable. {cape.get('error', '')}")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")
@@ -188,15 +186,15 @@ def render_tab6(model_output, phase_output) -> None:
             )
         if ig_oas["last_value"] is not None:
             tab_readings["IG OAS (Credit Spread)"] = f"{ig_oas['last_value']:.0f} bps"
-        if sector_data:
-            best  = max(sector_data.values(), key=lambda v: v["return_pct"])
-            worst = min(sector_data.values(), key=lambda v: v["return_pct"])
-            tab_readings["Best Sector (1M)"] = f"{best['name']} ({best['return_pct']:+.1f}%)"
-            tab_readings["Worst Sector (1M)"] = f"{worst['name']} ({worst['return_pct']:+.1f}%)"
-        if cape is not None and not cape.empty and not cape[cape.index >= start].empty:
+        if not sector_data.empty:
+            best_row  = sector_data.iloc[0]
+            worst_row = sector_data.iloc[-1]
+            tab_readings["Best Sector (1M)"]  = f"{best_row['Sector']} ({best_row['Return (%)']:+.1f}%)"
+            tab_readings["Worst Sector (1M)"] = f"{worst_row['Sector']} ({worst_row['Return (%)']:+.1f}%)"
+        if cape["last_value"] is not None:
             tab_readings["Shiller CAPE"] = (
-                f"{cape[cape.index >= start].iloc[-1]:.1f} · "
-                f"{'elevated (>25)' if cape[cape.index >= start].iloc[-1] > 25 else 'moderate'}"
+                f"{cape['last_value']:.1f} · "
+                f"{'elevated (>25)' if cape['last_value'] > 25 else 'moderate'}"
             )
 
         if tab_readings:
