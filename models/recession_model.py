@@ -18,7 +18,7 @@ from typing import Optional
 
 import numpy as np
 
-from data.fred_client import compute_icsa_yoy, compute_lei_growth
+from data.fred_client import compute_cfnai_signal, compute_icsa_yoy, compute_lei_growth
 
 logger = logging.getLogger(__name__)
 
@@ -101,17 +101,23 @@ def _stress_sahm(value: float) -> tuple[float, str]:
     return round(stress, 3), desc
 
 
-def _stress_lei(growth_pct: float) -> tuple[float, str]:
-    """LEI 6-month annualised growth. Negative and falling → high stress."""
-    stress = _logistic(-growth_pct / 2.0)
-    if growth_pct < -4.0:
-        desc = f"Contracting sharply ({growth_pct:+.1f}% ann.): strong recessionary signal"
-    elif growth_pct < 0.0:
-        desc = f"Contracting ({growth_pct:+.1f}% ann.): negative momentum"
-    elif growth_pct < 2.0:
-        desc = f"Stalling ({growth_pct:+.1f}% ann.): below-trend growth"
+def _stress_cfnai(value: float) -> tuple[float, str]:
+    """
+    Chicago Fed National Activity Index (3-month avg).
+    Threshold: <-0.7 historically associated with recession onset.
+    Stress rises as value falls below 0; peaks at -0.7 and below.
+    """
+    stress = _logistic((-value - 0.1) / 0.3)
+    if value < -0.70:
+        desc = f"CFNAI {value:+.2f}: below −0.70 recession threshold"
+    elif value < -0.35:
+        desc = f"CFNAI {value:+.2f}: weakening, approaching recession zone"
+    elif value < 0.0:
+        desc = f"CFNAI {value:+.2f}: below-trend growth, moderately weak"
+    elif value < 0.20:
+        desc = f"CFNAI {value:+.2f}: near trend growth"
     else:
-        desc = f"Expanding ({growth_pct:+.1f}% ann.): positive momentum"
+        desc = f"CFNAI {value:+.2f}: above-trend growth, expansionary"
     return round(stress, 3), desc
 
 
@@ -196,13 +202,13 @@ _FEATURES = [
         "get_stale": lambda inp: (inp["SAHMREALTIME"]["is_stale"], inp["SAHMREALTIME"].get("stale_message")),
     },
     {
-        "name":      "LEI 6-Month Growth",
-        "series_id": "USALOLITONOSTSAM",
+        "name":      "CFNAI (Activity Index)",
+        "series_id": "CFNAI",
         "weight":    0.15,
-        "stress_fn": _stress_lei,
-        "get_value": lambda inp: compute_lei_growth(inp["USALOLITONOSTSAM"]["data"]),
-        "get_date":  lambda inp: inp["USALOLITONOSTSAM"]["last_date"],
-        "get_stale": lambda inp: (inp["USALOLITONOSTSAM"]["is_stale"], inp["USALOLITONOSTSAM"].get("stale_message")),
+        "stress_fn": _stress_cfnai,
+        "get_value": lambda inp: compute_cfnai_signal(inp["CFNAI"]["data"]),
+        "get_date":  lambda inp: inp["CFNAI"]["last_date"],
+        "get_stale": lambda inp: (inp["CFNAI"]["is_stale"], inp["CFNAI"].get("stale_message")),
     },
     {
         "name":      "Chicago Fed NFCI",

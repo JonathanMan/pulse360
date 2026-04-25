@@ -24,14 +24,14 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     # ── Recession model inputs ───────────────────────────────────────────────
     "T10Y3M":           ("10Y–3M Treasury Spread",                "daily",     5),
     "SAHMREALTIME":     ("Sahm Rule Recession Indicator",          "monthly",  45),
-    "USALOLITONOSTSAM": ("OECD Composite Leading Indicator (US)",   "monthly",  45),
+    "CFNAI":            ("Chicago Fed National Activity Index",      "monthly",  45),
     "NFCI":             ("Chicago Fed NFCI",                       "weekly",   14),
     "ICSA":             ("Initial Jobless Claims (weekly)",        "weekly",   14),
     "BAMLH0A0HYM2":     ("HY OAS (bps)",                          "daily",     5),
     "NAPM":             ("ISM Manufacturing PMI",                  "monthly",  45),
     # ── Tab 1 – Macro Overview ───────────────────────────────────────────────
-    "A191RL1Q225SBEA":  ("Real GDP Growth QoQ Ann.",               "quarterly",100),
-    "GDPC1":            ("Real GDP Level",                         "quarterly",100),
+    "A191RL1Q225SBEA":  ("Real GDP Growth QoQ Ann.",               "quarterly",130),
+    "GDPC1":            ("Real GDP Level",                         "quarterly",130),
     "USREC":            ("NBER Recession Indicator",               "monthly",   60),
     # ── Tab 2 – Growth & Business Activity ──────────────────────────────────
     "INDPRO":           ("Industrial Production",                  "monthly",  45),
@@ -197,6 +197,20 @@ def compute_lei_growth(usslind_data: pd.Series, months: int = 6) -> Optional[flo
     return round(annualised, 2)
 
 
+def compute_cfnai_signal(cfnai_data: pd.Series, months: int = 3) -> Optional[float]:
+    """
+    Return the trailing `months`-month average of the CFNAI.
+    CFNAI semantics: >0 = above-trend growth, <-0.7 = recession signal.
+    Returns the average value or None if insufficient data.
+    """
+    if cfnai_data is None or cfnai_data.empty:
+        return None
+    monthly = cfnai_data.resample("MS").last().dropna()
+    if len(monthly) < months:
+        return None
+    return round(float(monthly.iloc[-months:].mean()), 3)
+
+
 def compute_icsa_yoy(icsa_data: pd.Series) -> Optional[float]:
     """
     Year-over-year % change in the 4-week average of initial claims.
@@ -223,5 +237,5 @@ def fetch_model_inputs() -> dict:
     Returns a dict of series_id → fetch_series() result for all 7 model inputs.
     Uses start_date="1990-01-01" for longer history on model calculations.
     """
-    model_ids = ["T10Y3M", "SAHMREALTIME", "USALOLITONOSTSAM", "NFCI", "ICSA", "BAMLH0A0HYM2", "NAPM"]
+    model_ids = ["T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA", "BAMLH0A0HYM2", "NAPM"]
     return {sid: fetch_series(sid, start_date="1990-01-01") for sid in model_ids}

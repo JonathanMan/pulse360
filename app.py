@@ -56,6 +56,7 @@ from data.fred_client import (
 )
 from models.cycle_classifier import classify_cycle_phase
 from models.recession_model import run_recession_model
+from data.fred_client import compute_cfnai_signal
 from ai.claude_client import (
     format_features_for_prompt,
     get_daily_briefing,
@@ -106,7 +107,7 @@ with st.spinner("Loading economic data…"):
     model_inputs = fetch_model_inputs()
 
 model_output = run_recession_model(model_inputs)
-lei_growth   = compute_lei_growth(model_inputs["USALOLITONOSTSAM"]["data"])
+lei_growth   = compute_cfnai_signal(model_inputs["CFNAI"]["data"])
 
 unrate_result = fetch_series("UNRATE", start_date="2010-01-01")
 unrate_data   = unrate_result["data"] if not unrate_result["data"].empty else None
@@ -167,7 +168,7 @@ with tabs[0]:
 
     gdp_lvl  = fetch_series("GDPC1",            start_date=tw_start)
     gdp_gr   = fetch_series("A191RL1Q225SBEA",   start_date=tw_start)
-    lei_res  = fetch_series("USALOLITONOSTSAM",  start_date=tw_start)
+    lei_res  = fetch_series("CFNAI",             start_date=tw_start)
 
     col1, col2 = st.columns(2)
 
@@ -202,7 +203,7 @@ with tabs[0]:
         _chart_meta(gdp_gr)
 
     # LEI
-    st.markdown("##### OECD Composite Leading Indicator (US)")
+    st.markdown("##### Chicago Fed National Activity Index (CFNAI)")
     if not lei_res["data"].empty:
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -297,7 +298,8 @@ with st.sidebar:
     st.metric(label="Cycle Phase",    value=phase_output.phase)
     st.metric(label="Confidence",     value=f"{tl_emoji} {phase_output.confidence}")
     if lei_growth is not None:
-        st.metric(label="LEI 6-mo Growth", value=f"{lei_growth:+.1f}%")
+        st.metric(label="CFNAI (3M avg)", value=f"{lei_growth:+.3f}",
+                  help="Chicago Fed National Activity Index. >0 = above trend, <-0.70 = recession signal.")
 
     st.markdown("---")
 
