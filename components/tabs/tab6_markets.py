@@ -15,7 +15,7 @@ from data.fred_client import fetch_series
 from data.market_client import fetch_sector_returns, fetch_shiller_cape
 from components.chart_utils import (
     dark_layout, add_nber, add_end_labels, chart_meta,
-    hover_tmpl, time_window_start, threshold_line
+    hover_tmpl, time_window_start, threshold_line, render_implications
 )
 from ai.claude_client import get_investment_implications
 
@@ -188,7 +188,7 @@ def render_tab6(model_output, phase_output) -> None:
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")
-    with st.expander("💡 Investment Implications", expanded=False):
+    with st.expander("💡 Investment Implications", expanded=True):
         tab_readings: dict[str, str] = {}
         if sp500["last_value"] is not None:
             tab_readings["S&P 500 Level"] = f"{sp500['last_value']:,.0f}"
@@ -225,7 +225,7 @@ def render_tab6(model_output, phase_output) -> None:
                     tab_readings          = tab_readings,
                     phase_notes           = phase_output.notes,
                 )
-            st.markdown(text)
+            render_implications(text, model_output.traffic_light)
         else:
             st.info("No data available for implications.")
 

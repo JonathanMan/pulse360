@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from ai.claude_client import get_investment_implications
-from components.chart_utils import add_nber, chart_meta, dark_layout, time_window_start
+from components.chart_utils import add_nber, chart_meta, dark_layout, time_window_start, render_implications
 from data.fred_client import fetch_series
 
 
@@ -89,7 +89,7 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")
-    with st.expander("💡 Investment Implications", expanded=False):
+    with st.expander("💡 Investment Implications", expanded=True):
         tab_readings: dict[str, str] = {}
         if gdp_gr["last_value"] is not None:
             tab_readings["Real GDP Growth (latest quarter)"] = (
@@ -118,7 +118,7 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
                     tab_readings          = tab_readings,
                     phase_notes           = phase_output.notes,
                 )
-            st.markdown(text)
+            render_implications(text, model_output.traffic_light)
         else:
             st.info("No data available for implications.")
 

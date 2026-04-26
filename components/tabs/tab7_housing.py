@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    dark_layout, add_nber, chart_meta, time_window_start, yoy_pct
+    dark_layout, add_nber, chart_meta, time_window_start, yoy_pct, render_implications
 )
 from ai.claude_client import get_investment_implications
 
@@ -167,7 +167,7 @@ def render_tab7(model_output, phase_output) -> None:
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")
-    with st.expander("💡 Investment Implications", expanded=False):
+    with st.expander("💡 Investment Implications", expanded=True):
         tab_readings: dict[str, str] = {}
         if houst["last_value"] is not None:
             tab_readings["Housing Starts"] = (
@@ -207,7 +207,7 @@ def render_tab7(model_output, phase_output) -> None:
                     tab_readings          = tab_readings,
                     phase_notes           = phase_output.notes,
                 )
-            st.markdown(text)
+            render_implications(text, model_output.traffic_light)
         else:
             st.info("No data available for implications.")
 
