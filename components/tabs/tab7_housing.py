@@ -120,7 +120,7 @@ def render_tab7(model_output, phase_output) -> None:
     col5, col6 = st.columns(2)
 
     with col5:
-        st.markdown("##### Retail Sales YoY (ex-Food Services)")
+        st.markdown("##### Retail Sales YoY (ex-Food Services & ex-Motor Vehicles)")
         if not rsxfs["data"].empty:
             rs_yoy = yoy_pct(rsxfs["data"]).dropna()
             if not rs_yoy.empty:
@@ -128,13 +128,27 @@ def render_tab7(model_output, phase_output) -> None:
                 fig = go.Figure(go.Bar(
                     x=rs_yoy.index, y=rs_yoy.values,
                     marker_color=colors,
-                    name="Retail Sales YoY %",
+                    name="ex-Food Services (RSXFS)",
+                    opacity=0.75,
                 ))
+                if not rsfsxmv["data"].empty:
+                    mv_yoy = yoy_pct(rsfsxmv["data"]).dropna()
+                    if not mv_yoy.empty:
+                        fig.add_trace(go.Scatter(
+                            x=mv_yoy.index, y=mv_yoy.values,
+                            mode="lines",
+                            line={"color": "#f39c12", "width": 2, "dash": "dot"},
+                            name="ex-Motor Vehicles (RSFSXMV)",
+                        ))
                 fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
                 fig = add_nber(fig, start_date=start)
                 fig = dark_layout(fig, yaxis_title="YoY %")
                 st.plotly_chart(fig, use_container_width=True, key="tab7_retail")
-        chart_meta(rsxfs, decimals=1)
+        col_rs1, col_rs2 = st.columns(2)
+        with col_rs1:
+            chart_meta(rsxfs, decimals=1)
+        with col_rs2:
+            chart_meta(rsfsxmv, decimals=1)
 
     with col6:
         st.markdown("##### Personal Savings Rate (PSAVERT)")
@@ -176,6 +190,10 @@ def render_tab7(model_output, phase_output) -> None:
             rs_yoy_last = yoy_pct(rsxfs["data"]).dropna()
             if not rs_yoy_last.empty:
                 tab_readings["Retail Sales ex-Food (YoY)"] = f"{rs_yoy_last.iloc[-1]:+.1f}%"
+        if not rsfsxmv["data"].empty:
+            mv_yoy_last = yoy_pct(rsfsxmv["data"]).dropna()
+            if not mv_yoy_last.empty:
+                tab_readings["Retail Sales ex-Motor Vehicles (YoY)"] = f"{mv_yoy_last.iloc[-1]:+.1f}%"
         if psavert["last_value"] is not None:
             tab_readings["Personal Savings Rate"] = f"{psavert['last_value']:.1f}%"
 

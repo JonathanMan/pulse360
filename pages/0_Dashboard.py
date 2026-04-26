@@ -14,6 +14,7 @@ from typing import Optional
 import plotly.graph_objects as go
 
 from components.overview_row import render_overview_row
+from components.tabs.tab1_macro     import render_tab1
 from components.tabs.tab2_growth    import render_tab2
 from components.tabs.tab3_labor     import render_tab3
 from components.tabs.tab4_inflation import render_tab4
@@ -133,116 +134,11 @@ tabs = st.tabs([
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Shared chart utilities (also used directly in Tab 1 below)
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _chart_meta(result: dict, decimals: int = 2) -> None:
-    """Local alias — delegates to components.chart_utils.chart_meta."""
-    chart_meta(result, decimals)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — Macro Overview & Cycle Phase
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tabs[0]:
-    st.subheader("Macro Overview & Cycle Phase")
-
-    # Time window
-    col_tw, _ = st.columns([5, 1])
-    with _:
-        tw_choice = st.radio("View", ["5Y", "10Y", "20Y"], index=1, horizontal=True,
-                             key="tab1_window", label_visibility="collapsed")
-    from datetime import timedelta
-    today_dt = date.today()
-    tw_start = (today_dt - timedelta(days={"5Y": 5*365, "10Y": 10*365, "20Y": 20*365}[tw_choice])).strftime("%Y-%m-%d")
-
-    gdp_lvl  = fetch_series("GDPC1",            start_date=tw_start)
-    gdp_gr   = fetch_series("A191RL1Q225SBEA",   start_date=tw_start)
-    lei_res  = fetch_series("CFNAI",             start_date=tw_start)
-
-    col1, col2 = st.columns(2)
-
-    # Real GDP level
-    with col1:
-        st.markdown("##### Real GDP Level")
-        if not gdp_lvl["data"].empty:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=gdp_lvl["data"].index, y=gdp_lvl["data"].values,
-                mode="lines", line={"color": "#3498db", "width": 2},
-                name="Real GDP",
-            ))
-            fig = add_nber(fig, start_date=tw_start)
-            fig = dark_layout(fig, yaxis_title="Billions (2017 $)")
-            st.plotly_chart(fig, use_container_width=True, key="gdp_lvl")
-        _chart_meta(gdp_lvl)
-
-    # Real GDP growth
-    with col2:
-        st.markdown("##### Real GDP Growth (QoQ Ann.)")
-        if not gdp_gr["data"].empty:
-            colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in gdp_gr["data"].values]
-            fig = go.Figure(go.Bar(
-                x=gdp_gr["data"].index, y=gdp_gr["data"].values,
-                marker_color=colors, name="GDP Growth",
-            ))
-            fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
-            fig = add_nber(fig, start_date=tw_start)
-            fig = dark_layout(fig, yaxis_title="% QoQ Annualised")
-            st.plotly_chart(fig, use_container_width=True, key="gdp_gr")
-        _chart_meta(gdp_gr)
-
-    # LEI
-    st.markdown("##### Chicago Fed National Activity Index (CFNAI)")
-    if not lei_res["data"].empty:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=lei_res["data"].index, y=lei_res["data"].values,
-            mode="lines", line={"color": "#9b59b6", "width": 2},
-            name="LEI",
-        ))
-        fig.add_hline(y=lei_res["data"].mean(), line_dash="dot",
-                      line_color="#555", line_width=1,
-                      annotation_text="Long-run avg", annotation_font_color="#666")
-        fig = add_nber(fig, start_date=tw_start)
-        fig = dark_layout(fig, yaxis_title="Index Level")
-        st.plotly_chart(fig, use_container_width=True, key="tab1_lei")
-    _chart_meta(lei_res)
-
-    # Macro Overview Investment Implications
-    st.markdown("---")
-    with st.expander("💡 Investment Implications", expanded=False):
-        from ai.claude_client import get_investment_implications
-        macro_readings: dict[str, str] = {}
-        if gdp_gr["last_value"] is not None:
-            macro_readings["Real GDP Growth (latest quarter)"] = (
-                f"{gdp_gr['last_value']:+.1f}% QoQ annualised · as of {gdp_gr['last_date']}"
-            )
-        if lei_res["last_value"] is not None:
-            macro_readings["Conference Board LEI"] = (
-                f"{lei_res['last_value']:.2f} · "
-                f"6-mo growth: {lei_growth:+.1f}%" if lei_growth is not None
-                else f"{lei_res['last_value']:.2f}"
-            )
-        macro_readings["Recession Probability"] = (
-            f"{model_output.probability:.1f}% ({model_output.traffic_light.upper()})"
-        )
-        macro_readings["Cycle Phase"] = f"{phase_output.phase} ({phase_output.confidence} confidence)"
-        if macro_readings:
-            with st.spinner("Generating implications…"):
-                text = get_investment_implications(
-                    tab_key               = "macro",
-                    cycle_phase           = phase_output.phase,
-                    recession_probability = model_output.probability,
-                    traffic_light         = model_output.traffic_light,
-                    tab_readings          = macro_readings,
-                    phase_notes           = phase_output.notes,
-                )
-            st.markdown(text)
-
-    st.markdown("---")
-    st.caption(DISCLAIMER)
+    render_tab1(model_output, phase_output, lei_growth=lei_growth)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
