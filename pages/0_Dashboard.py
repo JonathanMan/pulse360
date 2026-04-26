@@ -14,6 +14,7 @@ from typing import Optional
 import plotly.graph_objects as go
 
 from components.overview_row import render_overview_row
+from components.weekly_diff import render_weekly_diff
 from components.tabs.tab1_macro     import render_tab1
 from components.tabs.tab2_growth    import render_tab2
 from components.tabs.tab3_labor     import render_tab3
@@ -36,6 +37,7 @@ from ai.claude_client import (
     get_daily_briefing,
     stream_chat_response,
 )
+from ai.email_briefing import compose_briefing_html, send_briefing_email
 from components.chart_utils import dark_layout, add_nber, chart_meta
 from models.backtest import run_historical_backtest
 
@@ -117,8 +119,21 @@ prob_delta: Optional[float] = (
     if _prev_prob is not None else None
 )
 
+# ── Share model state with other pages via session_state ──────────────────────
+st.session_state["cycle_phase"]           = phase_output.phase
+st.session_state["recession_probability"] = model_output.probability
+st.session_state["traffic_light"]         = model_output.traffic_light
+st.session_state["feature_summary"]       = format_features_for_prompt(model_output.features)
+
 # ── Persistent overview row ────────────────────────────────────────────────────
 render_overview_row(model_output, phase_output, lei_growth, prob_delta=prob_delta)
+
+# ── Weekly diff panel ─────────────────────────────────────────────────────────
+render_weekly_diff(
+    model_output     = model_output,
+    phase_output     = phase_output,
+    prev_month_prob  = _prev_prob,
+)
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
 tabs = st.tabs([
@@ -257,7 +272,37 @@ with st.sidebar:
                 recent_crossings      = None,
                 recent_releases       = None,
             )
+        st.session_state["briefing_text"] = briefing_text
         st.markdown(briefing_text)
+
+    elif "briefing_text" in st.session_state:
+        st.markdown(st.session_state["briefing_text"])
+
+    # ── Email briefing button ────────────────────────────────────────────────
+    if st.session_state.get("briefing_text"):
+        if st.button("📧 Email me this briefing", use_container_width=True, key="email_briefing"):
+            html = compose_briefing_html(
+                briefing_md           = st.session_state["briefing_text"],
+                cycle_phase           = phase_output.phase,
+                recession_probability = model_output.probability,
+                traffic_light         = model_output.traffic_light,
+            )
+            ok, msg = send_briefing_email(
+                to      = st.secrets.get("BRIEFING_EMAIL", "jonathancyman@gmail.com"),
+                subject = (
+                    f"Pulse360 · {date.today():%d %b %Y} · "
+                    f"{phase_output.phase} · {model_output.probability:.0f}% risk"
+                ),
+                html    = html,
+            )
+            if ok:
+                st.success(msg)
+            else:
+                st.warning(
+                    f"{msg}\n\n"
+                    "To activate email delivery, open `ai/email_briefing.py` and "
+                    "uncomment one of the transport blocks (Gmail, Resend, or SendGrid)."
+                )
 
     st.markdown("---")
 
