@@ -73,8 +73,72 @@ st.markdown("""
         margin-top: 16px;
         line-height: 1.7;
     }
+    /* ── Analysis output: white text throughout ── */
+    .stMarkdown p, .stMarkdown li, .stMarkdown span,
+    .stMarkdown td, .stMarkdown th { color: #e8e8e8 !important; }
+    .stMarkdown h1, .stMarkdown h2 {
+        color: #ffffff !important;
+        border-bottom: 1px solid #2a2a4a;
+        padding-bottom: 6px;
+        margin-top: 1.4rem !important;
+    }
+    .stMarkdown h3  { color: #cccccc !important; }
+    .stMarkdown strong { color: #ffffff !important; }
+    .stMarkdown em  { color: #aaaaaa !important; }
 </style>
 """, unsafe_allow_html=True)
+
+# ── Analysis text helpers ─────────────────────────────────────────────────────
+
+import re as _re
+
+def _fix_dollars(text: str) -> str:
+    """Escape $ before numbers so Streamlit doesn't render them as LaTeX."""
+    return _re.sub(r'\$(\d)', r'\\$\1', text)
+
+def _colorize_analysis(text: str) -> str:
+    """
+    Post-process the completed analysis to add 🔴🟡🟢 colour indicators
+    to bullet points in Risk flags and What to watch sections.
+    Also escapes dollar signs.
+    """
+    text = _fix_dollars(text)
+    lines = text.split('\n')
+    out   = []
+    section = None
+
+    _DANGER  = ['extreme', 'highly sensitive', 'amplifies', 'directly tied',
+                'inversion', 'jump toward', 'sell off', 'sharp reversal',
+                'crossing 35', 'crashing', 'collapse']
+    _GOOD    = ['hedge', 'diversif', 'resilient', 'protective', 'cash buffer',
+                'provides modest']
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Track which section we're in
+        if stripped.startswith('## '):
+            heading = stripped[3:].lower()
+            section = (
+                'risk'      if 'risk'     in heading else
+                'watch'     if 'watch'    in heading else
+                'positions' if 'position' in heading else
+                None
+            )
+            out.append(line)
+            continue
+
+        # Colour-code bullets in Risk flags and What to watch
+        if stripped.startswith('- ') and section in ('risk', 'watch'):
+            sl = stripped.lower()
+            is_danger = any(w in sl for w in _DANGER)
+            is_good   = any(w in sl for w in _GOOD)
+            prefix    = '- 🔴 ' if is_danger else ('- 🟢 ' if is_good else '- 🟡 ')
+            line      = line.replace('- ', prefix, 1)
+
+        out.append(line)
+
+    return '\n'.join(out)
 
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
@@ -212,10 +276,11 @@ Just navigate to your Positions page, take a screenshot (phone or desktop), and 
                     feature_summary       = feature_summary,
                 ):
                     full_text += chunk
-                    placeholder.markdown(full_text + "▌")
+                    placeholder.markdown(_fix_dollars(full_text) + "▌")
 
-        placeholder.markdown(full_text)
-        st.session_state["screenshot_analysis_result"] = full_text
+        colorized = _colorize_analysis(full_text)
+        placeholder.markdown(colorized)
+        st.session_state["screenshot_analysis_result"] = colorized
 
     elif "screenshot_analysis_result" in st.session_state and not uploaded_images:
         # Clear cached result if files removed
@@ -375,10 +440,11 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
                 feature_summary       = feature_summary,
             ):
                 full_text += chunk
-                placeholder.markdown(full_text + "▌")
+                placeholder.markdown(_fix_dollars(full_text) + "▌")
 
-        placeholder.markdown(full_text)
-        st.session_state["csv_analysis_result"] = full_text
+        colorized = _colorize_analysis(full_text)
+        placeholder.markdown(colorized)
+        st.session_state["csv_analysis_result"] = colorized
 
     elif "csv_analysis_result" in st.session_state and uploaded_csv:
         st.markdown("---")

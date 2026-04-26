@@ -181,7 +181,7 @@ for col in display_returns.columns:
 st.dataframe(
     returns_table.style
         .format(lambda x: f"{x:+.1f}%" if x is not None and not (isinstance(x, float) and np.isnan(x)) else "—")
-        .applymap(_color_cell)
+        .map(_color_cell)
         .set_table_styles([{
             "selector": "th",
             "props": [("background-color", "#1a1a2e"), ("color", "white"), ("font-weight", "600")]
