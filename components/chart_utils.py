@@ -355,73 +355,36 @@ def threshold_line(
 
 def render_implications(text: str, traffic_light: str = "green") -> None:
     """
-    Render an Investment Implications card with a coloured left border keyed
-    to the current traffic-light signal (green / yellow / red).
+    Render an Investment Implications callout using Streamlit's native alert
+    components, colour-keyed to the traffic-light signal.
 
-    Splits the raw Haiku output into main body and disclaimer, then renders
-    both in a dark card with visual hierarchy:
-      - Accent-coloured header label
-      - Main analysis at 14px, high contrast
-      - Disclaimer small and muted at the bottom
+    Green  → st.success  (green card)
+    Yellow → st.warning  (amber card)
+    Red    → st.error    (red card)
+
+    The disclaimer is separated from the main body and rendered as a small
+    st.caption below the card.
 
     Args:
         text:          Raw text from get_investment_implications() —
-                       main body and optional "\\n\\n---\\n*disclaimer*".
+                       main body + optional "\\n\\n---\\n*disclaimer*".
         traffic_light: "green", "yellow", or "red" (defaults to "green").
     """
-    accent = {"green": "#2ecc71", "yellow": "#f39c12", "red": "#e74c3c"}.get(
-        (traffic_light or "green").lower(), "#3498db"
-    )
-
-    # Split on the disclaimer separator injected by prompts.py
+    # Split body from disclaimer at the separator injected by prompts.py
     parts    = text.split("\n\n---\n", 1)
     main_md  = parts[0].strip()
     disc_raw = parts[1].strip() if len(parts) > 1 else (
         "Educational macro analysis only — not personalised investment advice. "
         "Consult a licensed financial advisor before making investment decisions."
     )
-
-    # Strip markdown italics from disclaimer (rendered in plain HTML)
     disc_txt = re.sub(r"\*(.+?)\*", r"\1", disc_raw)
 
-    # Convert basic markdown in main body to inline HTML
-    main_html = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", main_md)
-    main_html = re.sub(r"\*(.+?)\*",     r"<em>\1</em>",         main_html)
-    # Preserve paragraph breaks as <br><br>; collapse single newlines
-    main_html = re.sub(r"\n{2,}", "<br><br>", main_html)
-    main_html = main_html.replace("\n", " ")
+    tl = (traffic_light or "green").lower()
+    if tl == "red":
+        st.error(main_md,    icon="💡")
+    elif tl == "yellow":
+        st.warning(main_md,  icon="💡")
+    else:
+        st.success(main_md,  icon="💡")
 
-    st.markdown(
-        f"""<div style="
-                background:#13131f;
-                border-left:4px solid {accent};
-                border-radius:0 8px 8px 0;
-                padding:16px 20px 14px 20px;
-                margin:4px 0 20px 0;">
-            <div style="
-                font-size:10px;
-                color:{accent};
-                font-weight:700;
-                letter-spacing:.1em;
-                text-transform:uppercase;
-                margin-bottom:10px;">
-                💡 Investment Implications
-            </div>
-            <div style="
-                font-size:14px;
-                color:#e8e8e8;
-                line-height:1.8;">
-                {main_html}
-            </div>
-            <div style="
-                font-size:10px;
-                color:#555;
-                margin-top:12px;
-                border-top:1px solid #222;
-                padding-top:8px;
-                font-style:italic;">
-                {disc_txt}
-            </div>
-        </div>""",
-        unsafe_allow_html=True,
-    )
+    st.caption(f"*{disc_txt}*")
