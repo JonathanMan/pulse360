@@ -12,7 +12,8 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    dark_layout, add_nber, chart_meta, time_window_start, threshold_line, yoy_pct
+    dark_layout, add_nber, add_end_labels, chart_meta,
+    hover_tmpl, time_window_start, threshold_line, yoy_pct
 )
 from ai.claude_client import get_investment_implications
 
@@ -55,6 +56,10 @@ def render_tab4(model_output, phase_output) -> None:
                     x=cpi_yoy.index, y=cpi_yoy.values,
                     mode="lines", line={"color": "#e74c3c", "width": 2},
                     name="CPI All Items",
+                    hovertemplate=hover_tmpl(
+                        "CPI All Items", y_fmt=".1f", unit="%",
+                        context="2% = Fed target",
+                    ),
                 ))
             if not core_cpi["data"].empty:
                 core_yoy = yoy_pct(core_cpi["data"]).dropna()
@@ -62,10 +67,15 @@ def render_tab4(model_output, phase_output) -> None:
                     x=core_yoy.index, y=core_yoy.values,
                     mode="lines", line={"color": "#e67e22", "width": 1.5, "dash": "dot"},
                     name="Core CPI",
+                    hovertemplate=hover_tmpl(
+                        "Core CPI (ex-food & energy)", y_fmt=".1f", unit="%",
+                        context="Fed preferred measure of underlying inflation",
+                    ),
                 ))
             fig = threshold_line(fig, 2.0, "2% Fed target", "#2ecc71", "dash")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="YoY %")
+            fig = add_end_labels(fig, fmt=".1f", unit="%")
             st.plotly_chart(fig, use_container_width=True, key="tab4_cpi")
         col_a, col_b = st.columns(2)
         with col_a:
@@ -83,6 +93,10 @@ def render_tab4(model_output, phase_output) -> None:
                     x=pce_yoy.index, y=pce_yoy.values,
                     mode="lines", line={"color": "#9b59b6", "width": 2},
                     name="PCE All Items",
+                    hovertemplate=hover_tmpl(
+                        "PCE All Items", y_fmt=".1f", unit="%",
+                        context="2% = Fed inflation target",
+                    ),
                 ))
             if not core_pce["data"].empty:
                 core_pce_yoy = yoy_pct(core_pce["data"]).dropna()
@@ -90,10 +104,15 @@ def render_tab4(model_output, phase_output) -> None:
                     x=core_pce_yoy.index, y=core_pce_yoy.values,
                     mode="lines", line={"color": "#8e44ad", "width": 1.5, "dash": "dot"},
                     name="Core PCE",
+                    hovertemplate=hover_tmpl(
+                        "Core PCE (Fed preferred)", y_fmt=".1f", unit="%",
+                        context="Primary Fed inflation gauge",
+                    ),
                 ))
             fig = threshold_line(fig, 2.0, "2% Fed target", "#2ecc71", "dash")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="YoY %")
+            fig = add_end_labels(fig, fmt=".1f", unit="%")
             st.plotly_chart(fig, use_container_width=True, key="tab4_pce")
         col_c, col_d = st.columns(2)
         with col_c:
@@ -110,16 +129,25 @@ def render_tab4(model_output, phase_output) -> None:
                 x=be5y["data"].index, y=be5y["data"].values,
                 mode="lines", line={"color": "#1abc9c", "width": 2},
                 name="5Y Breakeven",
+                hovertemplate=hover_tmpl(
+                    "5Y Breakeven Inflation", y_fmt=".2f", unit="%",
+                    context="Market-implied avg inflation over next 5 years",
+                ),
             ))
         if not be10y["data"].empty:
             fig.add_trace(go.Scatter(
                 x=be10y["data"].index, y=be10y["data"].values,
                 mode="lines", line={"color": "#3498db", "width": 1.5, "dash": "dot"},
                 name="10Y Breakeven",
+                hovertemplate=hover_tmpl(
+                    "10Y Breakeven Inflation", y_fmt=".2f", unit="%",
+                    context="Market-implied avg inflation over next 10 years",
+                ),
             ))
         fig = threshold_line(fig, 2.0, "2% Fed target", "#2ecc71", "dash")
         fig = threshold_line(fig, 2.5, "2.5% — elevated", "#f39c12", "dot")
         fig = dark_layout(fig, yaxis_title="Implied Inflation (%)")
+        fig = add_end_labels(fig, fmt=".2f", unit="%")
         st.plotly_chart(fig, use_container_width=True, key="tab4_breakeven")
 
     col5, col6 = st.columns(2)

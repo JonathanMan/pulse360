@@ -13,7 +13,8 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    dark_layout, add_nber, chart_meta, time_window_start, threshold_line
+    dark_layout, add_nber, add_end_labels, chart_meta,
+    hover_tmpl, time_window_start, threshold_line
 )
 from ai.claude_client import get_investment_implications
 
@@ -108,16 +109,25 @@ def render_tab5(model_output, phase_output) -> None:
                     x=t10y3m["data"].index, y=t10y3m["data"].values,
                     mode="lines", line={"color": "#3498db", "width": 2},
                     name="10Y – 3M Spread",
+                    hovertemplate=hover_tmpl(
+                        "10Y – 3M Spread", y_fmt="+.2f", unit="pp",
+                        context="Below 0 = inverted (recession signal)",
+                    ),
                 ))
             if not t10y2y["data"].empty:
                 fig.add_trace(go.Scatter(
                     x=t10y2y["data"].index, y=t10y2y["data"].values,
                     mode="lines", line={"color": "#9b59b6", "width": 1.5, "dash": "dot"},
                     name="10Y – 2Y Spread",
+                    hovertemplate=hover_tmpl(
+                        "10Y – 2Y Spread", y_fmt="+.2f", unit="pp",
+                        context="Below 0 = inverted",
+                    ),
                 ))
             fig = threshold_line(fig, 0, "0 — inversion threshold", "#e74c3c", "dash")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Spread (pp)")
+            fig = add_end_labels(fig, fmt="+.2f", unit="pp")
             st.plotly_chart(fig, use_container_width=True, key="tab5_spreads")
         col_a, col_b = st.columns(2)
         with col_a:
@@ -134,21 +144,32 @@ def render_tab5(model_output, phase_output) -> None:
                     x=fedfunds["data"].index, y=fedfunds["data"].values,
                     mode="lines", line={"color": "#e74c3c", "width": 2},
                     name="Fed Funds Rate",
+                    hovertemplate=hover_tmpl(
+                        "Fed Funds Rate", y_fmt=".2f", unit="%",
+                        context="FOMC target rate",
+                    ),
                 ))
             if not dgs10["data"].empty:
                 fig.add_trace(go.Scatter(
                     x=dgs10["data"].index, y=dgs10["data"].values,
                     mode="lines", line={"color": "#3498db", "width": 1.5},
                     name="10Y Treasury",
+                    hovertemplate=hover_tmpl(
+                        "10Y Treasury Yield", y_fmt=".2f", unit="%",
+                    ),
                 ))
             if not dgs2["data"].empty:
                 fig.add_trace(go.Scatter(
                     x=dgs2["data"].index, y=dgs2["data"].values,
                     mode="lines", line={"color": "#9b59b6", "width": 1.5, "dash": "dot"},
                     name="2Y Treasury",
+                    hovertemplate=hover_tmpl(
+                        "2Y Treasury Yield", y_fmt=".2f", unit="%",
+                    ),
                 ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Yield / Rate (%)")
+            fig = add_end_labels(fig, fmt=".2f", unit="%")
             st.plotly_chart(fig, use_container_width=True, key="tab5_rates")
         chart_meta(fedfunds, decimals=2)
 
@@ -182,17 +203,26 @@ def render_tab5(model_output, phase_output) -> None:
                 fig.add_trace(go.Scatter(
                     x=hy_oas["data"].index, y=hy_oas["data"].values,
                     mode="lines", line={"color": "#e74c3c", "width": 2},
-                    name="HY OAS (bps)",
+                    name="HY OAS",
+                    hovertemplate=hover_tmpl(
+                        "High-Yield OAS", y_fmt=",.0f", unit=" bps",
+                        context=">500 bps = stress signal",
+                    ),
                 ))
             if not ig_oas["data"].empty:
                 fig.add_trace(go.Scatter(
                     x=ig_oas["data"].index, y=ig_oas["data"].values,
                     mode="lines", line={"color": "#3498db", "width": 1.5, "dash": "dot"},
-                    name="IG OAS (bps)",
+                    name="IG OAS",
+                    hovertemplate=hover_tmpl(
+                        "Investment-Grade OAS", y_fmt=",.0f", unit=" bps",
+                        context="Tighter = risk-on environment",
+                    ),
                 ))
             fig = threshold_line(fig, 500, "500 bps HY — stress signal", "#e74c3c", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="OAS (bps)")
+            fig = add_end_labels(fig, fmt=",.0f", unit=" bps")
             st.plotly_chart(fig, use_container_width=True, key="tab5_oas")
         col_e, col_f = st.columns(2)
         with col_e:

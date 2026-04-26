@@ -4,15 +4,19 @@ Pulse360 — shared chart utilities
 Shared helpers used by app.py and all tab components.
 
 Exports:
-    dark_layout(fig, title, yaxis_title) → go.Figure
-    add_nber(fig, start_date)            → go.Figure
-    chart_meta(result, decimals)         → None  (renders st.caption / warnings)
-    time_window_start(key)               → str   (ISO date string)
-    yoy_pct(series)                      → pd.Series
+    dark_layout(fig, ...)          → go.Figure   (dark theme + hover + rangeselector)
+    add_nber(fig, start_date)      → go.Figure   (NBER recession shading)
+    add_end_labels(fig, ...)       → go.Figure   (direct line labels, no legend)
+    chart_meta(result, decimals)   → None        (renders st.caption / warnings)
+    hover_tmpl(name, ...)          → str         (Tableau-style hovertemplate string)
+    time_window_start(key)         → str         (ISO date string, 10Y default)
+    yoy_pct(series)                → pd.Series
+    threshold_line(fig, ...)       → go.Figure
 """
 
 from __future__ import annotations
 
+import math
 from datetime import date, timedelta
 
 import pandas as pd
@@ -23,38 +27,96 @@ from data.fred_client import fetch_series
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Dark layout template
+# Dark layout template  (all three visual upgrades live here)
 # ─────────────────────────────────────────────────────────────────────────────
+
+_RANGESELECTOR = {
+    "buttons": [
+        {"count": 1,  "label": "1Y",  "step": "year", "stepmode": "backward"},
+        {"count": 5,  "label": "5Y",  "step": "year", "stepmode": "backward"},
+        {"count": 10, "label": "10Y", "step": "year", "stepmode": "backward"},
+        {"step": "all", "label": "Max"},
+    ],
+    "bgcolor":     "#1a1a2e",
+    "activecolor": "#3498db",
+    "bordercolor": "#444",
+    "borderwidth": 1,
+    "font":        {"color": "#888", "size": 10},
+    "x":           0,
+    "xanchor":     "left",
+    "y":           1.0,
+    "yanchor":     "bottom",
+}
+
 
 def dark_layout(
     fig: go.Figure,
     title: str = "",
     yaxis_title: str = "",
     yaxis2_title: str = "",
+    rangeslider: bool = False,
 ) -> go.Figure:
-    """Apply Pulse360 dark theme to a Plotly figure."""
+    """
+    Apply Pulse360 dark theme to a Plotly figure.
+
+    Includes:
+    - Tableau-style hoverlabel (dark card, white text, left-aligned)
+    - Plotly rangeselector buttons (1Y / 5Y / 10Y / Max) on date axes
+    - Optional rangeslider (thin scrubber bar beneath chart)
+    """
+    xaxis_cfg: dict = {
+        "gridcolor":     "#1e1e2e",
+        "color":         "#888",
+        "showgrid":      True,
+        "rangeselector": _RANGESELECTOR,
+    }
+    if rangeslider:
+        xaxis_cfg["rangeslider"] = {
+            "visible":     True,
+            "bgcolor":     "#0e1117",
+            "bordercolor": "#333",
+            "thickness":   0.05,
+        }
+
     fig.update_layout(
-        title         = {"text": title, "font": {"size": 13, "color": "#dddddd"}},
-        paper_bgcolor = "rgba(0,0,0,0)",
-        plot_bgcolor  = "#0e1117",
-        font          = {"color": "#cccccc"},
-        xaxis         = {"gridcolor": "#1e1e2e", "color": "#888", "showgrid": True},
-        yaxis         = {
-            "gridcolor": "#1e1e2e", "color": "#888", "showgrid": True,
-            "title": yaxis_title,
+        title        = {"text": title, "font": {"size": 13, "color": "#dddddd"}},
+        paper_bgcolor= "rgba(0,0,0,0)",
+        plot_bgcolor = "#0e1117",
+        font         = {"color": "#cccccc"},
+        xaxis        = xaxis_cfg,
+        yaxis        = {
+            "gridcolor": "#1e1e2e",
+            "color":     "#888",
+            "showgrid":  True,
+            "title":     yaxis_title,
         },
-        margin        = {"t": 40, "b": 30, "l": 55, "r": 20},
-        hovermode     = "x unified",
-        legend        = {
-            "bgcolor": "rgba(0,0,0,0)", "font": {"color": "#888"},
-            "orientation": "h", "y": -0.15,
+        margin       = {"t": 55, "b": 30, "l": 55, "r": 20},
+        hovermode    = "x unified",
+        # ── Tableau-style tooltip card ────────────────────────────────────────
+        hoverlabel   = {
+            "bgcolor":    "#1a1a2e",
+            "bordercolor":"#444",
+            "font":       {"size": 12, "color": "#ffffff"},
+            "align":      "left",
+            "namelength": -1,   # never truncate series names
+        },
+        legend       = {
+            "bgcolor":     "rgba(0,0,0,0)",
+            "font":        {"color": "#888"},
+            "orientation": "h",
+            "y":           -0.15,
         },
     )
+
     if yaxis2_title:
-        fig.update_layout(
-            yaxis2={"gridcolor": "#1e1e2e", "color": "#888", "title": yaxis2_title,
-                    "overlaying": "y", "side": "right", "showgrid": False}
-        )
+        fig.update_layout(yaxis2={
+            "gridcolor": "#1e1e2e",
+            "color":     "#888",
+            "title":     yaxis2_title,
+            "overlaying":"y",
+            "side":      "right",
+            "showgrid":  False,
+        })
     return fig
 
 
@@ -84,7 +146,7 @@ def add_nber(fig: go.Figure, start_date: str = "2000-01-01") -> go.Figure:
                 annotation_text="Recession" if first else "",
                 annotation_position="top left",
                 annotation_font_size=9,
-                annotation_font_color="#666",
+                annotation_font_color="#555",
             )
             first = False
 
@@ -95,6 +157,120 @@ def add_nber(fig: go.Figure, start_date: str = "2000-01-01") -> go.Figure:
             layer="below", line_width=0,
         )
     return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Direct end-of-line labels  (replaces legend on multi-trace charts)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def add_end_labels(
+    fig: go.Figure,
+    fmt: str = ".1f",
+    unit: str = "",
+) -> go.Figure:
+    """
+    Replace the chart legend with a direct label at the last data point of
+    each Scatter trace. Labels use the trace colour so they read as inline.
+
+    Args:
+        fig:  The Plotly figure to annotate.
+        fmt:  Python format spec for the y value (e.g. ".1f", "+.2f", ",.0f").
+        unit: Unit suffix appended to the value (e.g. "%", " bps", "pp").
+
+    Returns:
+        The figure with annotations added and legend hidden.
+    """
+    for trace in fig.data:
+        if isinstance(trace, go.Bar):
+            continue
+        if not hasattr(trace, "x") or trace.x is None or not len(trace.x):
+            continue
+        if not hasattr(trace, "y") or trace.y is None or not len(trace.y):
+            continue
+
+        name = getattr(trace, "name", "") or ""
+        if not name:
+            continue
+
+        # Walk backwards to find last finite value
+        last_x = last_y = None
+        for xi, yi in zip(reversed(list(trace.x)), reversed(list(trace.y))):
+            if yi is not None and not (isinstance(yi, float) and math.isnan(yi)):
+                last_x, last_y = xi, yi
+                break
+        if last_x is None:
+            continue
+
+        # Resolve trace colour
+        color = "#cccccc"
+        if hasattr(trace, "line") and trace.line and getattr(trace.line, "color", None):
+            color = trace.line.color
+
+        try:
+            val_str = f"{last_y:{fmt}}{unit}"
+        except (ValueError, TypeError):
+            val_str = str(last_y)
+
+        fig.add_annotation(
+            x           = last_x,
+            y           = last_y,
+            text        = f"<b>{name}</b><br>{val_str}",
+            showarrow   = False,
+            xanchor     = "left",
+            xshift      = 8,
+            align       = "left",
+            font        = {"size": 9, "color": color},
+            bgcolor     = "rgba(14,17,23,0.85)",
+            borderpad   = 3,
+            bordercolor = color,
+            borderwidth = 0.5,
+        )
+
+    fig.update_layout(showlegend=False, margin={"r": 120})
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tableau-style hover template builder
+# ─────────────────────────────────────────────────────────────────────────────
+
+def hover_tmpl(
+    name: str,
+    y_fmt: str = ",.2f",
+    unit: str = "",
+    date_fmt: str = "%b %Y",
+    context: str = "",
+) -> str:
+    """
+    Build a rich Plotly hovertemplate in Tableau style:
+      Series name (bold)
+      Value + unit
+      Date
+      Optional context line (italic)
+
+    Args:
+        name:     Series label shown in bold.
+        y_fmt:    Format spec for the y value (e.g. ".1f", "+.2f", ",.0f").
+        unit:     Suffix after value (e.g. "%", " bps").
+        date_fmt: strftime string for the date row.
+        context:  Optional interpretive note shown in italic.
+
+    Returns:
+        A Plotly hovertemplate string.
+
+    Example:
+        hover_tmpl("CPI All Items", y_fmt=".1f", unit="%", context="2% = Fed target")
+        → "<b>CPI All Items</b><br>%{y:.1f}%<br>%{x|%b %Y}<br><i>2% = Fed target</i><extra></extra>"
+    """
+    lines = [
+        f"<b>{name}</b>",
+        "%{y:" + y_fmt + "}" + unit,
+        "%{x|" + date_fmt + "}",
+    ]
+    if context:
+        lines.append(f"<i>{context}</i>")
+    lines.append("<extra></extra>")
+    return "<br>".join(lines)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -116,22 +292,25 @@ def chart_meta(result: dict, decimals: int = 2) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Time window selector
+# Time window selector  (default: 10Y — feeds rangeselector in dark_layout)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def time_window_start(key: str = "window") -> str:
     """
     Render a horizontal radio button (5Y / 10Y / 20Y) and return the
     corresponding ISO start date string.
+
+    Default is 10Y so the native Plotly rangeselector (1Y / 5Y / 10Y / Max)
+    has enough data to be useful out of the box.
     """
     today  = date.today()
     choice = st.radio(
         "View",
-        options=["5Y", "10Y", "20Y"],
-        index=0,
-        horizontal=True,
-        key=key,
-        label_visibility="collapsed",
+        options  = ["5Y", "10Y", "20Y"],
+        index    = 1,          # 10Y default
+        horizontal = True,
+        key      = key,
+        label_visibility = "collapsed",
     )
     offsets = {"5Y": 5 * 365, "10Y": 10 * 365, "20Y": 20 * 365}
     return (today - timedelta(days=offsets[choice])).strftime("%Y-%m-%d")
@@ -158,12 +337,12 @@ def threshold_line(
 ) -> go.Figure:
     """Add a horizontal threshold line to a figure."""
     fig.add_hline(
-        y=y,
-        line_dash=dash,
-        line_color=color,
-        line_width=1,
-        annotation_text=label,
-        annotation_font_color=color,
-        annotation_font_size=10,
+        y                  = y,
+        line_dash          = dash,
+        line_color         = color,
+        line_width         = 1,
+        annotation_text    = label,
+        annotation_font_color = color,
+        annotation_font_size  = 10,
     )
     return fig

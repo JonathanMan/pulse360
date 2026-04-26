@@ -14,7 +14,8 @@ import plotly.graph_objects as go
 from data.fred_client import fetch_series
 from data.market_client import fetch_sector_returns, fetch_shiller_cape
 from components.chart_utils import (
-    dark_layout, add_nber, chart_meta, time_window_start, threshold_line
+    dark_layout, add_nber, add_end_labels, chart_meta,
+    hover_tmpl, time_window_start, threshold_line
 )
 from ai.claude_client import get_investment_implications
 
@@ -50,22 +51,30 @@ def render_tab6(model_output, phase_output) -> None:
         if not sp500["data"].empty or not nasdaq["data"].empty:
             fig = go.Figure()
             if not sp500["data"].empty:
-                # Normalise to 100 at window start for comparison
                 sp_norm = (sp500["data"] / sp500["data"].iloc[0]) * 100
                 fig.add_trace(go.Scatter(
                     x=sp_norm.index, y=sp_norm.values,
                     mode="lines", line={"color": "#3498db", "width": 2},
-                    name="S&P 500 (rebased)",
+                    name="S&P 500",
+                    hovertemplate=hover_tmpl(
+                        "S&P 500 (rebased to 100)", y_fmt=",.1f",
+                        context="100 = start of selected window",
+                    ),
                 ))
             if not nasdaq["data"].empty:
                 nq_norm = (nasdaq["data"] / nasdaq["data"].iloc[0]) * 100
                 fig.add_trace(go.Scatter(
                     x=nq_norm.index, y=nq_norm.values,
                     mode="lines", line={"color": "#9b59b6", "width": 1.5, "dash": "dot"},
-                    name="NASDAQ (rebased)",
+                    name="NASDAQ",
+                    hovertemplate=hover_tmpl(
+                        "NASDAQ Composite (rebased to 100)", y_fmt=",.1f",
+                        context="100 = start of selected window",
+                    ),
                 ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Index (rebased to 100 at start)")
+            fig = add_end_labels(fig, fmt=",.0f")
             st.plotly_chart(fig, use_container_width=True, key="tab6_equity")
         col_a, col_b = st.columns(2)
         with col_a:
@@ -100,17 +109,26 @@ def render_tab6(model_output, phase_output) -> None:
             fig.add_trace(go.Scatter(
                 x=hy_oas["data"].index, y=hy_oas["data"].values,
                 mode="lines", line={"color": "#e74c3c", "width": 2},
-                name="HY OAS (bps)",
+                name="HY OAS",
+                hovertemplate=hover_tmpl(
+                    "High-Yield OAS", y_fmt=",.0f", unit=" bps",
+                    context=">500 bps = stress signal",
+                ),
             ))
         if not ig_oas["data"].empty:
             fig.add_trace(go.Scatter(
                 x=ig_oas["data"].index, y=ig_oas["data"].values,
                 mode="lines", line={"color": "#3498db", "width": 1.5, "dash": "dot"},
-                name="IG OAS (bps)",
+                name="IG OAS",
+                hovertemplate=hover_tmpl(
+                    "Investment-Grade OAS", y_fmt=",.0f", unit=" bps",
+                    context="Tighter = risk-on",
+                ),
             ))
         fig = threshold_line(fig, 500, "500 bps HY — stress signal", "#e74c3c", "dot")
         fig = add_nber(fig, start_date=start)
         fig = dark_layout(fig, yaxis_title="OAS (bps)")
+        fig = add_end_labels(fig, fmt=",.0f", unit=" bps")
         st.plotly_chart(fig, use_container_width=True, key="tab6_oas")
 
     col3, col4 = st.columns(2)
