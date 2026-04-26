@@ -24,6 +24,7 @@ import streamlit as st
 from ai.portfolio_analyzer import (
     stream_portfolio_from_screenshot,
     stream_portfolio_from_positions,
+    stream_portfolio_chat,
     parse_portfolio_csv,
 )
 
@@ -85,6 +86,32 @@ st.markdown("""
     .stMarkdown h3  { color: #cccccc !important; }
     .stMarkdown strong { color: #ffffff !important; }
     .stMarkdown em  { color: #aaaaaa !important; }
+    /* ── Portfolio chat panel ── */
+    .portfolio-chat {
+        background: #12122a;
+        border: 1px solid #2a2a4a;
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-top: 24px;
+    }
+    .chat-msg-user {
+        background: #1e2340;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin: 8px 0;
+        color: #e8e8e8 !important;
+        font-size: 0.9rem;
+    }
+    .chat-msg-ai {
+        background: #0e1a2e;
+        border-left: 3px solid #3d5a80;
+        border-radius: 0 8px 8px 0;
+        padding: 10px 14px;
+        margin: 8px 0;
+        color: #e8e8e8 !important;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -139,6 +166,111 @@ def _colorize_analysis(text: str) -> str:
         out.append(line)
 
     return '\n'.join(out)
+
+def render_portfolio_chat(analysis_key: str) -> None:
+    """
+    Render a follow-up chat panel below a completed portfolio analysis.
+
+    Args:
+        analysis_key: session_state key holding the analysis text
+                      ("screenshot_analysis_result" or "csv_analysis_result")
+    """
+    analysis_text = st.session_state.get(analysis_key, "")
+    if not analysis_text:
+        return
+
+    chat_key      = f"chat_history_{analysis_key}"
+    input_key     = f"chat_input_{analysis_key}"
+    submitting_key = f"chat_submitting_{analysis_key}"
+
+    if chat_key not in st.session_state:
+        st.session_state[chat_key] = []
+
+    st.markdown("---")
+    st.markdown("### 💬 Ask a follow-up question")
+    st.caption("Ask anything about your portfolio — Claude has the full analysis as context.")
+
+    # ── Suggested prompts ─────────────────────────────────────────────────────
+    suggestions = [
+        "Which position is most exposed to a recession?",
+        "What would happen if NVDA dropped 30%?",
+        "How should I think about my semiconductor concentration?",
+        "What defensive positions would balance this portfolio?",
+    ]
+    sug_cols = st.columns(2)
+    for i, sug in enumerate(suggestions):
+        with sug_cols[i % 2]:
+            if st.button(sug, key=f"sug_{analysis_key}_{i}", use_container_width=True):
+                st.session_state[submitting_key] = sug
+
+    # ── Chat history display ──────────────────────────────────────────────────
+    history = st.session_state[chat_key]
+    if history:
+        for msg in history:
+            if msg["role"] == "user":
+                st.markdown(
+                    f'<div class="chat-msg-user">🙋 {msg["content"]}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div class="chat-msg-ai">{msg["content"]}</div>',
+                    unsafe_allow_html=True,
+                )
+        if st.button("🗑️ Clear chat", key=f"clear_{analysis_key}"):
+            st.session_state[chat_key] = []
+            st.rerun()
+
+    # ── Input form ────────────────────────────────────────────────────────────
+    with st.form(key=f"chat_form_{analysis_key}", clear_on_submit=True):
+        user_input = st.text_input(
+            label       = "Your question",
+            placeholder = "e.g. What's my biggest macro risk right now?",
+            key         = input_key,
+            label_visibility = "collapsed",
+        )
+        submitted = st.form_submit_button("Send ↗", use_container_width=True)
+
+    # Handle form submission or suggested prompt click
+    question = (
+        st.session_state.pop(submitting_key, None)
+        or (user_input if submitted else None)
+    )
+
+    if question:
+        history = st.session_state[chat_key]
+        history.append({"role": "user", "content": question})
+
+        st.markdown(
+            f'<div class="chat-msg-user">🙋 {question}</div>',
+            unsafe_allow_html=True,
+        )
+
+        placeholder = st.empty()
+        response    = ""
+
+        with st.spinner(""):
+            for chunk in stream_portfolio_chat(
+                user_message          = question,
+                chat_history          = history[:-1],   # exclude the just-added user msg
+                analysis_text         = analysis_text,
+                cycle_phase           = cycle_phase,
+                recession_probability = recession_probability,
+                traffic_light         = traffic_light,
+            ):
+                response += chunk
+                placeholder.markdown(
+                    f'<div class="chat-msg-ai">{response}▌</div>',
+                    unsafe_allow_html=True,
+                )
+
+        placeholder.markdown(
+            f'<div class="chat-msg-ai">{response}</div>',
+            unsafe_allow_html=True,
+        )
+        history.append({"role": "assistant", "content": response})
+        st.session_state[chat_key] = history
+
 
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
@@ -293,6 +425,9 @@ Just navigate to your Positions page, take a screenshot (phone or desktop), and 
         st.markdown(st.session_state["screenshot_analysis_result"])
         if st.button("🔄 Re-run analysis", key="rerun_screenshot"):
             st.session_state.pop("screenshot_analysis_result", None)
+
+    # Follow-up chat (shown whenever an analysis result exists)
+    render_portfolio_chat("screenshot_analysis_result")
             st.rerun()
 
     if not uploaded_images:
@@ -453,6 +588,9 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
         if st.button("🔄 Re-run analysis", key="rerun_csv"):
             st.session_state.pop("csv_analysis_result", None)
             st.rerun()
+
+    # Follow-up chat (shown whenever an analysis result exists)
+    render_portfolio_chat("csv_analysis_result")
 
     elif not uploaded_csv:
         st.session_state.pop("csv_analysis_result", None)

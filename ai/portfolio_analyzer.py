@@ -332,6 +332,88 @@ def stream_portfolio_from_positions(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Entry point 3: Follow-up chat on a completed portfolio analysis
+# ─────────────────────────────────────────────────────────────────────────────
+
+HAIKU = "claude-haiku-4-5-20251001"
+
+_PORTFOLIO_CHAT_SYSTEM = """You are the Pulse360 Portfolio Chat assistant — a macro-aware analyst \
+helping a personal investor dig deeper into their portfolio analysis.
+
+CONTEXT YOU HAVE:
+  • A completed portfolio analysis (provided below as "ANALYSIS")
+  • Current Pulse360 macro dashboard state (cycle phase, recession probability)
+  • The investor's actual holdings as described in the analysis
+
+YOUR ROLE:
+  • Answer follow-up questions about the portfolio, specific positions, or macro implications
+  • Explain concepts in plain English — the user is a smart amateur, not a quant
+  • Go deeper on any flag, position, or risk they want to explore
+  • Suggest what-if scenarios if asked (e.g. "what if NVDA drops 30%?")
+  • Be concise — 3–5 sentences unless the question needs more
+  • Be probabilistic, not certain
+  • Never give personalised buy/sell advice
+  • End every substantive answer with: *Educational analysis only — not investment advice.*
+
+IMPORTANT: Only discuss this specific portfolio and the macro context provided. \
+If asked about unrelated topics, redirect to portfolio/macro questions."""
+
+
+def stream_portfolio_chat(
+    user_message: str,
+    chat_history: list[dict],       # [{role: user|assistant, content: str}]
+    analysis_text: str,             # the completed portfolio analysis
+    cycle_phase: str,
+    recession_probability: float,
+    traffic_light: str,
+) -> Generator[str, None, None]:
+    """
+    Stream a follow-up chat response about the portfolio analysis.
+
+    Args:
+        user_message:   The user's question
+        chat_history:   Prior turns (list of {role, content} dicts)
+        analysis_text:  The full completed analysis text (used as context)
+        cycle_phase:    Current cycle phase
+        recession_probability: 0–100 float
+        traffic_light:  "green" | "yellow" | "red"
+
+    Yields:
+        Text chunks from Claude Haiku.
+    """
+    tl_label = {"green": "LOW", "yellow": "ELEVATED", "red": "HIGH"}.get(
+        traffic_light, traffic_light.upper()
+    )
+
+    system = (
+        f"{_PORTFOLIO_CHAT_SYSTEM}\n\n"
+        f"CURRENT MACRO STATE:\n"
+        f"  Cycle Phase: {cycle_phase}\n"
+        f"  Recession Probability: {recession_probability:.1f}% ({tl_label} risk)\n\n"
+        f"ANALYSIS:\n{analysis_text}"
+    )
+
+    # Build messages: history + new user message
+    messages = list(chat_history[-8:])   # cap at 8 prior turns
+    messages.append({"role": "user", "content": user_message})
+
+    try:
+        client = _get_client()
+        with client.messages.stream(
+            model      = HAIKU,
+            max_tokens = 512,
+            system     = system,
+            messages   = messages,
+        ) as stream:
+            for chunk in stream.text_stream:
+                yield chunk
+
+    except Exception as exc:
+        logger.error("stream_portfolio_chat failed: %s", exc)
+        yield f"\n\n⚠️ Chat unavailable: {exc}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CSV parser — handles IBKR and generic broker formats
 # ─────────────────────────────────────────────────────────────────────────────
 
