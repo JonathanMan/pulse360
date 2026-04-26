@@ -425,10 +425,10 @@ Just navigate to your Positions page, take a screenshot (phone or desktop), and 
         st.markdown(st.session_state["screenshot_analysis_result"])
         if st.button("🔄 Re-run analysis", key="rerun_screenshot"):
             st.session_state.pop("screenshot_analysis_result", None)
+            st.rerun()
 
     # Follow-up chat (shown whenever an analysis result exists)
     render_portfolio_chat("screenshot_analysis_result")
-            st.rerun()
 
     if not uploaded_images:
         st.markdown("""
@@ -589,9 +589,6 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
             st.session_state.pop("csv_analysis_result", None)
             st.rerun()
 
-    # Follow-up chat (shown whenever an analysis result exists)
-    render_portfolio_chat("csv_analysis_result")
-
     elif not uploaded_csv:
         st.session_state.pop("csv_analysis_result", None)
         st.markdown("""
@@ -600,6 +597,9 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
     Upload a CSV export above to get started
 </div>
 """, unsafe_allow_html=True)
+
+    # Follow-up chat (shown whenever an analysis result exists)
+    render_portfolio_chat("csv_analysis_result")
 
 
 # ── Footer ────────────────────────────────────────────────────────────────────
