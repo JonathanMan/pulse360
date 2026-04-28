@@ -27,6 +27,7 @@ pg = st.navigation(
             st.Page("pages/2_Phase_Returns.py", title="Phase Returns", icon="📈"),
             st.Page("pages/3_Simulator.py",    title="Simulator",     icon="🎛️"),
             st.Page("pages/4_Portfolio.py",    title="Portfolio",     icon="🗂️"),
+            st.Page("pages/5_Briefing.py",     title="At a Glance",   icon="📋"),
         ],
     }
 )

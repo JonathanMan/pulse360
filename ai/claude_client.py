@@ -2,9 +2,10 @@
 Pulse360 — Claude API Client
 ==============================
 Handles all Anthropic API calls for the AI layer:
-  • get_daily_briefing()       → cached 6h, returns markdown string
+  • get_daily_briefing()          → cached 6h, returns markdown string
   • get_investment_implications() → cached 2h per tab, returns prose string
-  • stream_chat_response()     → streaming generator for the chat sidebar
+  • stream_chat_response()        → streaming generator for the chat sidebar
+  • stream_briefing_section()     → streaming generator for At a Glance sections
 """
 
 from __future__ import annotations
@@ -274,3 +275,50 @@ def format_features_for_prompt(features: list) -> list[dict]:
         }
         for f in features
     ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# At a Glance Briefing — generic streaming section runner
+# ─────────────────────────────────────────────────────────────────────────────
+
+_BRIEFING_SYSTEM = """You are the Pulse360 At a Glance research engine.
+You produce high-signal, structured financial research for a sophisticated personal investor.
+
+RULES:
+1. Be specific and data-grounded. Reference real tickers, real values, real sources where possible.
+2. Be probabilistic — "historically leads to" not "will cause".
+3. Structure your response clearly with the sections and format requested in the prompt.
+4. Always cite sources inline (e.g. [Finviz], [WhaleWisdom], [FRED], [Reuters]) when referencing data.
+5. Never give personalised investment advice. Frame everything as research and historical context.
+6. Be concise but complete — cover every output field the prompt requests.
+7. End every response with:
+   *Educational research only — not personalised investment advice. Consult a licensed advisor.*"""
+
+
+def stream_briefing_section(
+    prompt: str,
+    max_tokens: int = 1200,
+) -> Generator[str, None, None]:
+    """
+    Stream a response for one At a Glance briefing section.
+
+    Args:
+        prompt:     The fully-rendered prompt for this section (placeholders already substituted).
+        max_tokens: Token budget for the response (default 1200).
+
+    Yields:
+        Text chunks as they stream from Claude Sonnet.
+    """
+    try:
+        client = _get_client()
+        with client.messages.stream(
+            model      = SONNET,
+            max_tokens = max_tokens,
+            system     = _BRIEFING_SYSTEM,
+            messages   = [{"role": "user", "content": prompt}],
+        ) as stream:
+            for chunk in stream.text_stream:
+                yield chunk
+    except Exception as exc:
+        logger.error("stream_briefing_section failed: %s", exc)
+        yield f"\n\n⚠️ Research unavailable: {exc}"
