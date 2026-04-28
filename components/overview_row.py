@@ -184,6 +184,47 @@ def _contributions_table(model_output: RecessionModelOutput) -> None:
 # Main render function
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Dynamic action-item helpers
+# ---------------------------------------------------------------------------
+
+def _phase_action(phase: str) -> str:
+    actions = {
+        "Early Expansion": "→ Rotate into cyclicals, small caps & commodities — risk appetite is rewarded early in the cycle.",
+        "Mid Expansion":   "→ Stay long risk assets and maintain equity overweight; growth & momentum sectors typically lead here.",
+        "Late Expansion":  "→ Begin trimming high-beta positions and building a quality/defensive tilt; valuations stretch late-cycle.",
+        "Peak":            "→ Reduce equity risk, favour short duration, and build cash — cycle turns happen fast from Peak.",
+        "Contraction":     "→ Shift to defensives, treasuries & gold; preserve capital until leading indicators stabilise.",
+    }
+    return actions.get(phase, "→ Monitor leading indicators closely before adding or reducing risk exposure.")
+
+
+def _prob_action(prob: float) -> str:
+    if prob < 25:
+        return "→ Macro risk is low — maintain strategic allocation; no defensive tilt warranted at this level."
+    if prob < 50:
+        return "→ Elevated risk — consider partial equity hedge and reduce high-yield credit exposure."
+    return "→ High recession probability — defensive rotation warranted; reduce risk assets and extend duration."
+
+
+def _lei_action(growth: float) -> str:
+    if growth > 1.0:
+        return "→ Rising LEI confirms expansion — leading indicators support staying long risk assets."
+    if growth >= 0:
+        return "→ Flat LEI trend — growth momentum is stalling; watch for consecutive monthly declines."
+    return "→ Falling LEI signals weakening activity ahead — reduce cyclical exposure and watch for trend reversal."
+
+
+def _scorecard_action(model_output: RecessionModelOutput) -> str:
+    stressed  = sum(1 for f in model_output.features if f.stress_score > 0.66)
+    elevated  = sum(1 for f in model_output.features if 0.33 < f.stress_score <= 0.66)
+    if stressed >= 3:
+        return f"→ {stressed} indicators stressed — broad macro deterioration; review portfolio defensiveness urgently."
+    if stressed >= 1 or elevated >= 3:
+        return f"→ {stressed + elevated} signals elevated or stressed — watch for contagion; consider trimming risk incrementally."
+    return "→ All indicators within normal range — no immediate portfolio adjustment required."
+
+
 def render_overview_row(
     model_output: RecessionModelOutput,
     phase_output: CyclePhaseOutput,
@@ -226,6 +267,11 @@ def render_overview_row(
                 f"<div style='font-size:11px; color:#dddddd; margin-top:2px;'>✓ {ind}</div>",
                 unsafe_allow_html=True,
             )
+        st.markdown(
+            f"<div style='font-size:11px; color:#f39c12; margin-top:10px; font-style:italic;'>"
+            f"{_phase_action(phase_output.phase)}</div>",
+            unsafe_allow_html=True,
+        )
 
     with col_gauge:
         st.markdown("**Recession Probability**")
@@ -252,6 +298,13 @@ def render_overview_row(
             )
         if model_output.data_as_of:
             st.caption(f"Data as of {model_output.data_as_of.strftime('%Y-%m-%d')}")
+        _prob_color = "#2ecc71" if model_output.probability < 25 else "#f39c12" if model_output.probability < 50 else "#e74c3c"
+        st.markdown(
+            f"<div style='text-align:center; font-size:11px; color:{_prob_color}; "
+            f"margin-top:6px; font-style:italic;'>"
+            f"{_prob_action(model_output.probability)}</div>",
+            unsafe_allow_html=True,
+        )
 
     with col_lei:
         st.markdown("**LEI Momentum**")
@@ -279,11 +332,26 @@ def render_overview_row(
             )
         else:
             st.info("LEI data unavailable", icon="⚠️")
+        if lei_growth is not None:
+            _lei_color = "#2ecc71" if lei_growth > 1.0 else "#f39c12" if lei_growth >= 0 else "#e74c3c"
+            st.markdown(
+                f"<div style='font-size:11px; color:{_lei_color}; margin-top:8px; font-style:italic;'>"
+                f"{_lei_action(lei_growth)}</div>",
+                unsafe_allow_html=True,
+            )
 
     # ── Row 2: risk scorecard ────────────────────────────────────────────────
     st.markdown("<div style='margin-top:12px;'><b>Risk Scorecard</b></div>",
                 unsafe_allow_html=True)
     _risk_scorecard(model_output)
+    _sc_stressed = sum(1 for f in model_output.features if f.stress_score > 0.66)
+    _sc_elevated = sum(1 for f in model_output.features if 0.33 < f.stress_score <= 0.66)
+    _sc_color = "#e74c3c" if _sc_stressed >= 3 else "#f39c12" if (_sc_stressed >= 1 or _sc_elevated >= 3) else "#2ecc71"
+    st.markdown(
+        f"<div style='font-size:11px; color:{_sc_color}; margin-top:8px; font-style:italic;'>"
+        f"{_scorecard_action(model_output)}</div>",
+        unsafe_allow_html=True,
+    )
 
     # ── Row 3: expandable model detail ───────────────────────────────────────
     with st.expander("📊 Recession Model — Feature Contributions", expanded=False):

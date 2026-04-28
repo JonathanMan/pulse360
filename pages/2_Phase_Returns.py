@@ -125,7 +125,15 @@ st.markdown("---")
 
 # ── Phase timeline ────────────────────────────────────────────────────────────
 st.subheader("Cycle Phase Timeline")
-st.caption("Each bar represents one calendar month, coloured by the phase assigned by the model.")
+st.caption(
+    "Each vertical bar is one calendar month, coloured by the phase the model assigned to it: "
+    "green for Expansion, amber for Late Cycle, red for Contraction, and blue for Recovery. "
+    "The month counts below show how many months of history fall into each phase — "
+    "this matters because phases with very few months (e.g. Contraction) produce return statistics "
+    "based on a thin sample, so treat those figures as directional rather than precise. "
+    "**What to look for:** long unbroken stretches of green confirm a stable expansion; "
+    "a shift to amber or red in recent months is the signal to watch."
+)
 
 fig_tl = go.Figure()
 for phase in PHASES:
@@ -168,7 +176,16 @@ st.markdown("---")
 
 # ── Returns matrix ────────────────────────────────────────────────────────────
 st.subheader("Annualised Returns by Phase (%)")
-st.caption("Arithmetic annualisation of mean monthly return for each phase × asset class combination.")
+st.caption(
+    "Each cell shows the average annualised return for that asset class during that cycle phase, "
+    "calculated by annualising the mean monthly return across all months in that phase since 1997. "
+    "Deep green cells indicate a strong historical tailwind; deep red cells indicate a headwind. "
+    "**How to use it:** find the row matching the current cycle phase shown on the Dashboard, "
+    "then read across to see which asset classes have historically had the wind at their back. "
+    "A positive number means the phase has been favourable on average — "
+    "but check the win rate and volatility (in the expander below) before drawing conclusions, "
+    "as a high average return with a low win rate means the gains came from a small number of extreme months."
+)
 
 def _color_cell(val):
     if pd.isna(val) or val is None:
@@ -226,6 +243,14 @@ st.markdown("---")
 
 # ── Bar chart: returns by asset, faceted by phase ─────────────────────────────
 st.subheader("Returns by Asset Class")
+st.caption(
+    "Each group of bars shows how one asset class has performed across all four cycle phases. "
+    "Bars above zero are phases where that asset has historically been a winner; bars below zero are phases to be cautious. "
+    "Colours represent the phase, not the direction. "
+    "**What to look for:** asset classes where one phase bar towers above the rest have a strong phase dependence — "
+    "gold and bonds, for example, tend to have their largest bars during Contraction. "
+    "Asset classes where all bars are similarly sized are less cycle-sensitive and behave more like all-weather holdings."
+)
 
 fig_bar = go.Figure()
 for phase in PHASES:
@@ -258,6 +283,15 @@ st.markdown("---")
 
 # ── Detailed drill-down per asset ─────────────────────────────────────────────
 st.subheader("Asset Class Detail")
+st.caption(
+    "Select an asset class tab to see a full breakdown: annualised return, win rate, volatility, "
+    "best and worst single months, and sample size for each phase. "
+    "Below the stats table is the cumulative return chart for that asset since 1997, "
+    "with NBER recessions shaded in grey — this lets you visually verify whether the phase statistics "
+    "match what you can see in the price history. "
+    "**Pay attention to the sample size column:** phases with fewer than 20 months of data "
+    "produce unreliable averages, so treat those rows with extra caution."
+)
 
 asset_tabs = st.tabs(list(ASSET_CLASSES.keys()))
 for i, (asset_name, series_id) in enumerate(ASSET_CLASSES.items()):

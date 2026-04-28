@@ -87,6 +87,15 @@ st.markdown("---")
 
 # ── Main chart: probability over time ─────────────────────────────────────────
 st.subheader("Recession Probability — Historical Model Output")
+st.caption(
+    "The blue line is the model's recession probability at each month from 1997 to today, "
+    "calculated using only data available at that time. "
+    "Grey shading marks NBER-declared recessions. "
+    "The orange dotted line at 25% is the yellow-flag threshold (elevated risk); "
+    "the red dashed line at 50% is the red-flag threshold (high risk). "
+    "**Look for:** how far in advance the line crossed each threshold before recessions began, "
+    "and how cleanly it stayed below 25% during expansions."
+)
 
 fig = go.Figure()
 
@@ -156,6 +165,14 @@ st.markdown("---")
 
 # ── Recession performance table ────────────────────────────────────────────────
 st.subheader("Performance by Recession")
+st.caption(
+    "Each row is one NBER recession. "
+    "'Yellow flag' shows the first month the model crossed 25% and how many months before the recession start that was — "
+    "a positive number (e.g. '3m early') means the model gave advance warning. "
+    "'Red flag' shows the same for the 50% threshold. "
+    "'Peak probability' shows the highest reading reached during the recession. "
+    "**What to look for:** consistent early flags with peaks well above 50% signal a model that was in sync with deteriorating conditions."
+)
 
 if rec_stats:
     rows = []
@@ -191,7 +208,13 @@ st.markdown("---")
 
 # ── Feature stress evolution ───────────────────────────────────────────────────
 st.subheader("Feature Stress Over Time")
-st.caption("Each line shows how stressed a model input was at each point in time (0 = no stress, 1 = maximum stress).")
+st.caption(
+    "Each coloured line shows one model input's stress score over time, on a 0–1 scale where 0 is completely benign and 1 is maximum historical stress. "
+    "The dotted line at 0.5 marks the neutral midpoint. "
+    "**What to look for:** multiple lines spiking above 0.5 simultaneously is the signature of a genuine recession scare — "
+    "a single line spiking in isolation (e.g. only credit spreads) tends to produce a false positive. "
+    "The weight next to each indicator's name in the legend tells you how much it contributes to the overall probability."
+)
 
 stress_cols = [c for c in bt_df.columns if c.startswith("stress_")]
 
@@ -237,6 +260,14 @@ st.markdown("---")
 
 # ── False positive analysis ───────────────────────────────────────────────────
 st.subheader("False Positive Periods (≥25% without recession)")
+st.caption(
+    "A false positive is any sustained period where the model stayed at or above 25% for two or more consecutive months "
+    "but was not followed by an NBER recession within 12 months. "
+    "Some false positives are legitimate near-misses (e.g. late 2018 credit stress that reversed without a recession); "
+    "others reflect model sensitivity to short-lived shocks. "
+    "**What to look for:** fewer and shorter false positive periods mean the model is more precise — "
+    "but a model with zero false positives is almost certainly under-sensitive and will miss the real thing."
+)
 
 if fp_list:
     st.dataframe(
