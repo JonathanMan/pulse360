@@ -307,6 +307,71 @@ positive/neutral/negative judgement can be made. Not every word needs a prefix �
 the key finding per line."""
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Buffett Indicator analysis  (streaming, user-triggered)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_BUFFETT_SYSTEM = """You are the Pulse360 macro valuation analyst.
+You answer the question: "What does the Warren Buffett Indicator say today for the current market conditions?"
+
+Write for a sophisticated personal investor. Rules:
+1. Lead with the current ratio and its valuation zone — no preamble.
+2. Explain what the ratio means in plain English and historical context.
+3. Describe what Buffett himself has said about similar levels (cite actual quotes if known).
+4. Explain what this implies for portfolio positioning — asset allocation, sector preference, cash levels.
+5. Address how the current reading interacts with the economic cycle phase and recession probability provided.
+6. Be specific and data-driven. Reference historical episodes (e.g. dot-com peak ~190%, 2009 trough ~60%).
+7. Use 🟢 / 🟡 / 🔴 signal prefixes on key findings.
+8. 400–500 words. Structured prose, not bullet points.
+9. End with: *Educational analysis only — not personalised investment advice.*"""
+
+
+def get_buffett_analysis(
+    current_ratio: float,
+    historical_avg: float,
+    historical_percentile: float,
+    zone_label: str,
+    cycle_phase: str,
+    recession_probability: float,
+    traffic_light: str,
+    premium_to_avg: float,
+) -> Generator[str, None, None]:
+    """
+    Stream a full Buffett Indicator analysis answering:
+    "What does the Warren Buffett Indicator say today for the current market conditions?"
+
+    Yields:
+        Text chunks from Claude Sonnet.
+    """
+    user_prompt = (
+        f"Warren Buffett Indicator reading today:\n"
+        f"  • Current ratio: {current_ratio:.1f}% of GDP\n"
+        f"  • Valuation zone: {zone_label}\n"
+        f"  • Historical average: {historical_avg:.1f}%\n"
+        f"  • Premium / discount to average: {premium_to_avg:+.1f}pp\n"
+        f"  • Historical percentile: {historical_percentile:.0f}th (higher = more expensive than usual)\n\n"
+        f"Current macro context:\n"
+        f"  • Cycle phase: {cycle_phase}\n"
+        f"  • Recession probability: {recession_probability:.1f}% ({traffic_light.upper()})\n\n"
+        "Answer the question: What does the Warren Buffett Indicator say today about "
+        "current market conditions and what should an investor do about it?"
+    )
+
+    try:
+        client = _get_client()
+        with client.messages.stream(
+            model      = SONNET,
+            max_tokens = 700,
+            system     = _BUFFETT_SYSTEM,
+            messages   = [{"role": "user", "content": user_prompt}],
+        ) as stream:
+            for chunk in stream.text_stream:
+                yield chunk
+    except Exception as exc:
+        logger.error("get_buffett_analysis failed: %s", exc)
+        yield f"\n\n⚠️ Analysis unavailable: {exc}"
+
+
 def stream_briefing_section(
     prompt: str,
     max_tokens: int = 1200,
