@@ -223,7 +223,7 @@ def render_overview_row(
         st.caption(phase_output.notes)
         for ind in phase_output.confirming_indicators[:3]:
             st.markdown(
-                f"<div style='font-size:11px; color:#aaaaaa; margin-top:2px;'>✓ {ind}</div>",
+                f"<div style='font-size:11px; color:#dddddd; margin-top:2px;'>✓ {ind}</div>",
                 unsafe_allow_html=True,
             )
 
@@ -270,7 +270,7 @@ def render_overview_row(
                                 margin-top:4px;">
                         {lei_growth:+.1f}%
                     </div>
-                    <div style="font-size:11px; color:#aaaaaa; margin-top:4px;">
+                    <div style="font-size:11px; color:#dddddd; margin-top:4px;">
                         6-mo annualised
                     </div>
                 </div>
