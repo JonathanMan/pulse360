@@ -24,31 +24,29 @@ from ai.claude_client import stream_briefing_section
 # ── Dark-theme CSS ────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* ── Base ── */
-    .stApp { background-color: #0e1117; color: #ffffff; }
+    /* ── Base (main content only — leave sidebar untouched) ── */
     .main .block-container { padding-top: 1rem; max-width: 1200px; }
 
-    /* ── All body text white ── */
-    .stApp p, .stApp li, .stApp span, .stApp div,
-    .stApp label, .stApp caption,
-    [data-testid="stMarkdownContainer"] p,
-    [data-testid="stMarkdownContainer"] li,
-    [data-testid="stMarkdownContainer"] td,
-    [data-testid="stMarkdownContainer"] th { color: #ffffff !important; }
+    /* ── All body text white — scoped to main content only ── */
+    .main p, .main li,
+    .main [data-testid="stMarkdownContainer"] p,
+    .main [data-testid="stMarkdownContainer"] li,
+    .main [data-testid="stMarkdownContainer"] td,
+    .main [data-testid="stMarkdownContainer"] th { color: #ffffff !important; }
 
-    /* ── Headings ── */
-    .stApp h1, .stApp h2, .stApp h3,
-    .stApp h4, .stApp h5, .stApp h6,
-    [data-testid="stMarkdownContainer"] h1,
-    [data-testid="stMarkdownContainer"] h2,
-    [data-testid="stMarkdownContainer"] h3,
-    [data-testid="stMarkdownContainer"] h4 { color: #e0e0ff !important; }
+    /* ── Headings — main content only ── */
+    .main h1, .main h2, .main h3, .main h4, .main h5, .main h6,
+    .main [data-testid="stMarkdownContainer"] h1,
+    .main [data-testid="stMarkdownContainer"] h2,
+    .main [data-testid="stMarkdownContainer"] h3,
+    .main [data-testid="stMarkdownContainer"] h4 { color: #e0e0ff !important; }
 
-    /* ── Caption / small text ── */
-    .stApp small, .stCaption { color: #aaaaaa !important; }
+    /* ── Caption / small text — main content only ── */
+    .main small, .main .stCaption,
+    .main [data-testid="stCaptionContainer"] { color: #aaaaaa !important; }
 
-    /* ── Inline code ── */
-    [data-testid="stMarkdownContainer"] code {
+    /* ── Inline code — main content only ── */
+    .main [data-testid="stMarkdownContainer"] code {
         background: #1e1e3a !important;
         color: #c8c8ff !important;
         border-radius: 4px;
@@ -64,54 +62,50 @@ st.markdown("""
         padding: 18px 20px;
         margin-top: 10px;
         line-height: 1.7;
+        color: #ffffff;
     }
+    .result-box p, .result-box li, .result-box td, .result-box th,
+    .result-box span { color: #ffffff !important; }
+    .result-box h1, .result-box h2, .result-box h3,
+    .result-box h4 { color: #e0e0ff !important; }
 
-    /* ── Metric cards ── */
-    div[data-testid="metric-container"] {
-        background: #1a1a2e;
-        border-radius: 8px;
-        padding: 12px 16px;
-        border: 1px solid #333;
-    }
-    div[data-testid="metric-container"] label,
-    div[data-testid="metric-container"] div { color: #ffffff !important; }
-
-    /* ── Input fields ── */
-    div[data-testid="stTextInput"] > div > input {
+    /* ── Input fields — main content only ── */
+    .main div[data-testid="stTextInput"] > div > input {
         background: #12122a !important;
         border-color: #333 !important;
         color: #ffffff !important;
     }
-    div[data-testid="stTextInput"] label { color: #cccccc !important; }
+    .main div[data-testid="stTextInput"] label { color: #cccccc !important; }
 
-    /* ── Selectbox ── */
-    div[data-testid="stSelectbox"] label { color: #cccccc !important; }
-    div[data-testid="stSelectbox"] > div > div {
+    /* ── Selectbox — main content only ── */
+    .main div[data-testid="stSelectbox"] label { color: #cccccc !important; }
+    .main div[data-testid="stSelectbox"] > div > div {
         background: #12122a !important;
         border-color: #333 !important;
         color: #ffffff !important;
     }
 
     /* ── Tables inside result boxes ── */
-    [data-testid="stMarkdownContainer"] table {
+    .result-box table {
         width: 100%;
         border-collapse: collapse;
         margin: 8px 0;
     }
-    [data-testid="stMarkdownContainer"] th {
+    .result-box th {
         background: #1e1e40 !important;
         color: #c8c8ff !important;
         padding: 8px 12px;
         border: 1px solid #333;
         font-size: 13px;
     }
-    [data-testid="stMarkdownContainer"] td {
+    .result-box td {
         padding: 7px 12px;
         border: 1px solid #222;
         font-size: 13px;
         vertical-align: top;
+        color: #ffffff !important;
     }
-    [data-testid="stMarkdownContainer"] tr:nth-child(even) td {
+    .result-box tr:nth-child(even) td {
         background: #0f0f22 !important;
     }
 
