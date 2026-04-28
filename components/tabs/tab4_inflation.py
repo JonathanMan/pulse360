@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 from data.fred_client import fetch_series
 from components.chart_utils import (
     dark_layout, add_nber, add_end_labels, chart_meta,
-    hover_tmpl, time_window_start, threshold_line, yoy_pct, render_implications
+    hover_tmpl, time_window_start, threshold_line, yoy_pct, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
 
@@ -83,6 +83,18 @@ def render_tab4(model_output, phase_output) -> None:
         with col_b:
             chart_meta(core_cpi, decimals=1)
 
+        # ── Action item ──────────────────────────────────────────────────────
+        if not cpi["data"].empty:
+            _cpi_yoy_val = (cpi["data"].pct_change(periods=12) * 100).dropna()
+            if not _cpi_yoy_val.empty:
+                _cv = _cpi_yoy_val.iloc[-1]
+                if _cv > 4:
+                    render_action_item(f"CPI at {_cv:.1f}% YoY — well above target; maintain short duration; TIPS and real assets offer inflation protection.", "#e74c3c")
+                elif _cv > 2:
+                    render_action_item(f"CPI at {_cv:.1f}% YoY — moderating but above target; Fed likely cautious; watch for rate cut timeline signals.", "#f39c12")
+                else:
+                    render_action_item(f"CPI at {_cv:.1f}% YoY — at/below Fed target; opens door to rate cuts; duration extension and growth assets supported.", "#2ecc71")
+
     with col2:
         st.markdown("##### PCE Year-over-Year")
         if not pce["data"].empty or not core_pce["data"].empty:
@@ -120,6 +132,18 @@ def render_tab4(model_output, phase_output) -> None:
         with col_d:
             chart_meta(core_pce, decimals=1)
 
+        # ── Action item ──────────────────────────────────────────────────────
+        if not core_pce["data"].empty:
+            _cpce_yoy = (core_pce["data"].pct_change(periods=12) * 100).dropna()
+            if not _cpce_yoy.empty:
+                _pv = _cpce_yoy.iloc[-1]
+                if _pv > 3:
+                    render_action_item(f"Core PCE at {_pv:.1f}% — Fed's preferred gauge well above target; avoid long duration; favour value over growth.", "#e74c3c")
+                elif _pv > 2:
+                    render_action_item(f"Core PCE at {_pv:.1f}% — last-mile disinflation underway; Fed on hold; selective duration extension OK.", "#f39c12")
+                else:
+                    render_action_item(f"Core PCE at {_pv:.1f}% — at/below target; rate cuts likely on the table; extend duration and consider growth rotation.", "#2ecc71")
+
     # ── Row 2: Breakeven Inflation ────────────────────────────────────────────
     st.markdown("##### Breakeven Inflation (Market-Implied)")
     if not be5y["data"].empty or not be10y["data"].empty:
@@ -156,6 +180,16 @@ def render_tab4(model_output, phase_output) -> None:
     with col6:
         chart_meta(be10y, decimals=2)
 
+    # ── Action item ──────────────────────────────────────────────────────────
+    if be5y["last_value"] is not None:
+        _bev = be5y["last_value"]
+        if _bev > 2.5:
+            render_action_item(f"5Y breakeven at {_bev:.2f}% — elevated inflation expectations; TIPS and commodities as hedge.", "#e74c3c")
+        elif _bev >= 2.0:
+            render_action_item(f"5Y breakeven at {_bev:.2f}% — inflation expectations anchored near target; no special inflation hedge needed.", "#2ecc71")
+        else:
+            render_action_item(f"5Y breakeven at {_bev:.2f}% — below target; deflation risk; favour nominal bonds over TIPS.", "#f39c12")
+
     # ── Row 3: WTI Crude | PPI ────────────────────────────────────────────────
     col7, col8 = st.columns(2)
 
@@ -173,6 +207,14 @@ def render_tab4(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="USD / barrel")
             st.plotly_chart(fig, use_container_width=True, key="tab4_wti")
         chart_meta(wti, decimals=2)
+        if wti["last_value"] is not None:
+            _wv = wti["last_value"]
+            if _wv > 90:
+                render_action_item(f"WTI at ${_wv:.0f}/bbl — cost-push inflation risk; energy sector outperforms; watch for consumer spending drag.", "#e74c3c")
+            elif _wv > 60:
+                render_action_item(f"WTI at ${_wv:.0f}/bbl — moderate range; inflation tail risk contained; balanced positioning appropriate.", "#f39c12")
+            else:
+                render_action_item(f"WTI at ${_wv:.0f}/bbl — below $60; deflationary energy signal; supportive for consumers but watch for demand-side weakness.", "#e74c3c")
 
     with col8:
         st.markdown("##### PPI Final Demand YoY")
@@ -190,6 +232,16 @@ def render_tab4(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="YoY %")
             st.plotly_chart(fig, use_container_width=True, key="tab4_ppi")
         chart_meta(ppi, decimals=1)
+        if not ppi["data"].empty:
+            _ppi_yoy = (ppi["data"].pct_change(periods=12) * 100).dropna()
+            if not _ppi_yoy.empty:
+                _ppv = _ppi_yoy.iloc[-1]
+                if _ppv > 3:
+                    render_action_item(f"PPI at {_ppv:.1f}% YoY — input cost pressure building; margin compression risk; favour pricing-power companies.", "#e74c3c")
+                elif _ppv >= 0:
+                    render_action_item(f"PPI at {_ppv:.1f}% YoY — cost pressures easing; margin recovery supportive for equities.", "#2ecc71")
+                else:
+                    render_action_item(f"PPI at {_ppv:.1f}% YoY — deflationary territory; demand-side weakness or commodity collapse; monitor earnings impact.", "#f39c12")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

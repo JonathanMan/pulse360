@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    dark_layout, add_nber, chart_meta, time_window_start, render_implications
+    dark_layout, add_nber, chart_meta, time_window_start, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
 
@@ -64,6 +64,15 @@ def render_tab8(model_output, phase_output) -> None:
             st.plotly_chart(fig, use_container_width=True, key="tab8_usd_broad")
         chart_meta(usd_broad, decimals=2)
 
+        if usd_broad["last_value"] is not None and not usd_broad["data"].empty:
+            _avg = usd_broad["data"].mean()
+            if usd_broad["last_value"] > _avg * 1.03:
+                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — strong dollar; headwind for US multinationals and EM assets; favour domestic US exposure.", "#f39c12")
+            elif usd_broad["last_value"] < _avg * 0.97:
+                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — weak dollar; tailwind for US multinationals and EM equities; consider international diversification.", "#2ecc71")
+            else:
+                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — near long-run average; FX neutral; no major cross-currency headwind or tailwind.", "#2ecc71")
+
     with col2:
         st.markdown("##### EUR/USD Exchange Rate")
         if not eur_usd["data"].empty:
@@ -83,6 +92,15 @@ def render_tab8(model_output, phase_output) -> None:
             st.plotly_chart(fig, use_container_width=True, key="tab8_eurusd")
         chart_meta(eur_usd, decimals=4)
 
+        if eur_usd["last_value"] is not None:
+            _ev = eur_usd["last_value"]
+            if _ev > 1.10:
+                render_action_item(f"EUR/USD at {_ev:.4f} — dollar weakness; European equities more competitive; consider EUR-hedged international exposure.", "#2ecc71")
+            elif _ev >= 1.0:
+                render_action_item(f"EUR/USD at {_ev:.4f} — near parity zone; FX neutral; no significant cross-currency tailwind or headwind.", "#f39c12")
+            else:
+                render_action_item(f"EUR/USD at {_ev:.4f} — below parity; USD dominance; potential European economic stress; underweight EUR assets.", "#e74c3c")
+
     # ── Row 2: USD/JPY | Brent Crude ─────────────────────────────────────────
     col3, col4 = st.columns(2)
 
@@ -100,6 +118,15 @@ def render_tab8(model_output, phase_output) -> None:
             st.plotly_chart(fig, use_container_width=True, key="tab8_jpyusd")
         chart_meta(jpy_usd, decimals=2)
 
+        if jpy_usd["last_value"] is not None:
+            _jv = jpy_usd["last_value"]
+            if _jv > 145:
+                render_action_item(f"USD/JPY at {_jv:.1f} — yen weakness; Japanese exporters benefit but Bank of Japan intervention risk elevated.", "#f39c12")
+            elif _jv >= 120:
+                render_action_item(f"USD/JPY at {_jv:.1f} — moderate range; yen normalising; Japan equities fairly valued on FX basis.", "#2ecc71")
+            else:
+                render_action_item(f"USD/JPY at {_jv:.1f} — strong yen; Japanese export competitiveness at risk; underweight Japan exporters.", "#e74c3c")
+
     with col4:
         st.markdown("##### Brent Crude Oil ($/bbl)")
         if not brent["data"].empty:
@@ -114,6 +141,15 @@ def render_tab8(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="USD / barrel")
             st.plotly_chart(fig, use_container_width=True, key="tab8_brent")
         chart_meta(brent, decimals=2)
+
+        if brent["last_value"] is not None:
+            _bv = brent["last_value"]
+            if _bv > 90:
+                render_action_item(f"Brent at ${_bv:.0f}/bbl — energy inflation risk elevated; overweight energy sector; monitor consumer spending impact.", "#e74c3c")
+            elif _bv >= 60:
+                render_action_item(f"Brent at ${_bv:.0f}/bbl — moderate range; energy market balanced; no major inflation shock from oil.", "#f39c12")
+            else:
+                render_action_item(f"Brent at ${_bv:.0f}/bbl — below $60; weak global demand signal; avoid energy sector; deflation risk elevated.", "#e74c3c")
 
     # ── Global Commodity Index ────────────────────────────────────────────────
     st.markdown("##### Global Commodity Price Index (World Bank / FRED)")
@@ -131,6 +167,15 @@ def render_tab8(model_output, phase_output) -> None:
         fig = dark_layout(fig, yaxis_title="Index (current = 100)")
         st.plotly_chart(fig, use_container_width=True, key="tab8_commodity")
     chart_meta(commodity, decimals=1)
+
+    if commodity["last_value"] is not None and len(commodity["data"]) >= 5:
+        _yoy_comm = (commodity["data"].iloc[-1] / commodity["data"].iloc[-5] - 1) * 100
+        if _yoy_comm > 10:
+            render_action_item(f"Global commodities +{_yoy_comm:.1f}% YoY — real asset inflation hedge; favour commodity producers and materials.", "#f39c12")
+        elif _yoy_comm >= -5:
+            render_action_item(f"Global commodities {_yoy_comm:+.1f}% YoY — stable; no major inflationary or deflationary commodity shock.", "#2ecc71")
+        else:
+            render_action_item(f"Global commodities {_yoy_comm:.1f}% YoY — falling sharply; global demand weakness signal; avoid cyclical commodity exposure.", "#e74c3c")
 
     # ── Metrics row ───────────────────────────────────────────────────────────
     st.markdown("##### Current Readings at a Glance")

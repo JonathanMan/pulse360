@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 from data.fred_client import fetch_series
 from components.chart_utils import (
     dark_layout, add_nber, add_end_labels, chart_meta,
-    hover_tmpl, time_window_start, threshold_line, render_implications
+    hover_tmpl, time_window_start, threshold_line, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
 
@@ -97,6 +97,17 @@ def render_tab5(model_output, phase_output) -> None:
             ) else ""
         )
 
+    if t10y3m["last_value"] is not None:
+        _yc = t10y3m["last_value"]
+        if _yc > 0.5:
+            render_action_item(f"10Y–3M spread at {_yc:+.2f}pp — yield curve positive; financial conditions normalising; supports risk-on equities.", "#2ecc71")
+        elif _yc >= 0:
+            render_action_item(f"10Y–3M spread at {_yc:+.2f}pp — barely positive; watch for re-inversion which would renew recession concerns.", "#f39c12")
+        elif _yc >= -1:
+            render_action_item(f"10Y–3M spread at {_yc:+.2f}pp — yield curve inverted; active recession signal; reduce equity risk and extend duration.", "#e74c3c")
+        else:
+            render_action_item(f"10Y–3M spread at {_yc:+.2f}pp — deep inversion; historically precedes recessions; significant defensive tilt warranted.", "#e74c3c")
+
     # ── Row 2: Yield Spreads | Fed Funds vs 10Y ──────────────────────────────
     col1, col2 = st.columns(2)
 
@@ -135,6 +146,14 @@ def render_tab5(model_output, phase_output) -> None:
         with col_b:
             chart_meta(t10y2y, decimals=2)
 
+        # ── Action item ──────────────────────────────────────────────────────
+        if t10y3m["last_value"] is not None:
+            _sp = t10y3m["last_value"]
+            if _sp < 0:
+                render_action_item(f"10Y–3M at {_sp:+.2f}pp — inverted; reduce duration risk in credit; favour short-end treasuries and quality.", "#e74c3c")
+            else:
+                render_action_item(f"10Y–3M at {_sp:+.2f}pp — positive and steepening; carry trade and bank stocks historically benefit.", "#2ecc71")
+
     with col2:
         st.markdown("##### Fed Funds vs 10Y Treasury")
         if not fedfunds["data"].empty or not dgs10["data"].empty:
@@ -172,6 +191,14 @@ def render_tab5(model_output, phase_output) -> None:
             fig = add_end_labels(fig, fmt=".2f", unit="%")
             st.plotly_chart(fig, use_container_width=True, key="tab5_rates")
         chart_meta(fedfunds, decimals=2)
+        if fedfunds["last_value"] is not None and dgs10["last_value"] is not None:
+            _gap = fedfunds["last_value"] - dgs10["last_value"]
+            if _gap > 0.5:
+                render_action_item(f"Fed Funds ({fedfunds['last_value']:.2f}%) above 10Y ({dgs10['last_value']:.2f}%) — policy restrictive; economy under rate pressure; watch for easing signals.", "#e74c3c")
+            elif abs(_gap) <= 0.5:
+                render_action_item(f"Fed Funds near 10Y yield — policy close to neutral; watch for directional FOMC signal.", "#f39c12")
+            else:
+                render_action_item(f"Fed Funds ({fedfunds['last_value']:.2f}%) below 10Y ({dgs10['last_value']:.2f}%) — positive carry; accommodative conditions; risk assets historically outperform.", "#2ecc71")
 
     # ── Row 3: NFCI | Credit Spreads ─────────────────────────────────────────
     col3, col4 = st.columns(2)
@@ -194,6 +221,14 @@ def render_tab5(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="NFCI Index")
             st.plotly_chart(fig, use_container_width=True, key="tab5_nfci")
         chart_meta(nfci, decimals=2)
+        if nfci["last_value"] is not None:
+            _nv = nfci["last_value"]
+            if _nv > 0.5:
+                render_action_item(f"NFCI at {_nv:.2f} — financial conditions tight; reduce leverage and avoid high-yield.", "#e74c3c")
+            elif _nv > 0:
+                render_action_item(f"NFCI at {_nv:.2f} — slightly tight; monitor for further tightening; selective high-yield caution.", "#f39c12")
+            else:
+                render_action_item(f"NFCI at {_nv:.2f} — accommodative conditions; risk assets supported; high-yield and equities historically perform well.", "#2ecc71")
 
     with col4:
         st.markdown("##### Credit Spreads — HY & IG OAS")
@@ -230,6 +265,16 @@ def render_tab5(model_output, phase_output) -> None:
         with col_f:
             chart_meta(ig_oas, decimals=0)
 
+    # ── Action item ──────────────────────────────────────────────────────────
+    if hy_oas["last_value"] is not None:
+        _hv = hy_oas["last_value"]
+        if _hv > 500:
+            render_action_item(f"HY spreads at {_hv:.0f} bps — stress-level; credit market pricing recession; avoid high-yield, extend investment-grade duration.", "#e74c3c")
+        elif _hv > 350:
+            render_action_item(f"HY spreads at {_hv:.0f} bps — elevated; reduce high-yield allocation and favour investment-grade credit.", "#f39c12")
+        else:
+            render_action_item(f"HY spreads at {_hv:.0f} bps — benign; selective high-yield positioning supported in this environment.", "#2ecc71")
+
     # ── 30Y Mortgage Rate ─────────────────────────────────────────────────────
     st.markdown("##### 30-Year Mortgage Rate")
     if not mortgage["data"].empty:
@@ -243,6 +288,14 @@ def render_tab5(model_output, phase_output) -> None:
         fig = dark_layout(fig, yaxis_title="Rate (%)")
         st.plotly_chart(fig, use_container_width=True, key="tab5_mortgage")
     chart_meta(mortgage, decimals=2)
+    if mortgage["last_value"] is not None:
+        _mv = mortgage["last_value"]
+        if _mv > 7:
+            render_action_item(f"30Y mortgage at {_mv:.2f}% — severely constraining housing; avoid homebuilder and rate-sensitive REIT exposure.", "#e74c3c")
+        elif _mv > 5:
+            render_action_item(f"30Y mortgage at {_mv:.2f}% — elevated; housing market under pressure; selective real estate caution warranted.", "#f39c12")
+        else:
+            render_action_item(f"30Y mortgage at {_mv:.2f}% — low; housing market supported; homebuilders and consumer staples benefit.", "#2ecc71")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

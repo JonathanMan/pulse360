@@ -15,7 +15,7 @@ from data.fred_client import fetch_series
 from data.market_client import fetch_sector_returns, fetch_shiller_cape
 from components.chart_utils import (
     dark_layout, add_nber, add_end_labels, chart_meta,
-    hover_tmpl, time_window_start, threshold_line, render_implications
+    hover_tmpl, time_window_start, threshold_line, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
 
@@ -82,6 +82,18 @@ def render_tab6(model_output, phase_output) -> None:
         with col_b:
             chart_meta(nasdaq, decimals=0)
 
+        # ── Action item ──────────────────────────────────────────────────────
+        if not sp500["data"].empty and len(sp500["data"]) >= 22:
+            _sp_mom = (sp500["data"].iloc[-1] / sp500["data"].iloc[-22] - 1) * 100
+            if _sp_mom >= 5:
+                render_action_item(f"S&P 500 up {_sp_mom:.1f}% over past month — momentum positive; maintain equity overweight and favour momentum sectors.", "#2ecc71")
+            elif _sp_mom >= 0:
+                render_action_item(f"S&P 500 up {_sp_mom:.1f}% over past month — modest gains; hold positions and watch for breakout or reversal.", "#f39c12")
+            elif _sp_mom >= -5:
+                render_action_item(f"S&P 500 down {abs(_sp_mom):.1f}% over past month — equities under pressure; review support levels before adding.", "#f39c12")
+            else:
+                render_action_item(f"S&P 500 down {abs(_sp_mom):.1f}% over past month — risk-off selloff; increase cash and defensives.", "#e74c3c")
+
     with col2:
         st.markdown("##### VIX — Volatility Index")
         if not vix["data"].empty:
@@ -100,6 +112,15 @@ def render_tab6(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="VIX Level")
             st.plotly_chart(fig, use_container_width=True, key="tab6_vix")
         chart_meta(vix, decimals=1)
+
+        if vix["last_value"] is not None:
+            _vv = vix["last_value"]
+            if _vv > 30:
+                render_action_item(f"VIX at {_vv:.1f} — high fear; historically a contrarian buying opportunity in expansions; defensive in confirmed recessions.", "#e74c3c")
+            elif _vv > 20:
+                render_action_item(f"VIX at {_vv:.1f} — elevated; market uncertainty rising; reduce position sizing and review hedges.", "#f39c12")
+            else:
+                render_action_item(f"VIX at {_vv:.1f} — calm; low-volatility environment favours carry strategies and risk-on positioning.", "#2ecc71")
 
     # ── Row 2: Credit Spreads ─────────────────────────────────────────────────
     st.markdown("##### Credit Spreads — HY & IG Option-Adjusted Spread")
@@ -137,6 +158,16 @@ def render_tab6(model_output, phase_output) -> None:
     with col4:
         chart_meta(ig_oas, decimals=0)
 
+    # ── Action item ──────────────────────────────────────────────────────────
+    if hy_oas["last_value"] is not None:
+        _hv = hy_oas["last_value"]
+        if _hv > 500:
+            render_action_item(f"HY spreads at {_hv:.0f} bps — stress-level; credit market pricing recession; avoid high-yield.", "#e74c3c")
+        elif _hv > 350:
+            render_action_item(f"HY spreads at {_hv:.0f} bps — elevated; reduce HY allocation and extend investment-grade duration.", "#f39c12")
+        else:
+            render_action_item(f"HY spreads at {_hv:.0f} bps — benign; selective high-yield positioning supported.", "#2ecc71")
+
     # ── Row 3: Sector ETF Returns ─────────────────────────────────────────────
     st.markdown("##### Sector ETF Performance — 1-Month Returns")
     sector_data = fetch_sector_returns(period_days=22)   # returns pd.DataFrame
@@ -157,6 +188,16 @@ def render_tab6(model_output, phase_output) -> None:
         fig.update_layout(height=350, margin={"l": 140})
         st.plotly_chart(fig, use_container_width=True, key="tab6_sectors")
         st.caption("Data via yfinance. Returns ≈ 22 trading days (~1 month).")
+
+        if not sector_data.empty:
+            _best = sector_data.iloc[0]
+            _worst = sector_data.iloc[-1]
+            _best_ret = _best["Return (%)"]
+            _worst_ret = _worst["Return (%)"]
+            if _best_ret > 0:
+                render_action_item(f"Leading sector: {_best['Sector']} ({_best_ret:+.1f}%) — rotation into {_best['Sector']} consistent with current cycle phase; laggard: {_worst['Sector']} ({_worst_ret:+.1f}%).", "#2ecc71")
+            else:
+                render_action_item(f"All sectors negative in past month — broad risk-off; defensive positioning across the board warranted.", "#e74c3c")
     else:
         st.info("Sector return data unavailable.")
 
@@ -183,6 +224,15 @@ def render_tab6(model_output, phase_output) -> None:
             f"Shiller CAPE · Current: **{cape['last_value']:.1f}** · "
             f"Long-run avg: {long_run_avg:.1f} · As of: {cape['last_date']}"
         )
+
+        if cape["last_value"] is not None:
+            _cv = cape["last_value"]
+            if _cv > 35:
+                render_action_item(f"CAPE at {_cv:.1f} — extremely elevated; long-run return expectations historically poor at these levels; reduce equity overweight.", "#e74c3c")
+            elif _cv > 25:
+                render_action_item(f"CAPE at {_cv:.1f} — above long-run average; equities richly valued; favour value over growth and tighten stop-losses.", "#f39c12")
+            else:
+                render_action_item(f"CAPE at {_cv:.1f} — near/below long-run average; valuation not a headwind; supports maintaining equity allocation.", "#2ecc71")
     else:
         st.info(f"Shiller CAPE data unavailable. {cape.get('error', '')}")
 

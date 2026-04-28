@@ -11,7 +11,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
-from components.chart_utils import dark_layout, add_nber, chart_meta, time_window_start, threshold_line, render_implications
+from components.chart_utils import dark_layout, add_nber, chart_meta, time_window_start, threshold_line, render_implications, render_action_item
 from ai.claude_client import get_investment_implications
 
 
@@ -53,6 +53,12 @@ def render_tab2(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="Index (2017=100)")
             st.plotly_chart(fig, use_container_width=True, key="tab2_indpro")
         chart_meta(indpro, decimals=1)
+        if indpro["last_value"] is not None and len(indpro["data"]) >= 2:
+            _ip_trend = indpro["data"].iloc[-1] - indpro["data"].iloc[-2]
+            if _ip_trend > 0:
+                render_action_item("Industrial output expanding — supports cyclical exposure; materials and industrials historically outperform.", "#2ecc71")
+            else:
+                render_action_item("Industrial output contracting — reduce cyclical exposure; watch for sustained decline as a recession precursor.", "#e74c3c")
 
     with col2:
         st.markdown("##### Capacity Utilization (TCU)")
@@ -68,6 +74,13 @@ def render_tab2(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="% of Capacity")
             st.plotly_chart(fig, use_container_width=True, key="tab2_tcu")
         chart_meta(tcu, decimals=1)
+        if tcu["last_value"] is not None:
+            if tcu["last_value"] >= 80:
+                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — near full capacity; watch for inflationary pressure and margin compression.", "#f39c12")
+            elif tcu["last_value"] >= 75:
+                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — healthy growth without overheating; no capacity constraint concerns.", "#2ecc71")
+            else:
+                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — significant slack in the economy; conditions support accommodative policy.", "#e74c3c")
 
     # ── Row 2: ISM PMI notice ─────────────────────────────────────────────────
     st.markdown("##### ISM PMI — Manufacturing &amp; Services")
@@ -105,6 +118,14 @@ def render_tab2(model_output, phase_output) -> None:
         fig = dark_layout(fig, yaxis_title="% Month-over-Month")
         st.plotly_chart(fig, use_container_width=True, key="tab2_durable")
     chart_meta(adxtno, decimals=1)
+    if not adxtno["data"].empty and len(adxtno["data"]) >= 2:
+        _dg_mom = adxtno["data"].pct_change().iloc[-1] * 100
+        if _dg_mom >= 1.0:
+            render_action_item(f"Durable goods orders +{_dg_mom:.1f}% MoM — business investment expanding; supports industrials and capex-linked equities.", "#2ecc71")
+        elif _dg_mom >= 0:
+            render_action_item(f"Durable goods orders +{_dg_mom:.1f}% MoM — capex momentum stalling; watch for consecutive months of weakness.", "#f39c12")
+        else:
+            render_action_item(f"Durable goods orders {_dg_mom:.1f}% MoM — capex contraction signal; reduce industrials exposure and monitor trend.", "#e74c3c")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

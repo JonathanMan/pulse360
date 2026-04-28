@@ -11,7 +11,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
-from components.chart_utils import dark_layout, add_nber, chart_meta, time_window_start, threshold_line, yoy_pct, render_implications
+from components.chart_utils import dark_layout, add_nber, chart_meta, time_window_start, threshold_line, yoy_pct, render_implications, render_action_item
 from ai.claude_client import get_investment_implications
 
 
@@ -62,6 +62,13 @@ def render_tab3(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="% Unemployed")
             st.plotly_chart(fig, use_container_width=True, key="tab3_unrate")
         chart_meta(unrate, decimals=1)
+        if unrate["last_value"] is not None:
+            if unrate["last_value"] <= 4.0:
+                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — tight labor market; watch for wage pressure and sustained Fed hawkishness.", "#f39c12")
+            elif unrate["last_value"] <= 5.0:
+                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — labor market healthy; no immediate recession signal from this metric.", "#2ecc71")
+            else:
+                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — labor market weakening; defensive positioning and reduced equity risk warranted.", "#e74c3c")
 
     with col2:
         st.markdown("##### Sahm Rule Recession Indicator")
@@ -80,6 +87,13 @@ def render_tab3(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="Sahm Indicator (pp)")
             st.plotly_chart(fig, use_container_width=True, key="tab3_sahm")
         chart_meta(sahm, decimals=2)
+        if sahm["last_value"] is not None:
+            if sahm["last_value"] >= 0.5:
+                render_action_item(f"Sahm Rule TRIGGERED at {sahm['last_value']:.2f} — recession signal active; shift decisively to defensives and capital preservation.", "#e74c3c")
+            elif sahm["last_value"] >= 0.3:
+                render_action_item(f"Sahm Rule at {sahm['last_value']:.2f} — warning zone; trim cyclical exposure and build cash buffer.", "#f39c12")
+            else:
+                render_action_item(f"Sahm Rule at {sahm['last_value']:.2f} — benign; no labor deterioration detected; maintain current positioning.", "#2ecc71")
 
     # ── Row 2: Nonfarm Payrolls MoM | Initial Claims ─────────────────────────
     col3, col4 = st.columns(2)
@@ -99,6 +113,14 @@ def render_tab3(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="Change (000s)")
             st.plotly_chart(fig, use_container_width=True, key="tab3_payems")
         chart_meta(payems, decimals=0)
+        if not payems["data"].empty and len(payems["data"]) >= 2:
+            _pay_mom = payems["data"].diff().iloc[-1] / 1000
+            if _pay_mom >= 200:
+                render_action_item(f"+{_pay_mom:.0f}K jobs added — strong job creation; consumer spending engine intact; risk assets supported.", "#2ecc71")
+            elif _pay_mom >= 0:
+                render_action_item(f"+{_pay_mom:.0f}K jobs added — moderate growth; expansion continues but momentum moderating; monitor trend.", "#f39c12")
+            else:
+                render_action_item(f"{_pay_mom:.0f}K jobs lost — labor market contracting; defensive rotation and duration extension warranted.", "#e74c3c")
 
     with col4:
         st.markdown("##### Initial Claims 4-Week Avg (IC4WSA)")
@@ -114,6 +136,11 @@ def render_tab3(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="Claims (000s)")
             st.plotly_chart(fig, use_container_width=True, key="tab3_ic4w")
         chart_meta(ic4w, decimals=0)
+        if ic4w["last_value"] is not None:
+            if ic4w["last_value"] > 300000:
+                render_action_item(f"Claims at {ic4w['last_value']/1000:.0f}K — above 300K threshold; labor market stress elevated; watch before adding equity risk.", "#e74c3c")
+            else:
+                render_action_item(f"Claims at {ic4w['last_value']/1000:.0f}K — normal range; no meaningful layoff trend; labor market remains supportive.", "#2ecc71")
 
     # ── Row 3: JOLTS Job Openings ─────────────────────────────────────────────
     st.markdown("##### JOLTS Job Openings (JTSJOL)")
@@ -129,6 +156,14 @@ def render_tab3(model_output, phase_output) -> None:
         fig = dark_layout(fig, yaxis_title="Job Openings (000s)")
         st.plotly_chart(fig, use_container_width=True, key="tab3_jolts")
     chart_meta(jolts, decimals=0)
+    if jolts["last_value"] is not None:
+        _jolts_m = jolts["last_value"] / 1_000_000
+        if _jolts_m > 8:
+            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor demand strong; wage inflation risk; Fed likely to stay restrictive.", "#f39c12")
+        elif _jolts_m >= 5:
+            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor market rebalancing toward sustainable levels; benign signal.", "#2ecc71")
+        else:
+            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor demand weakening; monitor unemployment rate for follow-through.", "#e74c3c")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    dark_layout, add_nber, chart_meta, time_window_start, yoy_pct, render_implications
+    dark_layout, add_nber, chart_meta, time_window_start, yoy_pct, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
 
@@ -59,6 +59,15 @@ def render_tab7(model_output, phase_output) -> None:
             st.plotly_chart(fig, use_container_width=True, key="tab7_houst")
         chart_meta(houst, decimals=0)
 
+        if houst["last_value"] is not None:
+            _hv = houst["last_value"]
+            if _hv > 1400:
+                render_action_item(f"Housing starts at {_hv:,.0f}K — above trend; construction sector healthy; homebuilders and building materials supported.", "#2ecc71")
+            elif _hv > 1000:
+                render_action_item(f"Housing starts at {_hv:,.0f}K — moderate; market adjusting to rate environment; selective homebuilder exposure.", "#f39c12")
+            else:
+                render_action_item(f"Housing starts at {_hv:,.0f}K — depressed; residential investment contracting; avoid homebuilders and rate-sensitive REITs.", "#e74c3c")
+
     with col2:
         st.markdown("##### Building Permits (PERMIT)")
         if not permit["data"].empty:
@@ -73,6 +82,15 @@ def render_tab7(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="Thousands of Units (SAAR)")
             st.plotly_chart(fig, use_container_width=True, key="tab7_permit")
         chart_meta(permit, decimals=0)
+
+        if permit["last_value"] is not None:
+            _pv = permit["last_value"]
+            if _pv > 1400:
+                render_action_item(f"Permits at {_pv:,.0f}K — strong pipeline; homebuilder and materials sectors supported by forward activity.", "#2ecc71")
+            elif _pv > 1000:
+                render_action_item(f"Permits at {_pv:,.0f}K — moderate pipeline; healthy but not booming; neutral stance on housing.", "#f39c12")
+            else:
+                render_action_item(f"Permits at {_pv:,.0f}K — weak pipeline; forward construction contracting; housing recession risk elevated.", "#e74c3c")
 
     # ── Row 2: Case-Shiller HPI YoY | Consumer Sentiment ─────────────────────
     col3, col4 = st.columns(2)
@@ -93,6 +111,17 @@ def render_tab7(model_output, phase_output) -> None:
                 fig = dark_layout(fig, yaxis_title="YoY %")
                 st.plotly_chart(fig, use_container_width=True, key="tab7_cshpi")
         chart_meta(cs_hpi, decimals=1)
+
+        if not cs_hpi["data"].empty:
+            _cs_yoy = yoy_pct(cs_hpi["data"], periods=12).dropna()
+            if not _cs_yoy.empty:
+                _cv = _cs_yoy.iloc[-1]
+                if _cv > 5:
+                    render_action_item(f"Home prices up {_cv:.1f}% YoY — housing wealth supporting consumer confidence; watch for affordability constraint.", "#f39c12")
+                elif _cv >= 0:
+                    render_action_item(f"Home prices up {_cv:.1f}% YoY — moderate growth; healthy market signal; no bubble or bust concern.", "#2ecc71")
+                else:
+                    render_action_item(f"Home prices down {abs(_cv):.1f}% YoY — housing wealth destruction; consumer spending headwind; avoid real estate.", "#e74c3c")
 
     with col4:
         st.markdown("##### U of Michigan Consumer Sentiment")
@@ -115,6 +144,15 @@ def render_tab7(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="Index Level")
             st.plotly_chart(fig, use_container_width=True, key="tab7_sentiment")
         chart_meta(umcsent, decimals=1)
+
+        if umcsent["last_value"] is not None:
+            _sv = umcsent["last_value"]
+            if _sv >= 80:
+                render_action_item(f"Sentiment at {_sv:.1f} — confident consumers; spending cycle intact; consumer discretionary and retail favoured.", "#2ecc71")
+            elif _sv >= 60:
+                render_action_item(f"Sentiment at {_sv:.1f} — mixed outlook; spending cautious; focus on non-discretionary consumer staples.", "#f39c12")
+            else:
+                render_action_item(f"Sentiment at {_sv:.1f} — pessimistic; spending retraction risk; reduce discretionary, add consumer staples.", "#e74c3c")
 
     # ── Row 3: Retail Sales | Personal Savings Rate ───────────────────────────
     col5, col6 = st.columns(2)
@@ -150,6 +188,18 @@ def render_tab7(model_output, phase_output) -> None:
         with col_rs2:
             chart_meta(rsfsxmv, decimals=1)
 
+        # ── Action item ──────────────────────────────────────────────────────
+        if not rsxfs["data"].empty:
+            _rs_yoy = yoy_pct(rsxfs["data"]).dropna()
+            if not _rs_yoy.empty:
+                _rv = _rs_yoy.iloc[-1]
+                if _rv > 3:
+                    render_action_item(f"Retail sales +{_rv:.1f}% YoY — consumer engine firing; consumer discretionary and payments sectors benefit.", "#2ecc71")
+                elif _rv >= 0:
+                    render_action_item(f"Retail sales +{_rv:.1f}% YoY — spending decelerating; selective consumer exposure; watch for further softening.", "#f39c12")
+                else:
+                    render_action_item(f"Retail sales {_rv:.1f}% YoY — consumer retrenchment underway; shift to consumer staples and defensive sectors.", "#e74c3c")
+
     with col6:
         st.markdown("##### Personal Savings Rate (PSAVERT)")
         if not psavert["data"].empty:
@@ -164,6 +214,15 @@ def render_tab7(model_output, phase_output) -> None:
             fig = dark_layout(fig, yaxis_title="% of Disposable Income")
             st.plotly_chart(fig, use_container_width=True, key="tab7_savings")
         chart_meta(psavert, decimals=1)
+
+        if psavert["last_value"] is not None:
+            _psv = psavert["last_value"]
+            if _psv > 7:
+                render_action_item(f"Savings rate at {_psv:.1f}% — consumers building buffer; potential future spending catalyst but current demand subdued.", "#f39c12")
+            elif _psv >= 3:
+                render_action_item(f"Savings rate at {_psv:.1f}% — normalised; consumer spending capacity healthy; supports sustained demand.", "#2ecc71")
+            else:
+                render_action_item(f"Savings rate at {_psv:.1f}% — very low; spending may be unsustainable; watch for pullback as buffer runs out.", "#e74c3c")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")
