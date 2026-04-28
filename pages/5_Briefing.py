@@ -24,51 +24,125 @@ from ai.claude_client import stream_briefing_section
 # ── Dark-theme CSS ────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .stApp { background-color: #0e1117; }
+    /* ── Base ── */
+    .stApp { background-color: #0e1117; color: #ffffff; }
     .main .block-container { padding-top: 1rem; max-width: 1200px; }
-    .section-card {
-        background: #1a1a2e;
-        border: 1px solid #2a2a4a;
-        border-radius: 10px;
-        padding: 20px 24px;
-        margin-bottom: 16px;
+
+    /* ── All body text white ── */
+    .stApp p, .stApp li, .stApp span, .stApp div,
+    .stApp label, .stApp caption,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] li,
+    [data-testid="stMarkdownContainer"] td,
+    [data-testid="stMarkdownContainer"] th { color: #ffffff !important; }
+
+    /* ── Headings ── */
+    .stApp h1, .stApp h2, .stApp h3,
+    .stApp h4, .stApp h5, .stApp h6,
+    [data-testid="stMarkdownContainer"] h1,
+    [data-testid="stMarkdownContainer"] h2,
+    [data-testid="stMarkdownContainer"] h3,
+    [data-testid="stMarkdownContainer"] h4 { color: #e0e0ff !important; }
+
+    /* ── Caption / small text ── */
+    .stApp small, .stCaption { color: #aaaaaa !important; }
+
+    /* ── Inline code ── */
+    [data-testid="stMarkdownContainer"] code {
+        background: #1e1e3a !important;
+        color: #c8c8ff !important;
+        border-radius: 4px;
+        padding: 1px 5px;
     }
-    .section-header {
-        font-size: 18px;
-        font-weight: 700;
-        color: #e0e0ff;
-        margin-bottom: 4px;
-    }
-    .section-subheader {
-        font-size: 12px;
-        color: #888;
-        margin-bottom: 14px;
-    }
+
+    /* ── Result box wrapper ── */
     .result-box {
-        background: #0d0d1a;
-        border: 1px solid #333;
+        background: #12122a;
+        border: 1px solid #2a2a5a;
+        border-left: 3px solid #4a4aaa;
         border-radius: 8px;
-        padding: 16px;
-        margin-top: 12px;
-        font-size: 14px;
-        line-height: 1.6;
+        padding: 18px 20px;
+        margin-top: 10px;
+        line-height: 1.7;
     }
-    div[data-testid="stTextInput"] > div > input,
+
+    /* ── Metric cards ── */
+    div[data-testid="metric-container"] {
+        background: #1a1a2e;
+        border-radius: 8px;
+        padding: 12px 16px;
+        border: 1px solid #333;
+    }
+    div[data-testid="metric-container"] label,
+    div[data-testid="metric-container"] div { color: #ffffff !important; }
+
+    /* ── Input fields ── */
+    div[data-testid="stTextInput"] > div > input {
+        background: #12122a !important;
+        border-color: #333 !important;
+        color: #ffffff !important;
+    }
+    div[data-testid="stTextInput"] label { color: #cccccc !important; }
+
+    /* ── Selectbox ── */
+    div[data-testid="stSelectbox"] label { color: #cccccc !important; }
     div[data-testid="stSelectbox"] > div > div {
         background: #12122a !important;
         border-color: #333 !important;
-        color: #e0e0ff !important;
+        color: #ffffff !important;
     }
+
+    /* ── Tables inside result boxes ── */
+    [data-testid="stMarkdownContainer"] table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+    }
+    [data-testid="stMarkdownContainer"] th {
+        background: #1e1e40 !important;
+        color: #c8c8ff !important;
+        padding: 8px 12px;
+        border: 1px solid #333;
+        font-size: 13px;
+    }
+    [data-testid="stMarkdownContainer"] td {
+        padding: 7px 12px;
+        border: 1px solid #222;
+        font-size: 13px;
+        vertical-align: top;
+    }
+    [data-testid="stMarkdownContainer"] tr:nth-child(even) td {
+        background: #0f0f22 !important;
+    }
+
+    /* ── Horizontal rule ── */
+    hr { border-color: #2a2a4a !important; }
+
+    /* ── Run buttons ── */
     .stButton > button {
         background: #2a2a6a;
-        color: #e0e0ff;
+        color: #ffffff;
         border: 1px solid #4a4a9a;
         border-radius: 6px;
+        font-weight: 600;
     }
     .stButton > button:hover {
         background: #3a3a8a;
-        border-color: #6a6aba;
+        border-color: #7a7aca;
+        color: #ffffff;
     }
+
+    /* ── Signal legend chips ── */
+    .sig-legend {
+        display: inline-flex;
+        gap: 14px;
+        font-size: 12px;
+        color: #aaa;
+        margin-bottom: 6px;
+    }
+    .sig-green  { color: #2ecc71; font-weight: 600; }
+    .sig-orange { color: #f39c12; font-weight: 600; }
+    .sig-red    { color: #e74c3c; font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -76,7 +150,15 @@ st.markdown("""
 st.markdown("## 📋 At a Glance Briefing")
 st.caption(
     "Seven AI-powered research sections — fill in your parameters and click **Run** to stream live analysis from Claude Sonnet. "
-    "Results are cached in your session until you clear them or refresh."
+    "Results persist in your session until you clear them or restart the app."
+)
+st.markdown(
+    '<div class="sig-legend">'
+    '<span class="sig-green">🟢 Positive / Low risk</span>'
+    '<span class="sig-orange">🟡 Neutral / Moderate risk</span>'
+    '<span class="sig-red">🔴 Negative / High risk</span>'
+    "</div>",
+    unsafe_allow_html=True,
 )
 st.caption(
     "*Educational research only — not personalised investment advice. "
@@ -100,18 +182,33 @@ def _run_section(prompt: str, state_key: str, placeholder) -> None:
     full_text = ""
     for chunk in stream_briefing_section(prompt):
         full_text += chunk
-        placeholder.markdown(full_text + "▌")
+        # Render markdown directly so 🟢🟡🔴 and formatting display correctly while streaming
+        placeholder.markdown(full_text + " ▌")
     st.session_state[state_key] = full_text
     placeholder.markdown(full_text)
 
 
-def _result_area(state_key: str):
-    """Render persisted result if available."""
-    if st.session_state.get(state_key):
-        st.markdown(
-            f'<div class="result-box">{st.session_state[state_key]}</div>',
-            unsafe_allow_html=True,
+def _result_area(state_key: str) -> None:
+    """Render persisted result as styled markdown inside a card container."""
+    text = st.session_state.get(state_key, "")
+    if not text:
+        return
+    # Convert markdown → HTML so we can wrap it in a styled div cleanly.
+    # Falls back to raw text if the markdown library is not installed.
+    try:
+        import markdown as _md
+        html_body = _md.markdown(
+            text,
+            extensions=["tables", "fenced_code", "nl2br"],
         )
+    except ImportError:
+        # Graceful fallback: render as plain markdown outside the styled box
+        st.markdown(text)
+        return
+    st.markdown(
+        f'<div class="result-box">{html_body}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════

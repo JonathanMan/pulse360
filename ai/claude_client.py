@@ -292,7 +292,19 @@ RULES:
 5. Never give personalised investment advice. Frame everything as research and historical context.
 6. Be concise but complete — cover every output field the prompt requests.
 7. End every response with:
-   *Educational research only — not personalised investment advice. Consult a licensed advisor.*"""
+   *Educational research only — not personalised investment advice. Consult a licensed advisor.*
+
+SIGNAL COLOUR CODING — apply consistently to every key reading, ticker, metric, or finding:
+- Prefix with 🟢 when the reading is positive, bullish, or low-risk
+  (e.g. strong earnings, low short interest risk, solid balance sheet, accommodative conditions)
+- Prefix with 🟡 when the reading is neutral, mixed, or moderate risk
+  (e.g. uncertain outlook, elevated but not extreme, conflicting signals)
+- Prefix with 🔴 when the reading is negative, bearish, or high-risk
+  (e.g. deteriorating fundamentals, high regulatory risk, dangerous valuation, danger zone)
+
+Apply the signal prefix to bullet points, table rows, and inline metric values wherever a clear
+positive/neutral/negative judgement can be made. Not every word needs a prefix — use them on
+the key finding per line."""
 
 
 def stream_briefing_section(
