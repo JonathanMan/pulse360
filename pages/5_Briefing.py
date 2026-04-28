@@ -208,37 +208,67 @@ def _result_area(state_key: str) -> None:
 # ══════════════════════════════════════════════════════════════════════════════
 # 1 · MACRO SNAPSHOT
 # ══════════════════════════════════════════════════════════════════════════════
+
+_MACRO_MARKETS = [
+    "United States", "Eurozone", "United Kingdom", "Japan", "China",
+    "Australia", "Canada", "India", "Brazil", "South Korea",
+    "Germany", "France", "Italy", "Spain", "Switzerland",
+    "Hong Kong", "Singapore", "South Africa", "Mexico", "Saudi Arabia",
+    "Emerging Markets (broad)", "Frontier Markets (broad)",
+]
+
 with st.container():
     st.markdown("### 1 · Macro Snapshot")
-    st.caption("Search the web and summarise today's macro backdrop, identify historically outperforming sectors, and list 3 historical parallels.")
+    st.caption("Search the web and summarise today's macro backdrop across selected markets, identify historically outperforming sectors, and list 3 historical parallels.")
 
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([4, 1])
     with col1:
-        macro_region = st.text_input(
-            "Country / Region",
-            value="United States",
-            key="macro_region",
-            placeholder="e.g. United States, Eurozone, Japan",
+        macro_markets = st.multiselect(
+            "Markets",
+            options=_MACRO_MARKETS,
+            default=["United States"],
+            key="macro_markets",
+            placeholder="Select one or more markets…",
         )
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
         run_macro = st.button("▶ Run", key="btn_macro", use_container_width=True)
 
-    if run_macro and macro_region.strip():
+    if run_macro and macro_markets:
+        markets_str = ", ".join(macro_markets)
+        multi = len(macro_markets) > 1
         prompt = (
-            f"Search the web and summarize today's macro backdrop for {macro_region}: "
-            f"inflation, interest rates, GDP, and employment. "
-            f"Based on this setup, identify which sectors and asset classes have historically outperformed. "
+            f"Search the web and summarize today's macro backdrop for the following "
+            f"{'markets' if multi else 'market'}: {markets_str}.\n\n"
+            f"For {'each market' if multi else 'this market'} cover: "
+            f"inflation, interest rates, GDP trajectory, and employment.\n"
+            + (
+                f"After the per-market breakdown, include a **Cross-Market Comparison** section "
+                f"highlighting key divergences and convergences between the markets.\n"
+                if multi else ""
+            )
+            + f"Based on the combined setup, identify which sectors and asset classes have "
+            f"historically outperformed in similar macro conditions. "
             f"Include 3 historical parallels, the typical outperformance window, and 3 sources.\n\n"
             f"Structure your response with these headers:\n"
-            f"**Current Macro Backdrop** — key data points for each of the 4 indicators\n"
-            f"**Historically Outperforming Sectors & Asset Classes** — table or list with typical outperformance window\n"
+            + (
+                f"**{'Market-by-Market Backdrop' if multi else 'Current Macro Backdrop'}** "
+                f"— {'one sub-section per market with ' if multi else ''}"
+                f"key data points for each of the 4 indicators\n"
+            )
+            + (
+                f"**Cross-Market Comparison** — key divergences and what they signal\n"
+                if multi else ""
+            )
+            + f"**Historically Outperforming Sectors & Asset Classes** — table or list with typical outperformance window\n"
             f"**3 Historical Parallels** — date range, macro conditions, what outperformed\n"
             f"**Sources** — 3 linked or named sources"
         )
         placeholder = st.empty()
-        with st.spinner("Researching macro backdrop…"):
+        with st.spinner(f"Researching macro backdrop for {markets_str}…"):
             _run_section(prompt, "brief_macro", placeholder)
+    elif run_macro and not macro_markets:
+        st.warning("Please select at least one market.")
     else:
         _result_area("brief_macro")
 
