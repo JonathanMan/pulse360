@@ -162,6 +162,10 @@ if "sim_ready" not in st.session_state:
 
 # ── Preset buttons ────────────────────────────────────────────────────────────
 
+st.caption(
+    "Use the preset buttons to jump to a known historical episode and see how the model would have read it, "
+    "then customise from there — or start from the current baseline and stress individual inputs to explore 'what if' questions."
+)
 preset_cols = st.columns(len(PRESETS))
 for col, (label, vals) in zip(preset_cols, PRESETS.items()):
     with col:
@@ -181,6 +185,13 @@ col_left, col_right = st.columns([12, 10])
 
 with col_left:
     st.markdown("##### Model inputs")
+    st.caption(
+        "Each slider controls one of the seven model inputs. "
+        "The stress score (🟢 0–0.4 · 🟡 0.4–0.7 · 🔴 0.7–1.0) shown below each slider "
+        "tells you how alarming that value is relative to its historical range — "
+        "0 means completely benign, 1 means as stressed as it has ever been. "
+        "The overall probability on the right updates instantly as you move any slider."
+    )
     for feat in _FEAT_CFG:
         label = f"**{feat['name']}** · {feat['weight']*100:.0f}% weight"
         st.markdown(label)
@@ -280,6 +291,13 @@ with col_right:
         font         = {"color": "#aaa"},
     )
     st.plotly_chart(fig_gauge, use_container_width=True, key="sim_gauge")
+    st.caption(
+        "The gauge shows the blended recession probability for your current slider settings. "
+        "🟢 Green (0–25%) = expansion-friendly conditions; "
+        "🟡 Yellow (25–50%) = elevated risk warranting caution; "
+        "🔴 Red (50–100%) = high probability of recession. "
+        "The phase badge below the gauge labels the likely cycle position implied by the combination of inputs."
+    )
 
     # ── Phase badge ───────────────────────────────────────────────────────────
     st.markdown(
@@ -292,6 +310,13 @@ with col_right:
 
     # ── Feature contribution chart ────────────────────────────────────────────
     st.markdown("##### Feature contributions (pp)")
+    st.caption(
+        "Each horizontal bar shows how much one indicator adds to the overall recession probability, "
+        "measured in percentage points (pp). Bars are colour-coded by stress level: "
+        "🟢 green = benign, 🟡 yellow = moderately stressed, 🔴 red = highly stressed. "
+        "A longer bar means that indicator is the dominant driver of the current reading — "
+        "useful for identifying which lever to focus on when exploring 'what if' questions."
+    )
     names   = [r["name"].replace("Treasury Spread","Spread").replace("Manufacturing ","") for r in feature_results]
     contribs = [r["contribution"] for r in feature_results]
     bar_colors = [
@@ -334,6 +359,13 @@ if "sim_analysis" in st.session_state:
     snap = st.session_state["sim_analysis"]
     st.markdown("---")
     st.markdown("#### 🤖 Scenario Analysis")
+    st.caption(
+        "Claude's plain-English interpretation of the scenario you have dialled in — "
+        "what the combination of inputs signals about the current cycle phase, the key risks to watch, "
+        "and the broad investment implications. Useful for stress-testing narratives: "
+        "e.g. 'does this feel like 2007 or 2015?' "
+        "Remember this is educational analysis, not personalised investment advice."
+    )
     st.caption(
         f"Probability: **{snap['probability']:.1f}%** · "
         f"Phase: **{snap['phase']}** · "
