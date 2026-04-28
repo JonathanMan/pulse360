@@ -38,6 +38,18 @@ st.caption(
     "Covers 3 NBER recessions: 2001, 2007–09, 2020"
 )
 st.markdown(
+    "This page tests whether the recession probability model would have worked historically. "
+    "At every calendar month from 1997 to today, the model is re-run using only the data that "
+    "was actually available at that moment — no hindsight, no future data leaked in. "
+    "The result is a continuous probability curve plotted against the three NBER-dated recessions "
+    "(grey shading). "
+    "**How to interpret it:** look for whether the model crossed 50% before or early in each recession "
+    "(lead time), whether it stayed low during expansions (low false-positive rate), and how quickly "
+    "it recovered after each downturn. The summary stats below the chart quantify all three. "
+    "A model that consistently leads recessions by 2–3 months with few false positives is useful for "
+    "tilting defensively before conditions deteriorate — the backtest tells you whether this one earns that trust."
+)
+st.markdown(
     "> **Methodology:** At each calendar month, the model is run using only data "
     "available *up to that date* — no look-ahead bias. "
     "HY OAS data begins Dec 1996, so the full backtest starts Jan 1997."

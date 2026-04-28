@@ -39,6 +39,19 @@ st.caption(
     "How each asset class has performed during Expansion, Late Cycle, "
     "Contraction, and Recovery phases · 1997–present"
 )
+st.markdown(
+    "This page answers a simple but powerful question: given the current cycle phase, what have "
+    "equities, bonds, gold, oil, and the dollar historically done? "
+    "Every month since 1997 is assigned to a phase (Expansion, Late Cycle, Contraction, or Recovery) "
+    "using the same model that runs on the Dashboard, and the actual asset class returns for those "
+    "months are then aggregated into statistics. "
+    "**How to interpret it:** the annualised return bars show the average tailwind or headwind each "
+    "asset class has faced in a given phase — a tall green bar means that phase has historically been "
+    "a strong tailwind, a red bar means a headwind. "
+    "Pair this with the current phase shown on the Dashboard to understand which asset classes have "
+    "the historical wind at their back right now, and use the win rate and volatility stats to judge "
+    "how consistent and smooth that historical edge has been."
+)
 
 # ── Load dependencies ─────────────────────────────────────────────────────────
 with st.spinner("Loading backtest and asset class data… (cached after first run)"):

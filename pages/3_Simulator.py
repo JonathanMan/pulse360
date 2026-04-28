@@ -42,6 +42,19 @@ st.caption(
     "Adjust any input to see how the recession probability responds · "
     "Hit 'Analyse' to get a Claude interpretation of the scenario"
 )
+st.markdown(
+    "This page lets you stress-test the model by manually dialling in hypothetical economic conditions. "
+    "The seven sliders represent the key inputs — yield curve, unemployment trend, activity index, "
+    "financial conditions, jobless claims, credit spreads, and manufacturing PMI — and the recession "
+    "probability updates in real time as you move them. "
+    "**How to interpret it:** use the preset scenarios (e.g. 2008 Crisis, COVID Shock, Soft Landing) "
+    "to see how the model would read historical episodes, or build your own by asking 'what if the "
+    "Fed cuts rates aggressively but PMI stays weak?' "
+    "Each slider shows a stress score from 0 (benign) to 1 (maximum stress) and its contribution to "
+    "the overall probability — so you can see exactly which inputs are driving the signal and how "
+    "sensitive the model is to changes in each one. "
+    "Hit **Analyse this scenario** to get a plain-English Claude interpretation of whatever combination you have dialled in."
+)
 
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
