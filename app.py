@@ -22,9 +22,11 @@ st.set_page_config(
 st.markdown("""
 <style>
     /* ── Body text → white ── */
-    .main p, .main li, .main span,
+    .main p, .main li, .main span, .main strong, .main b,
     .main [data-testid="stMarkdownContainer"] p,
-    .main [data-testid="stMarkdownContainer"] li { color: #ffffff !important; }
+    .main [data-testid="stMarkdownContainer"] li,
+    .main [data-testid="stMarkdownContainer"] strong,
+    .main [data-testid="stMarkdownContainer"] b { color: #ffffff !important; }
 
     /* ── Headings → white (markdown + native st.header/subheader/title) ── */
     .main h1, .main h2, .main h3,

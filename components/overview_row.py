@@ -41,9 +41,9 @@ def _recession_gauge(probability: float, traffic_light: str) -> go.Figure:
                 "range": [0, 100],
                 "tickvals": [0, 25, 50, 75, 100],
                 "ticktext": ["0", "25", "50", "75", "100"],
-                "tickfont": {"size": 10, "color": "#888"},
+                "tickfont": {"size": 10, "color": "#cccccc"},
                 "tickwidth": 1,
-                "tickcolor": "#555",
+                "tickcolor": "#888",
             },
             "bar":       {"color": bar_color, "thickness": 0.65},
             "bgcolor":   "#1a1a2e",
@@ -86,7 +86,7 @@ def _contributions_chart(model_output: RecessionModelOutput) -> go.Figure:
         marker_color=bar_colors,
         text=[f"{f.contribution:.1f}pp" for f in features],
         textposition="outside",
-        textfont={"size": 11, "color": "#cccccc"},
+        textfont={"size": 11, "color": "#ffffff"},
         hovertemplate=(
             "<b>%{y}</b><br>"
             "Contribution: %{x:.2f} pp<br>"
@@ -100,11 +100,11 @@ def _contributions_chart(model_output: RecessionModelOutput) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis={
             "title": "Contribution to Probability (percentage points)",
-            "color": "#888",
+            "color": "#cccccc",
             "gridcolor": "#333",
             "range": [0, max(f.contribution for f in features) * 1.35],
         },
-        yaxis={"color": "#cccccc", "gridcolor": "rgba(0,0,0,0)"},
+        yaxis={"color": "#ffffff", "gridcolor": "rgba(0,0,0,0)"},
         font={"color": "#ffffff"},
         showlegend=False,
     )
@@ -148,9 +148,9 @@ def _risk_scorecard(model_output: RecessionModelOutput) -> None:
                             background:{bg}; border-radius:10px;
                             border:1px solid #444; min-height:80px;">
                     <div style="font-size:22px; line-height:1;">{icon}</div>
-                    <div style="font-size:11px; color:#ccc; margin-top:5px;
+                    <div style="font-size:11px; color:#ffffff; margin-top:5px;
                                 font-weight:600;">{_SCORECARD_LABELS[sid]}</div>
-                    <div style="font-size:10px; color:#888; margin-top:2px;">
+                    <div style="font-size:10px; color:#cccccc; margin-top:2px;">
                         {status}
                     </div>
                 </div>
@@ -223,7 +223,7 @@ def render_overview_row(
         st.caption(phase_output.notes)
         for ind in phase_output.confirming_indicators[:3]:
             st.markdown(
-                f"<div style='font-size:11px; color:#888; margin-top:2px;'>✓ {ind}</div>",
+                f"<div style='font-size:11px; color:#aaaaaa; margin-top:2px;'>✓ {ind}</div>",
                 unsafe_allow_html=True,
             )
 
@@ -270,7 +270,7 @@ def render_overview_row(
                                 margin-top:4px;">
                         {lei_growth:+.1f}%
                     </div>
-                    <div style="font-size:11px; color:#888; margin-top:4px;">
+                    <div style="font-size:11px; color:#aaaaaa; margin-top:4px;">
                         6-mo annualised
                     </div>
                 </div>
