@@ -17,6 +17,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from components.chart_utils import render_action_item
 from models.cycle_classifier import CyclePhaseOutput
 from models.recession_model import RecessionModelOutput
 
@@ -267,11 +268,9 @@ def render_overview_row(
                 f"<div style='font-size:11px; color:#dddddd; margin-top:2px;'>✓ {ind}</div>",
                 unsafe_allow_html=True,
             )
-        st.markdown(
-            f"<div style='font-size:11px; color:#f39c12; margin-top:10px; font-style:italic;'>"
-            f"{_phase_action(phase_output.phase)}</div>",
-            unsafe_allow_html=True,
-        )
+        _pa_text = _phase_action(phase_output.phase)
+        _pa_color = phase_output.color if hasattr(phase_output, "color") else "#f39c12"
+        render_action_item(_pa_text, _pa_color)
 
     with col_gauge:
         st.markdown("**Recession Probability**")
@@ -299,12 +298,7 @@ def render_overview_row(
         if model_output.data_as_of:
             st.caption(f"Data as of {model_output.data_as_of.strftime('%Y-%m-%d')}")
         _prob_color = "#2ecc71" if model_output.probability < 25 else "#f39c12" if model_output.probability < 50 else "#e74c3c"
-        st.markdown(
-            f"<div style='text-align:center; font-size:11px; color:{_prob_color}; "
-            f"margin-top:6px; font-style:italic;'>"
-            f"{_prob_action(model_output.probability)}</div>",
-            unsafe_allow_html=True,
-        )
+        render_action_item(_prob_action(model_output.probability), _prob_color)
 
     with col_lei:
         st.markdown("**LEI Momentum**")
@@ -334,11 +328,7 @@ def render_overview_row(
             st.info("LEI data unavailable", icon="⚠️")
         if lei_growth is not None:
             _lei_color = "#2ecc71" if lei_growth > 1.0 else "#f39c12" if lei_growth >= 0 else "#e74c3c"
-            st.markdown(
-                f"<div style='font-size:11px; color:{_lei_color}; margin-top:8px; font-style:italic;'>"
-                f"{_lei_action(lei_growth)}</div>",
-                unsafe_allow_html=True,
-            )
+            render_action_item(_lei_action(lei_growth), _lei_color)
 
     # ── Row 2: risk scorecard ────────────────────────────────────────────────
     st.markdown("<div style='margin-top:12px;'><b>Risk Scorecard</b></div>",
@@ -347,11 +337,7 @@ def render_overview_row(
     _sc_stressed = sum(1 for f in model_output.features if f.stress_score > 0.66)
     _sc_elevated = sum(1 for f in model_output.features if 0.33 < f.stress_score <= 0.66)
     _sc_color = "#e74c3c" if _sc_stressed >= 3 else "#f39c12" if (_sc_stressed >= 1 or _sc_elevated >= 3) else "#2ecc71"
-    st.markdown(
-        f"<div style='font-size:11px; color:{_sc_color}; margin-top:8px; font-style:italic;'>"
-        f"{_scorecard_action(model_output)}</div>",
-        unsafe_allow_html=True,
-    )
+    render_action_item(_scorecard_action(model_output), _sc_color)
 
     # ── Row 3: expandable model detail ───────────────────────────────────────
     with st.expander("📊 Recession Model — Feature Contributions", expanded=False):

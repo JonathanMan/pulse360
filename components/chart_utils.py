@@ -12,6 +12,7 @@ Exports:
     time_window_start(key)         → str         (ISO date string, 10Y default)
     yoy_pct(series)                → pd.Series
     threshold_line(fig, ...)       → go.Figure
+    render_action_item(text, color)→ None        (styled action-item card below charts)
 """
 
 from __future__ import annotations
@@ -388,3 +389,42 @@ def render_implications(text: str, traffic_light: str = "green") -> None:
         st.success(main_md,  icon="💡")
 
     st.caption(f"*{disc_txt}*")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Action-item card  (signal-coloured callout below charts and sections)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def render_action_item(text: str, color: str = "#f39c12") -> None:
+    """
+    Render a styled action-item card below a chart or dashboard section.
+
+    Displays a left-accent card with a bold "💡 Action" label in the signal
+    colour and white body text — larger and more visually distinct than a
+    plain st.caption().
+
+    Args:
+        text:  The action message. Leading "→ " is stripped automatically.
+        color: Hex accent colour, typically signal-matched:
+               "#2ecc71" green · "#f39c12" amber · "#e74c3c" red
+    """
+    clean = text.lstrip("→ ").strip()
+    st.markdown(
+        f"""
+        <div style="
+            background: {color}1a;
+            border-left: 4px solid {color};
+            border-radius: 0 8px 8px 0;
+            padding: 12px 18px;
+            margin: 10px 0 6px 0;
+        ">
+            <span style="color:{color}; font-weight:700; font-size:14px; margin-right:6px;">
+                💡 Action
+            </span>
+            <span style="color:#ffffff; font-size:14px; line-height:1.6;">
+                {clean}
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )

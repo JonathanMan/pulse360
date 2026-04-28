@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from ai.claude_client import get_investment_implications
-from components.chart_utils import add_nber, chart_meta, dark_layout, time_window_start, render_implications
+from components.chart_utils import add_nber, chart_meta, dark_layout, time_window_start, render_implications, render_action_item
 from data.fred_client import fetch_series
 
 
@@ -57,13 +57,9 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
         if not gdp_lvl["data"].empty and len(gdp_lvl["data"]) >= 2:
             _lvl_trend = gdp_lvl["data"].iloc[-1] - gdp_lvl["data"].iloc[-2]
             if _lvl_trend > 0:
-                _lvl_color, _lvl_action = "#2ecc71", "→ Output base expanding — confirms growth phase; no defensive rotation required on GDP alone."
+                render_action_item("Output base expanding — confirms growth phase; no defensive rotation required on GDP alone.", "#2ecc71")
             else:
-                _lvl_color, _lvl_action = "#e74c3c", "→ GDP level declining — two consecutive quarterly drops would confirm a technical recession; monitor closely."
-            st.markdown(
-                f"<div style='font-size:11px; color:{_lvl_color}; margin-top:4px; font-style:italic;'>{_lvl_action}</div>",
-                unsafe_allow_html=True,
-            )
+                render_action_item("GDP level declining — two consecutive quarterly drops would confirm a technical recession; monitor closely.", "#e74c3c")
 
     with col2:
         st.markdown("##### Real GDP Growth (QoQ Ann.)")
@@ -82,15 +78,11 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
         _gr_val = gdp_gr["last_value"]
         if _gr_val is not None:
             if _gr_val >= 2.5:
-                _gr_color, _gr_action = "#2ecc71", f"→ {_gr_val:+.1f}% — strong growth: cyclicals, industrials & consumer discretionary typically outperform here."
+                render_action_item(f"{_gr_val:+.1f}% — strong growth: cyclicals, industrials & consumer discretionary typically outperform here.", "#2ecc71")
             elif _gr_val >= 0:
-                _gr_color, _gr_action = "#f39c12", f"→ {_gr_val:+.1f}% — moderate growth: favour quality and investment-grade credit over high-yield."
+                render_action_item(f"{_gr_val:+.1f}% — moderate growth: favour quality and investment-grade credit over high-yield.", "#f39c12")
             else:
-                _gr_color, _gr_action = "#e74c3c", f"→ {_gr_val:+.1f}% — negative growth: reduce equity exposure, rotate to defensives and treasuries."
-            st.markdown(
-                f"<div style='font-size:11px; color:{_gr_color}; margin-top:4px; font-style:italic;'>{_gr_action}</div>",
-                unsafe_allow_html=True,
-            )
+                render_action_item(f"{_gr_val:+.1f}% — negative growth: reduce equity exposure, rotate to defensives and treasuries.", "#e74c3c")
 
     # ── Row 2: CFNAI ──────────────────────────────────────────────────────────
     st.markdown("##### Chicago Fed National Activity Index (CFNAI)")
@@ -114,15 +106,11 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
     _cfnai_val = lei_res["last_value"]
     if _cfnai_val is not None:
         if _cfnai_val > 0:
-            _cfnai_color, _cfnai_action = "#2ecc71", f"→ CFNAI {_cfnai_val:+.2f}: above-trend activity — supports risk-on positioning; cyclical tilt rewarded."
+            render_action_item(f"CFNAI {_cfnai_val:+.2f}: above-trend activity — supports risk-on positioning; cyclical tilt rewarded.", "#2ecc71")
         elif _cfnai_val > -0.7:
-            _cfnai_color, _cfnai_action = "#f39c12", f"→ CFNAI {_cfnai_val:+.2f}: below-trend but not recessionary — neutral posture; watch for sustained move below −0.70."
+            render_action_item(f"CFNAI {_cfnai_val:+.2f}: below-trend but not recessionary — neutral posture; watch for sustained move below −0.70.", "#f39c12")
         else:
-            _cfnai_color, _cfnai_action = "#e74c3c", f"→ CFNAI {_cfnai_val:+.2f}: well below trend — historically signals elevated recession risk; consider defensive rotation."
-        st.markdown(
-            f"<div style='font-size:11px; color:{_cfnai_color}; margin-top:4px; font-style:italic;'>{_cfnai_action}</div>",
-            unsafe_allow_html=True,
-        )
+            render_action_item(f"CFNAI {_cfnai_val:+.2f}: well below trend — historically signals elevated recession risk; consider defensive rotation.", "#e74c3c")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")
