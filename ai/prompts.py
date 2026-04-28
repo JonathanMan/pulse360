@@ -181,7 +181,16 @@ RULES:
 4. Be action-oriented but never give personalised advice. Say "historically favours" not "you should buy".
 5. If a key reading is near a threshold (e.g. Sahm approaching 0.50), flag it explicitly.
 6. Never fabricate data. Only use values provided. If data is stale, note it.
-7. Do not include a disclaimer — it will be appended automatically."""
+7. Do not include a disclaimer — it will be appended automatically.
+
+SIGNAL COLOUR CODING — apply to every specific indicator value or reading you mention:
+- Prefix with 🟢 when the reading is positive / supportive / low risk
+  (e.g. PMI > 50 and rising, unemployment falling, yield curve steepening)
+- Prefix with 🟡 when the reading is neutral, mixed, or a moderate caution
+  (e.g. PMI near 50, moderate spread widening, slowing but positive growth)
+- Prefix with 🔴 when the reading is negative / contractionary / high risk
+  (e.g. PMI below 50 and falling, inverted yield curve, Sahm Rule triggered)
+Use the signal prefix inline before the relevant value, e.g. "🟢 ISM at 54.2" or "🔴 yield curve at -0.4%"."""
 
 
 # Tab-specific context injected into the implications prompt

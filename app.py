@@ -17,6 +17,47 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Global styles — injected once, applied to every page ─────────────────────
+# Scoped to .main so the sidebar nav retains its original Streamlit styling.
+st.markdown("""
+<style>
+    /* ── Body text → white ── */
+    .main p, .main li, .main span,
+    .main [data-testid="stMarkdownContainer"] p,
+    .main [data-testid="stMarkdownContainer"] li { color: #ffffff !important; }
+
+    /* ── Headings → near-white ── */
+    .main h1, .main h2, .main h3,
+    .main h4, .main h5, .main h6,
+    .main [data-testid="stMarkdownContainer"] h1,
+    .main [data-testid="stMarkdownContainer"] h2,
+    .main [data-testid="stMarkdownContainer"] h3,
+    .main [data-testid="stMarkdownContainer"] h4 { color: #e8e8ff !important; }
+
+    /* ── Captions / helper text ── */
+    .main [data-testid="stCaptionContainer"],
+    .main small { color: #aaaaaa !important; }
+
+    /* ── Metric labels & values ── */
+    div[data-testid="metric-container"] label { color: #cccccc !important; }
+    div[data-testid="metric-container"] [data-testid="stMetricValue"] { color: #ffffff !important; }
+
+    /* ── Table cells ── */
+    .main [data-testid="stMarkdownContainer"] td,
+    .main [data-testid="stMarkdownContainer"] th { color: #ffffff !important; }
+
+    /* ── Input / selectbox labels ── */
+    .main label { color: #cccccc !important; }
+
+    /* ── Expander headers ── */
+    .main [data-testid="stExpander"] summary { color: #ffffff !important; }
+
+    /* ── Tab labels ── */
+    .stTabs [data-baseweb="tab"] { color: #cccccc !important; }
+    .stTabs [aria-selected="true"] { color: #ffffff !important; }
+</style>
+""", unsafe_allow_html=True)
+
 pg = st.navigation(
     {
         "": [
