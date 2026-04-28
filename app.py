@@ -26,13 +26,21 @@ st.markdown("""
     .main [data-testid="stMarkdownContainer"] p,
     .main [data-testid="stMarkdownContainer"] li { color: #ffffff !important; }
 
-    /* ── Headings → near-white ── */
+    /* ── Headings → white (markdown + native st.header/subheader/title) ── */
     .main h1, .main h2, .main h3,
     .main h4, .main h5, .main h6,
     .main [data-testid="stMarkdownContainer"] h1,
     .main [data-testid="stMarkdownContainer"] h2,
     .main [data-testid="stMarkdownContainer"] h3,
-    .main [data-testid="stMarkdownContainer"] h4 { color: #e8e8ff !important; }
+    .main [data-testid="stMarkdownContainer"] h4,
+    .main [data-testid="stMarkdownContainer"] h5,
+    .main [data-testid="stMarkdownContainer"] h6,
+    .main [data-testid="stHeadingWithActionElements"] h1,
+    .main [data-testid="stHeadingWithActionElements"] h2,
+    .main [data-testid="stHeadingWithActionElements"] h3,
+    .main [data-testid="stHeadingWithActionElements"] h4,
+    .main [data-testid="stHeadingWithActionElements"],
+    [data-testid="stHeadingWithActionElements"] span { color: #ffffff !important; }
 
     /* ── Captions / helper text ── */
     .main [data-testid="stCaptionContainer"],

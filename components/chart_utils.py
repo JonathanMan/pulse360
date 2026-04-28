@@ -80,10 +80,10 @@ def dark_layout(
         }
 
     fig.update_layout(
-        title        = {"text": title, "font": {"size": 13, "color": "#dddddd"}},
+        title        = {"text": title, "font": {"size": 13, "color": "#ffffff"}},
         paper_bgcolor= "rgba(0,0,0,0)",
         plot_bgcolor = "#0e1117",
-        font         = {"color": "#cccccc"},
+        font         = {"color": "#ffffff"},
         xaxis        = xaxis_cfg,
         yaxis        = {
             "gridcolor": "#1e1e2e",
