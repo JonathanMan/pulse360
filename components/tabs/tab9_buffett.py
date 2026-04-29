@@ -284,6 +284,12 @@ def render_tab9(model_output, phase_output) -> None:
         st.error("Could not compute Buffett Indicator — data alignment failed.")
         return
 
+    # Pre-compute SP500 monthly early so it's available anywhere on the page
+    sp_monthly = (
+        sp_result["data"].resample("ME").last().dropna()
+        if not sp_result["data"].empty else pd.Series(dtype=float)
+    )
+
     current_ratio  = float(ratio.iloc[-1])
     hist_mean      = float(ratio.mean())
     hist_pct       = float((ratio < current_ratio).mean() * 100)
@@ -414,6 +420,182 @@ def render_tab9(model_output, phase_output) -> None:
             f"Buffett would be buying aggressively; strong long-term entry opportunity.",
             "#2ecc71",
         )
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # WHEN TO BUY / WHEN TO SELL
+    # ══════════════════════════════════════════════════════════════════════════
+
+    st.markdown("### 📊 Entry & Exit Framework")
+    st.caption(
+        "Historical analysis of S&P 500 forward returns at different Buffett Indicator levels. "
+        "Entry points = trough of each undervalued episode (<100%). "
+        "Exit signals = first crossing of 135%+ per overvaluation episode. "
+        "Forward returns calculated from signal date to 1, 3, and 5 years later."
+    )
+
+    if not sp_monthly.empty:
+        fwd_df, buy_df, sell_df = _entry_exit_analysis(ratio, sp_monthly)
+
+        col_buy, col_sell = st.columns(2)
+
+        # ── 🟢 WHEN TO BUY ───────────────────────────────────────────────────
+        with col_buy:
+            st.markdown("#### 🟢 When to Buy")
+
+            dist_to_fair = max(0.0, current_ratio - 100.0)
+            if current_ratio < 75:
+                buy_signal = "Strong Buy Zone"
+                buy_color  = "#2ecc71"
+            elif current_ratio < 100:
+                buy_signal = "Buy Zone"
+                buy_color  = "#27ae60"
+            elif current_ratio < 115:
+                buy_signal = f"{dist_to_fair:.0f}pp above Fair Value"
+                buy_color  = "#f1c40f"
+            else:
+                buy_signal = f"{dist_to_fair:.0f}pp above Fair Value"
+                buy_color  = "#e74c3c"
+
+            st.markdown(
+                f'<div style="background:{_hex_rgba(buy_color,0.12)};border:1px solid '
+                f'{_hex_rgba(buy_color,0.4)};border-radius:8px;padding:10px 14px;margin-bottom:10px;">'
+                f'<span style="color:{buy_color};font-weight:700;">Current Signal: </span>'
+                f'<span style="color:#fff;">{buy_signal}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            if not buy_df.empty:
+                b1, b2, b3 = st.columns(3)
+                b1.metric("Avg 1Y Return", f"{buy_df['1Y'].dropna().mean():+.1f}%")
+                b2.metric("Avg 3Y Return", f"{buy_df['3Y'].dropna().mean():+.1f}%")
+                b3.metric("Avg 5Y Return", f"{buy_df['5Y'].dropna().mean():+.1f}%")
+                st.caption("S&P 500 returns from the trough of each undervalued episode (<100%)")
+
+                display_buy = buy_df[["date", "buffett_pct", "1Y", "3Y", "5Y"]].copy()
+                display_buy["Date"]      = pd.to_datetime(display_buy["date"]).dt.strftime("%b %Y")
+                display_buy["Level (%)"] = display_buy["buffett_pct"].map(lambda x: f"{x:.1f}%")
+                for c in ["1Y", "3Y", "5Y"]:
+                    display_buy[c] = display_buy[c].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
+                st.dataframe(display_buy[["Date", "Level (%)", "1Y", "3Y", "5Y"]],
+                             use_container_width=True, hide_index=True)
+            else:
+                st.info("No historical undervalued episodes found in available data.")
+
+            st.markdown(
+                "**Key conditions for strong buy signals:**\n"
+                "- Buffett Indicator < 100% (at or below Fair Value)\n"
+                "- Near end of NBER recession or early recovery\n"
+                "- CFNAI 3M avg turning positive\n"
+                "- Recession probability falling from a peak"
+            )
+
+        # ── 🔴 WHEN TO SELL ──────────────────────────────────────────────────
+        with col_sell:
+            st.markdown("#### 🔴 When to Sell / Reduce")
+
+            if current_ratio >= 165:
+                sell_signal = f"Significantly Overvalued — {current_ratio:.0f}% of GDP"
+                sell_color  = "#c0392b"
+            elif current_ratio >= 135:
+                sell_signal = f"Overvalued — {current_ratio:.0f}% of GDP"
+                sell_color  = "#e74c3c"
+            elif current_ratio >= 115:
+                sell_signal = f"Modestly Overvalued — {current_ratio:.0f}% of GDP"
+                sell_color  = "#e67e22"
+            else:
+                sell_signal = "Not in sell zone"
+                sell_color  = "#2ecc71"
+
+            st.markdown(
+                f'<div style="background:{_hex_rgba(sell_color,0.12)};border:1px solid '
+                f'{_hex_rgba(sell_color,0.4)};border-radius:8px;padding:10px 14px;margin-bottom:10px;">'
+                f'<span style="color:{sell_color};font-weight:700;">Current Signal: </span>'
+                f'<span style="color:#fff;">{sell_signal}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            if not sell_df.empty:
+                s1, s2, s3 = st.columns(3)
+                s1.metric("Avg 1Y Return", f"{sell_df['1Y'].dropna().mean():+.1f}%", delta_color="inverse")
+                s2.metric("Avg 3Y Return", f"{sell_df['3Y'].dropna().mean():+.1f}%", delta_color="inverse")
+                s3.metric("Avg 5Y Return", f"{sell_df['5Y'].dropna().mean():+.1f}%", delta_color="inverse")
+                st.caption("S&P 500 returns from the first crossing of 135%+ per episode")
+
+                display_sell = sell_df[["date", "buffett_pct", "1Y", "3Y", "5Y"]].copy()
+                display_sell["Date"]      = pd.to_datetime(display_sell["date"]).dt.strftime("%b %Y")
+                display_sell["Level (%)"] = display_sell["buffett_pct"].map(lambda x: f"{x:.1f}%")
+                for c in ["1Y", "3Y", "5Y"]:
+                    display_sell[c] = display_sell[c].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
+                st.dataframe(display_sell[["Date", "Level (%)", "1Y", "3Y", "5Y"]],
+                             use_container_width=True, hide_index=True)
+            else:
+                st.info("No historical overvaluation episodes found in available data.")
+
+            st.markdown(
+                "**Warning signs to watch alongside a high reading:**\n"
+                "- Yield curve inverting or dis-inverting rapidly\n"
+                "- CFNAI 3M avg rolling over below 0\n"
+                "- Sahm Rule approaching 0.5pp trigger\n"
+                "- Credit spreads widening from a low base"
+            )
+
+        # ── Forward Return by Zone chart ──────────────────────────────────────
+        st.markdown("---")
+        st.markdown("##### Forward S&P 500 Returns by Buffett Indicator Zone")
+        st.caption(
+            "Median S&P 500 return over the next 1, 3, and 5 years from each quarterly Buffett "
+            "observation, grouped by valuation zone. Shows how forward returns decay as the "
+            "indicator rises. Only zones with ≥3 observations shown."
+        )
+
+        if not fwd_df.empty:
+            zone_stats = (
+                fwd_df.groupby("zone")[["1Y", "3Y", "5Y"]]
+                .median()
+                .reindex([z for z in _ZONE_ORDER if z in fwd_df["zone"].unique()])
+            )
+            zone_counts = fwd_df.groupby("zone").size()
+            zone_stats  = zone_stats[zone_counts[zone_stats.index] >= 3]
+
+            fig_z = go.Figure()
+            for col, line_color in [("1Y", "#3498db"), ("3Y", "#9b59b6"), ("5Y", "#1abc9c")]:
+                fig_z.add_trace(go.Bar(
+                    name=f"{col} Forward Return",
+                    x=zone_stats.index.tolist(),
+                    y=zone_stats[col].tolist(),
+                    marker_color=[
+                        _hex_rgba("#2ecc71", 0.85) if v >= 0 else _hex_rgba("#e74c3c", 0.85)
+                        for v in zone_stats[col].tolist()
+                    ],
+                    marker_line_color=line_color,
+                    marker_line_width=1.5,
+                    hovertemplate=f"<b>%{{x}}</b><br>{col} median: <b>%{{y:+.1f}}%</b><extra></extra>",
+                ))
+
+            fig_z.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
+            fig_z = dark_layout(fig_z, yaxis_title="Median Forward Return (%)")
+            fig_z.update_layout(
+                height=360, barmode="group",
+                xaxis={"tickangle": -20},
+                legend={"orientation": "h", "y": -0.22},
+            )
+            st.plotly_chart(fig_z, use_container_width=True, key="tab9_zone_returns")
+
+            if "Significantly Overvalued" in zone_stats.index and "Significantly Undervalued" in zone_stats.index:
+                best_5y  = zone_stats.loc["Significantly Undervalued", "5Y"]
+                worst_5y = zone_stats.loc["Significantly Overvalued",  "5Y"]
+                render_action_item(
+                    f"The data speaks clearly: buying when significantly undervalued (<75%) has "
+                    f"historically yielded a median {best_5y:+.1f}% 5-year return, versus "
+                    f"{worst_5y:+.1f}% when significantly overvalued (>165%). "
+                    f"The Buffett Indicator is a long-horizon tool — its signal strengthens "
+                    f"over 3–5 year holding periods.",
+                    "#2ecc71" if best_5y > 30 else "#f39c12",
+                )
 
     st.markdown("---")
 
@@ -691,205 +873,6 @@ def render_tab9(model_output, phase_output) -> None:
                 f"No qualifying breach → correction pairs found for {thresh_val:.0f}% "
                 f"within the available data window."
             )
-
-    st.markdown("---")
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # WHEN TO BUY / WHEN TO SELL
-    # ══════════════════════════════════════════════════════════════════════════
-
-    st.markdown("### 📊 Entry & Exit Framework")
-    st.caption(
-        "Historical analysis of S&P 500 forward returns at different Buffett Indicator levels. "
-        "Entry points = trough of each undervalued episode (<100%). "
-        "Exit signals = first crossing of 135%+ per overvaluation episode. "
-        "Forward returns calculated from signal date to 1, 3, and 5 years later."
-    )
-
-    if not sp_result["data"].empty:
-        fwd_df, buy_df, sell_df = _entry_exit_analysis(ratio, sp_monthly)
-
-        col_buy, col_sell = st.columns(2)
-
-        # ── 🟢 WHEN TO BUY ───────────────────────────────────────────────────
-        with col_buy:
-            st.markdown("#### 🟢 When to Buy")
-
-            # Current distance from buy zone
-            dist_to_fair   = max(0.0, current_ratio - 100.0)
-            dist_to_buy    = max(0.0, current_ratio - 75.0)
-            if current_ratio < 75:
-                buy_signal = "Strong Buy Zone"
-                buy_color  = "#2ecc71"
-            elif current_ratio < 100:
-                buy_signal = "Buy Zone"
-                buy_color  = "#27ae60"
-            elif current_ratio < 115:
-                buy_signal = f"{dist_to_fair:.0f}pp above Fair Value"
-                buy_color  = "#f1c40f"
-            else:
-                buy_signal = f"{dist_to_fair:.0f}pp above Fair Value"
-                buy_color  = "#e74c3c"
-
-            st.markdown(
-                f'<div style="background:{_hex_rgba(buy_color,0.12)};border:1px solid '
-                f'{_hex_rgba(buy_color,0.4)};border-radius:8px;padding:10px 14px;margin-bottom:10px;">'
-                f'<span style="color:{buy_color};font-weight:700;">Current Signal: </span>'
-                f'<span style="color:#fff;">{buy_signal}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-            if not buy_df.empty:
-                avg_1y = buy_df["1Y"].dropna().mean()
-                avg_3y = buy_df["3Y"].dropna().mean()
-                avg_5y = buy_df["5Y"].dropna().mean()
-
-                b1, b2, b3 = st.columns(3)
-                b1.metric("Avg 1Y Return", f"{avg_1y:+.1f}%")
-                b2.metric("Avg 3Y Return", f"{avg_3y:+.1f}%")
-                b3.metric("Avg 5Y Return", f"{avg_5y:+.1f}%")
-
-                st.caption("Median S&P 500 returns from the trough of each undervalued episode (<100%)")
-
-                display_buy = buy_df[["date", "buffett_pct", "1Y", "3Y", "5Y"]].copy()
-                display_buy["Date"]     = pd.to_datetime(display_buy["date"]).dt.strftime("%b %Y")
-                display_buy["Level (%)"] = display_buy["buffett_pct"].map(lambda x: f"{x:.1f}%")
-                display_buy["1Y"]       = display_buy["1Y"].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
-                display_buy["3Y"]       = display_buy["3Y"].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
-                display_buy["5Y"]       = display_buy["5Y"].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
-                st.dataframe(
-                    display_buy[["Date", "Level (%)", "1Y", "3Y", "5Y"]],
-                    use_container_width=True, hide_index=True,
-                )
-            else:
-                st.info("No historical undervalued episodes found in the available data.")
-
-            st.markdown(
-                "**Key conditions for strong buy signals:**\n"
-                "- Buffett Indicator < 100% (Fair Value)\n"
-                "- Near end of NBER recession or early recovery\n"
-                "- CFNAI 3M avg turning positive\n"
-                "- Recession probability falling from a peak"
-            )
-
-        # ── 🔴 WHEN TO SELL ──────────────────────────────────────────────────
-        with col_sell:
-            st.markdown("#### 🔴 When to Sell / Reduce")
-
-            # Current overvaluation signal
-            if current_ratio >= 165:
-                sell_signal = f"Significantly Overvalued — {current_ratio:.0f}% of GDP"
-                sell_color  = "#c0392b"
-            elif current_ratio >= 135:
-                sell_signal = f"Overvalued — {current_ratio:.0f}% of GDP"
-                sell_color  = "#e74c3c"
-            elif current_ratio >= 115:
-                sell_signal = f"Modestly Overvalued — {current_ratio:.0f}% of GDP"
-                sell_color  = "#e67e22"
-            else:
-                sell_signal = "Not in sell zone"
-                sell_color  = "#2ecc71"
-
-            st.markdown(
-                f'<div style="background:{_hex_rgba(sell_color,0.12)};border:1px solid '
-                f'{_hex_rgba(sell_color,0.4)};border-radius:8px;padding:10px 14px;margin-bottom:10px;">'
-                f'<span style="color:{sell_color};font-weight:700;">Current Signal: </span>'
-                f'<span style="color:#fff;">{sell_signal}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-            if not sell_df.empty:
-                avg_1y = sell_df["1Y"].dropna().mean()
-                avg_3y = sell_df["3Y"].dropna().mean()
-                avg_5y = sell_df["5Y"].dropna().mean()
-
-                s1, s2, s3 = st.columns(3)
-                s1.metric("Avg 1Y Return", f"{avg_1y:+.1f}%", delta_color="inverse")
-                s2.metric("Avg 3Y Return", f"{avg_3y:+.1f}%", delta_color="inverse")
-                s3.metric("Avg 5Y Return", f"{avg_5y:+.1f}%", delta_color="inverse")
-
-                st.caption("Median S&P 500 returns from the first crossing of 135%+ per episode")
-
-                display_sell = sell_df[["date", "buffett_pct", "1Y", "3Y", "5Y"]].copy()
-                display_sell["Date"]      = pd.to_datetime(display_sell["date"]).dt.strftime("%b %Y")
-                display_sell["Level (%)"] = display_sell["buffett_pct"].map(lambda x: f"{x:.1f}%")
-                display_sell["1Y"]        = display_sell["1Y"].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
-                display_sell["3Y"]        = display_sell["3Y"].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
-                display_sell["5Y"]        = display_sell["5Y"].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
-                st.dataframe(
-                    display_sell[["Date", "Level (%)", "1Y", "3Y", "5Y"]],
-                    use_container_width=True, hide_index=True,
-                )
-            else:
-                st.info("No historical overvaluation episodes found in the available data.")
-
-            st.markdown(
-                "**Warning signs to watch alongside a high reading:**\n"
-                "- Yield curve inverting or dis-inverting rapidly\n"
-                "- CFNAI 3M avg rolling over below 0\n"
-                "- Sahm Rule approaching 0.5pp trigger\n"
-                "- Credit spreads widening from low base"
-            )
-
-        # ── Forward Return by Zone chart (full width) ─────────────────────────
-        st.markdown("---")
-        st.markdown("##### Forward S&P 500 Returns by Buffett Indicator Zone")
-        st.caption(
-            "Median annualised S&P 500 return over the next 1, 3, and 5 years from each quarterly "
-            "Buffett observation, grouped by valuation zone. Shows how forward returns historically "
-            "decay as the indicator rises. Only zones with ≥3 observations are shown."
-        )
-
-        if not fwd_df.empty:
-            zone_stats = (
-                fwd_df.groupby("zone")[["1Y", "3Y", "5Y"]]
-                .median()
-                .reindex([z for z in _ZONE_ORDER if z in fwd_df["zone"].unique()])
-            )
-            zone_counts = fwd_df.groupby("zone").size()
-            zone_stats  = zone_stats[zone_counts[zone_stats.index] >= 3]
-
-            fig_z = go.Figure()
-            bar_colors = {"1Y": "#3498db", "3Y": "#9b59b6", "5Y": "#1abc9c"}
-
-            for col, color in bar_colors.items():
-                fig_z.add_trace(go.Bar(
-                    name=f"{col} Forward Return",
-                    x=zone_stats.index.tolist(),
-                    y=zone_stats[col].tolist(),
-                    marker_color=[
-                        _hex_rgba("#2ecc71", 0.85) if v >= 0 else _hex_rgba("#e74c3c", 0.85)
-                        for v in zone_stats[col].tolist()
-                    ],
-                    marker_line_color=color,
-                    marker_line_width=1.5,
-                    hovertemplate=f"<b>%{{x}}</b><br>{col} median return: <b>%{{y:+.1f}}%</b><extra></extra>",
-                ))
-
-            fig_z.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
-            fig_z = dark_layout(fig_z, yaxis_title="Median Forward Return (%)")
-            fig_z.update_layout(
-                height=380,
-                barmode="group",
-                xaxis={"tickangle": -20},
-                legend={"orientation": "h", "y": -0.18},
-            )
-            st.plotly_chart(fig_z, use_container_width=True, key="tab9_zone_returns")
-
-            # Summary callout
-            if "Significantly Overvalued" in zone_stats.index and "Significantly Undervalued" in zone_stats.index:
-                best_5y  = zone_stats.loc["Significantly Undervalued", "5Y"]
-                worst_5y = zone_stats.loc["Significantly Overvalued",  "5Y"]
-                render_action_item(
-                    f"The data speaks clearly: buying when significantly undervalued (<75%) "
-                    f"has historically yielded a median {best_5y:+.1f}% 5-year return, versus "
-                    f"{worst_5y:+.1f}% when significantly overvalued (>165%). "
-                    f"The Buffett Indicator is a long-horizon valuation tool — "
-                    f"its predictive power strengthens over 3–5 year holding periods.",
-                    "#2ecc71" if best_5y > 30 else "#f39c12",
-                )
 
     st.markdown("---")
 
