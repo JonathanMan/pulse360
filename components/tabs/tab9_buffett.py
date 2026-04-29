@@ -419,19 +419,19 @@ def render_tab9(model_output, phase_output) -> None:
     # CORRECTIONS OVERLAY + LAG ANALYSIS
     # ══════════════════════════════════════════════════════════════════════════
 
-    st.markdown("##### Buffett Indicator vs S&P 500 Corrections")
+    st.markdown("##### Buffett Indicator vs S&P 500")
     st.caption(
-        "Red shading marks S&P 500 corrections (≥10% drawdown from rolling 12-month high). "
-        "Grey shading = NBER recessions. Dashed lines show key overvaluation thresholds. "
-        "Use the lag table below to see how many months elapsed between each Buffett breach "
-        "and the next market correction."
+        "Left axis: Buffett Indicator (%) with valuation zone bands. "
+        "Right axis: S&P 500 price (log scale). "
+        "Red shading = corrections ≥10% from rolling 12-month high. "
+        "Grey shading = NBER recessions."
     )
 
-    with st.spinner("Loading S&P 500 correction data…"):
+    with st.spinner("Loading S&P 500 data…"):
         sp_result = fetch_series("SP500", start_date="1950-01-01")
 
     if sp_result["data"].empty:
-        st.warning("S&P 500 data unavailable — corrections overlay skipped.")
+        st.warning("S&P 500 data unavailable — overlay skipped.")
     else:
         sp_monthly  = sp_result["data"].resample("ME").last().dropna()
         corrections = _find_sp500_corrections(sp_monthly, drawdown_threshold=-0.10)
@@ -439,7 +439,7 @@ def render_tab9(model_output, phase_output) -> None:
         # ── Overlay chart ─────────────────────────────────────────────────────
         fig_c = go.Figure()
 
-        # Valuation zone bands (lighter than main chart — corrections dominate)
+        # Valuation zone bands on left axis
         for lo, hi, label, color in _ZONES:
             fig_c.add_hrect(
                 y0=lo, y1=min(hi, 300),
@@ -450,32 +450,44 @@ def render_tab9(model_output, phase_output) -> None:
         # S&P 500 correction shading — intensity scales with drawdown depth
         for c in corrections:
             depth     = abs(c["max_drawdown"])
-            intensity = min(0.08 + depth * 0.6, 0.28)
+            intensity = min(0.07 + depth * 0.5, 0.22)
             fig_c.add_vrect(
                 x0=c["start"], x1=c["end"],
                 fillcolor=f"rgba(231,76,60,{intensity:.2f})",
                 line_width=0, layer="below",
             )
-            # Label deeper corrections
             if depth >= 0.15:
                 fig_c.add_annotation(
-                    x=c["trough_date"], y=ratio.max() * 1.05,
+                    x=c["trough_date"], y=float(ratio.max()) * 1.04,
                     text=f"-{depth:.0%}",
                     showarrow=False,
                     font={"color": "#e74c3c", "size": 8},
                     xanchor="center",
+                    yref="y",
                 )
 
-        # Buffett Indicator line
+        # Buffett Indicator — left y-axis (y)
         fig_c.add_trace(go.Scatter(
             x=ratio.index, y=ratio.values,
             mode="lines",
             line={"color": zone_color, "width": 2.5},
             name="Buffett Indicator (%)",
-            hovertemplate="%{x|%b %Y}: <b>%{y:.1f}%</b><extra></extra>",
+            yaxis="y",
+            hovertemplate="%{x|%b %Y} — Buffett: <b>%{y:.1f}%</b><extra></extra>",
         ))
 
-        # Historical mean
+        # S&P 500 price — right y-axis (y2), log scale
+        fig_c.add_trace(go.Scatter(
+            x=sp_monthly.index, y=sp_monthly.values,
+            mode="lines",
+            line={"color": "#3498db", "width": 1.8, "dash": "dot"},
+            name="S&P 500 (right axis)",
+            yaxis="y2",
+            opacity=0.85,
+            hovertemplate="%{x|%b %Y} — S&P 500: <b>%{y:,.0f}</b><extra></extra>",
+        ))
+
+        # Historical mean line
         fig_c.add_hline(
             y=hist_mean, line_dash="dot", line_color="#888", line_width=1.5,
             annotation_text=f"Avg {hist_mean:.0f}%",
@@ -484,9 +496,9 @@ def render_tab9(model_output, phase_output) -> None:
 
         # Overvaluation threshold lines
         for thresh, label, color in [
-            (115, "115% Modestly OV",       "#e67e22"),
-            (135, "135% Overvalued",         "#e74c3c"),
-            (165, "165% Significantly OV",   "#c0392b"),
+            (115, "115% Modestly OV",      "#e67e22"),
+            (135, "135% Overvalued",        "#e74c3c"),
+            (165, "165% Significantly OV",  "#c0392b"),
         ]:
             fig_c.add_hline(
                 y=thresh, line_dash="dash", line_color=color, line_width=1,
@@ -494,19 +506,24 @@ def render_tab9(model_output, phase_output) -> None:
                 annotation_position="top right", annotation_font_size=9,
             )
 
-        # Legend proxy for correction shading
-        fig_c.add_trace(go.Scatter(
-            x=[None], y=[None], mode="markers",
-            marker={"color": "rgba(231,76,60,0.35)", "size": 12, "symbol": "square"},
-            name="S&P 500 Correction (≥10%)",
-        ))
-
         fig_c = add_nber(fig_c, start_date="1945-01-01")
-        fig_c = dark_layout(fig_c, yaxis_title="Market Cap / GDP (%)")
+        fig_c = dark_layout(fig_c, yaxis_title="Buffett Indicator (%)")
         fig_c.update_layout(
-            height=480,
-            yaxis={"range": [0, min(300, float(ratio.max()) * 1.15)]},
-            legend={"orientation": "h", "y": -0.08},
+            height=500,
+            yaxis={
+                "range": [0, min(300, float(ratio.max()) * 1.15)],
+                "title": "Buffett Indicator (%)",
+            },
+            yaxis2={
+                "title":      "S&P 500 (log)",
+                "overlaying": "y",
+                "side":       "right",
+                "type":       "log",
+                "showgrid":   False,
+                "tickfont":   {"color": "#3498db"},
+                "titlefont":  {"color": "#3498db"},
+            },
+            legend={"orientation": "h", "y": -0.10},
         )
         st.plotly_chart(fig_c, use_container_width=True, key="tab9_corrections_overlay")
 
