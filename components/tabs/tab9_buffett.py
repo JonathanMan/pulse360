@@ -184,6 +184,41 @@ _ZONE_ORDER = [
 ]
 _ZONE_COLORS = {z: c for _, _, z, c in _ZONES}
 
+_ZONE_RANGES = {
+    "Significantly Undervalued": "< 75%",
+    "Modestly Undervalued":      "75–100%",
+    "Fair Value":                "100–115%",
+    "Modestly Overvalued":       "115–135%",
+    "Overvalued":                "135–165%",
+    "Significantly Overvalued":  "> 165%",
+}
+
+# Hardcoded historical overvaluation anchors (context beyond FRED data window)
+_HIST_SELL_ANCHORS = [
+    {"Period": "1968–1970",  "Peak BI": "~105%", "S&P Drawdown": "−36%",
+     "Context": "Go-Go era. Vietnam war spending. Fed tightening cycle."},
+    {"Period": "1972–1974",  "Peak BI": "~107%", "S&P Drawdown": "−48%",
+     "Context": "Nifty Fifty bubble. OPEC oil shock. Stagflation."},
+    {"Period": "1999–2002",  "Peak BI": "~183%", "S&P Drawdown": "−49%",
+     "Context": "Dot-com bubble peak. NASDAQ fell −78%. Record BI at the time."},
+    {"Period": "2007–2009",  "Peak BI": "~115%", "S&P Drawdown": "−57%",
+     "Context": "Pre-GFC. Housing collapse, Lehman. Lower BI, deeper damage."},
+    {"Period": "2021–2022",  "Peak BI": "~215%", "S&P Drawdown": "−25%",
+     "Context": "Post-COVID bubble. Fed pivot QE→QT. Rate shock repricing."},
+]
+
+# Hardcoded historical buy anchors (great entry points across full history)
+_HIST_BUY_ANCHORS = [
+    {"Date": "Dec 1974", "BI Level": "~37%",  "Fwd 1Y": "+37%", "Fwd 3Y": "+56%",  "Fwd 5Y": "+86%",
+     "Context": "Post-OPEC crash. Market at 37% of GDP. Stagflation trough."},
+    {"Date": "Aug 1982", "BI Level": "~33%",  "Fwd 1Y": "+63%", "Fwd 3Y": "+99%",  "Fwd 5Y": "+183%",
+     "Context": "Volcker rate peak. S&P 500 began 18-year bull run."},
+    {"Date": "Mar 2009", "BI Level": "~57%",  "Fwd 1Y": "+68%", "Fwd 3Y": "+87%",  "Fwd 5Y": "+178%",
+     "Context": "GFC trough. NCBEILQ027S hit multi-decade low vs. GDP."},
+    {"Date": "Mar 2020", "BI Level": "~140%", "Fwd 1Y": "+75%", "Fwd 3Y": "+34%",  "Fwd 5Y": "N/A",
+     "Context": "COVID crash. Not in classic buy zone but recovery speed was exceptional."},
+]
+
 
 def _entry_exit_analysis(
     ratio:     pd.Series,
@@ -424,135 +459,351 @@ def render_tab9(model_output, phase_output) -> None:
     st.markdown("---")
 
     # ══════════════════════════════════════════════════════════════════════════
-    # WHEN TO BUY / WHEN TO SELL
+    # ENTRY & EXIT FRAMEWORK — rebuilt: multi-factor, statistically robust
     # ══════════════════════════════════════════════════════════════════════════
 
     st.markdown("### 📊 Entry & Exit Framework")
     st.caption(
-        "Historical analysis of S&P 500 forward returns at different Buffett Indicator levels. "
-        "Entry points = trough of each undervalued episode (<100%). "
-        "Exit signals = first crossing of 135%+ per overvaluation episode. "
-        "Forward returns calculated from signal date to 1, 3, and 5 years later."
+        "A statistically robust, multi-factor framework. "
+        "Composite Score (0–100) blends Buffett Indicator (40pts), recession probability (35pts), "
+        "and yield-curve / financial conditions (25pts). "
+        "The Risk/Reward Matrix shows median S&P 500 returns and probability of a positive return "
+        "across all six valuation zones. Historical anchors included where FRED data is limited."
     )
 
+    # ── Component 1 — Buffett Indicator (40 pts max) ──────────────────────────
+    if current_ratio < 75:
+        bi_pts, bi_signal, bi_color = 40, "Significantly Undervalued", "#2ecc71"
+    elif current_ratio < 100:
+        bi_pts, bi_signal, bi_color = 32, "Modestly Undervalued",      "#27ae60"
+    elif current_ratio < 115:
+        bi_pts, bi_signal, bi_color = 22, "Fair Value",                "#f1c40f"
+    elif current_ratio < 135:
+        bi_pts, bi_signal, bi_color = 14, "Neutral / Modestly OV",     "#e67e22"
+    elif current_ratio < 165:
+        bi_pts, bi_signal, bi_color =  6, "Overvalued",                "#e74c3c"
+    else:
+        bi_pts, bi_signal, bi_color =  0, "Significantly Overvalued",  "#c0392b"
+
+    # ── Component 2 — Recession Probability (35 pts max) ─────────────────────
+    rec_prob = model_output.probability
+    if rec_prob < 5:
+        rp_pts, rp_signal, rp_color = 35, "Very Low",  "#2ecc71"
+    elif rec_prob < 15:
+        rp_pts, rp_signal, rp_color = 25, "Low",       "#27ae60"
+    elif rec_prob < 30:
+        rp_pts, rp_signal, rp_color = 15, "Moderate",  "#f39c12"
+    elif rec_prob < 50:
+        rp_pts, rp_signal, rp_color =  7, "Elevated",  "#e67e22"
+    else:
+        rp_pts, rp_signal, rp_color =  0, "High",      "#e74c3c"
+
+    # ── Component 3 — Yield Curve / Financial Conditions (25 pts max) ────────
+    yc_val: float | None = None
+    yc_label = "Fin. Conditions"
+    try:
+        for f in model_output.features:
+            sid = (
+                str(getattr(f, "series_id", ""))
+                if not isinstance(f, dict)
+                else str(f.get("series_id", ""))
+            )
+            if "T10Y2Y" in sid or "T10Y3M" in sid:
+                raw = (
+                    getattr(f, "value", None)
+                    if not isinstance(f, dict)
+                    else f.get("value")
+                )
+                if raw is not None:
+                    yc_val  = float(raw)
+                    yc_label = "10Y–2Y Spread"
+                    break
+    except Exception:
+        pass
+
+    if yc_val is not None:
+        if yc_val > 1.0:
+            yc_pts, yc_sig, yc_color = 25, f"+{yc_val:.2f}pp Steep",      "#2ecc71"
+        elif yc_val > 0.0:
+            yc_pts, yc_sig, yc_color = 17, f"+{yc_val:.2f}pp Flat",       "#f1c40f"
+        elif yc_val > -0.5:
+            yc_pts, yc_sig, yc_color =  8, f"{yc_val:.2f}pp Inverted",    "#e67e22"
+        else:
+            yc_pts, yc_sig, yc_color =  0, f"{yc_val:.2f}pp Deep Inv.",   "#e74c3c"
+    else:
+        tl = model_output.traffic_light
+        if tl == "green":
+            yc_pts, yc_sig, yc_color = 25, "Green",  "#2ecc71"
+        elif tl == "yellow":
+            yc_pts, yc_sig, yc_color = 12, "Yellow", "#f39c12"
+        else:
+            yc_pts, yc_sig, yc_color =  0, "Red",    "#e74c3c"
+
+    composite_score = bi_pts + rp_pts + yc_pts  # 0–100
+
+    if composite_score >= 70:
+        cs_label, cs_color = "Strong Buy Environment", "#2ecc71"
+        cs_action = "Macro backdrop supports equity overweight. Long-term entry conditions favourable."
+    elif composite_score >= 55:
+        cs_label, cs_color = "Broadly Favourable",     "#27ae60"
+        cs_action = "Reasonable conditions for full strategic equity allocation."
+    elif composite_score >= 40:
+        cs_label, cs_color = "Neutral / Cautious",     "#f1c40f"
+        cs_action = "Hold strategic allocation; avoid leverage; tilt toward quality."
+    elif composite_score >= 25:
+        cs_label, cs_color = "Elevated Risk",          "#e67e22"
+        cs_action = "Reduce equity exposure; raise cash; increase quality and defensive tilt."
+    else:
+        cs_label, cs_color = "Strong Caution",         "#e74c3c"
+        cs_action = "Defensive posture warranted. Buffett-style cash accumulation historically optimal."
+
+    # ── Composite score card ───────────────────────────────────────────────────
+    st.markdown(
+        f"""
+        <div style="background:#1a1a2e;border:2px solid {_hex_rgba(cs_color, 0.55)};
+                    border-radius:12px;padding:18px 22px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                      flex-wrap:wrap;gap:16px;margin-bottom:14px;">
+            <div>
+              <div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.08em;
+                          text-transform:uppercase;margin-bottom:6px;">Composite Macro Score</div>
+              <div style="color:{cs_color};font-size:2.6rem;font-weight:800;line-height:1;">
+                {composite_score}
+                <span style="font-size:1rem;color:#555;font-weight:400;"> / 100</span>
+              </div>
+              <div style="color:{cs_color};font-size:1rem;font-weight:700;margin-top:5px;">
+                {cs_label}
+              </div>
+              <div style="color:#aaa;font-size:0.78rem;margin-top:4px;max-width:320px;">
+                {cs_action}
+              </div>
+            </div>
+            <div style="font-size:0.8rem;line-height:2.1;padding-top:4px;">
+              <div>
+                <span style="color:#888;">⚖️ Buffett Indicator</span>
+                &nbsp;<span style="color:{bi_color};font-weight:700;">{bi_pts}/40</span>
+                &nbsp;<span style="color:#555;">{bi_signal} · {current_ratio:.1f}% of GDP</span>
+              </div>
+              <div>
+                <span style="color:#888;">📉 Recession Probability</span>
+                &nbsp;<span style="color:{rp_color};font-weight:700;">{rp_pts}/35</span>
+                &nbsp;<span style="color:#555;">{rp_signal} · {rec_prob:.1f}%</span>
+              </div>
+              <div>
+                <span style="color:#888;">📈 {yc_label}</span>
+                &nbsp;<span style="color:{yc_color};font-weight:700;">{yc_pts}/25</span>
+                &nbsp;<span style="color:#555;">{yc_sig}</span>
+              </div>
+            </div>
+          </div>
+          <div style="position:relative;margin-bottom:5px;">
+            <div style="background:#0e1117;border-radius:6px;height:10px;overflow:hidden;">
+              <div style="background:linear-gradient(90deg,#c0392b 0%,#e74c3c 15%,
+                          #e67e22 28%,#f39c12 42%,#f1c40f 55%,#27ae60 70%,#2ecc71 100%);
+                          width:100%;height:100%;border-radius:6px;"></div>
+            </div>
+            <div style="position:absolute;top:-3px;left:{composite_score}%;
+                        transform:translateX(-50%);height:16px;width:3px;
+                        background:#fff;border-radius:2px;
+                        box-shadow:0 0 6px rgba(255,255,255,.6);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#444;
+                      margin-top:4px;">
+            <span>0 — Caution</span><span>25</span>
+            <span>50 — Neutral</span><span>75</span><span>100 — Buy</span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── Risk / Reward Matrix ───────────────────────────────────────────────────
     if not sp_monthly.empty:
         fwd_df, buy_df, sell_df = _entry_exit_analysis(ratio, sp_monthly)
 
-        col_buy, col_sell = st.columns(2)
+        st.markdown("#### 🗺️ Risk / Reward Matrix")
+        st.caption(
+            "Each row = one valuation zone. Columns show median S&P 500 forward return and the "
+            "probability of a positive return at 1Y, 3Y, and 5Y horizons, "
+            "computed from all quarterly observations since 1950. "
+            "The neutral zone (100–135%) is split into 'Fair Value' and 'Modestly Overvalued' "
+            "to avoid the binary buy/sell framing. n = quarterly observations in that zone."
+        )
 
-        # ── 🟢 WHEN TO BUY ───────────────────────────────────────────────────
-        with col_buy:
-            st.markdown("#### 🟢 When to Buy")
+        if not fwd_df.empty:
+            def _ret_color(v: float | None) -> tuple[str, str]:
+                if v is None:
+                    return "#555", "—"
+                txt = f"{v:+.1f}%"
+                if v >= 20:   return "#2ecc71", txt
+                if v >= 10:   return "#27ae60", txt
+                if v >=  0:   return "#f1c40f", txt
+                if v >= -10:  return "#e67e22", txt
+                return "#e74c3c", txt
 
-            dist_to_fair = max(0.0, current_ratio - 100.0)
-            if current_ratio < 75:
-                buy_signal = "Strong Buy Zone"
-                buy_color  = "#2ecc71"
-            elif current_ratio < 100:
-                buy_signal = "Buy Zone"
-                buy_color  = "#27ae60"
-            elif current_ratio < 115:
-                buy_signal = f"{dist_to_fair:.0f}pp above Fair Value"
-                buy_color  = "#f1c40f"
-            else:
-                buy_signal = f"{dist_to_fair:.0f}pp above Fair Value"
-                buy_color  = "#e74c3c"
+            def _prob_color(v: float | None) -> tuple[str, str]:
+                if v is None:
+                    return "#555", "—"
+                txt = f"{v:.0f}%"
+                if v >= 75:  return "#2ecc71", txt
+                if v >= 60:  return "#27ae60", txt
+                if v >= 50:  return "#f1c40f", txt
+                if v >= 35:  return "#e67e22", txt
+                return "#e74c3c", txt
+
+            th = ("background:#1a1a2e;color:#aaa;font-size:0.72rem;font-weight:700;"
+                  "letter-spacing:.04em;text-transform:uppercase;padding:7px 10px;"
+                  "border-bottom:1px solid #333;white-space:nowrap;")
+            th_r = th + "text-align:right;"
+            th_l = th + "text-align:left;"
+            td   = "padding:7px 10px;font-size:0.82rem;border-bottom:1px solid #1e1e2e;"
+
+            rows_html = ""
+            for zone in _ZONE_ORDER:
+                z_color = _ZONE_COLORS.get(zone, "#888")
+                rng     = _ZONE_RANGES.get(zone, "")
+                mask    = fwd_df["zone"] == zone
+                n       = int(mask.sum())
+                if n < 2:
+                    continue
+                sub = fwd_df[mask]
+                cells = (
+                    f'<td style="{td}text-align:left;">'
+                    f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;'
+                    f'background:{z_color};margin-right:6px;vertical-align:middle;"></span>'
+                    f'<span style="color:#fff;font-weight:600;">{zone}</span></td>'
+                    f'<td style="{td}color:#aaa;">{rng}</td>'
+                    f'<td style="{td}color:#888;text-align:right;">{n}</td>'
+                )
+                for col in ["1Y", "3Y", "5Y"]:
+                    vals = sub[col].dropna()
+                    med  = float(round(vals.median(), 1)) if len(vals) >= 2 else None
+                    prob = float(round((vals > 0).mean() * 100, 0)) if len(vals) >= 2 else None
+                    rc, rv = _ret_color(med)
+                    pc, pv = _prob_color(prob)
+                    cells += (
+                        f'<td style="{td}color:{rc};font-weight:600;text-align:right;">{rv}</td>'
+                        f'<td style="{td}color:{pc};text-align:right;">{pv}</td>'
+                    )
+                rows_html += f"<tr>{cells}</tr>"
 
             st.markdown(
-                f'<div style="background:{_hex_rgba(buy_color,0.12)};border:1px solid '
-                f'{_hex_rgba(buy_color,0.4)};border-radius:8px;padding:10px 14px;margin-bottom:10px;">'
-                f'<span style="color:{buy_color};font-weight:700;">Current Signal: </span>'
-                f'<span style="color:#fff;">{buy_signal}</span>'
-                f'</div>',
+                f"""
+                <div style="overflow-x:auto;margin:8px 0 4px;">
+                  <table style="width:100%;border-collapse:collapse;background:#0e1117;
+                                border-radius:8px;overflow:hidden;">
+                    <thead><tr>
+                      <th style="{th_l}">Zone</th>
+                      <th style="{th_l}">BI Range</th>
+                      <th style="{th_r}">n</th>
+                      <th style="{th_r}">1Y Med</th><th style="{th_r}">1Y P(+)</th>
+                      <th style="{th_r}">3Y Med</th><th style="{th_r}">3Y P(+)</th>
+                      <th style="{th_r}">5Y Med</th><th style="{th_r}">5Y P(+)</th>
+                    </tr></thead>
+                    <tbody>{rows_html}</tbody>
+                  </table>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
+            st.caption(
+                "Med = median S&P 500 total return from signal date. "
+                "P(+) = % of observations where forward return was positive. "
+                "Zones with fewer than 2 observations are hidden."
+            )
 
+        # ── Sell Signals ───────────────────────────────────────────────────────
+        st.markdown("#### 🔴 Historical Sell Signals — When to Reduce Equity")
+        st.caption(
+            "FRED-computed sell signals (first crossing of 135% per overvaluation episode) plus "
+            "well-documented historical anchors for context. "
+            "Sell signals are rare — the Buffett Indicator is a long-cycle tool, not a market timer."
+        )
+
+        sell_c1, sell_c2 = st.columns(2)
+
+        with sell_c1:
+            st.markdown("**📊 FRED Sell Signals (135%+ episode crossings)**")
+            if not sell_df.empty:
+                s1, s2, s3 = st.columns(3)
+                s1.metric("Avg 1Y Return",
+                          f"{sell_df['1Y'].dropna().mean():+.1f}%", delta_color="inverse")
+                s2.metric("Avg 3Y Return",
+                          f"{sell_df['3Y'].dropna().mean():+.1f}%", delta_color="inverse")
+                s3.metric("Avg 5Y Return",
+                          f"{sell_df['5Y'].dropna().mean():+.1f}%", delta_color="inverse")
+                dsell = sell_df[["date", "buffett_pct", "1Y", "3Y", "5Y"]].copy()
+                dsell["Date"]       = pd.to_datetime(dsell["date"]).dt.strftime("%b %Y")
+                dsell["BI (% GDP)"] = dsell["buffett_pct"].map(lambda x: f"{x:.1f}%")
+                for c in ["1Y", "3Y", "5Y"]:
+                    dsell[c] = dsell[c].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
+                st.dataframe(
+                    dsell[["Date", "BI (% GDP)", "1Y", "3Y", "5Y"]],
+                    use_container_width=True, hide_index=True,
+                )
+            else:
+                st.info("No 135%+ episode crossings found in available FRED data.")
+
+        with sell_c2:
+            st.markdown("**📚 Historical Overvaluation Anchors**")
+            st.caption(
+                "Major documented episodes with approximate S&P 500 peak-trough drawdowns."
+            )
+            st.dataframe(
+                pd.DataFrame(_HIST_SELL_ANCHORS),
+                use_container_width=True, hide_index=True,
+            )
+
+        # ── Buy Signals ────────────────────────────────────────────────────────
+        st.markdown("#### 🟢 Historical Buy Signals — Best Entry Points")
+        st.caption(
+            "FRED-computed buy signals (trough of each episode below 100%) plus hardcoded "
+            "anchors for the great buying opportunities of 1974, 1982, and 2009 — "
+            "periods that predate FRED coverage or the current data window."
+        )
+
+        buy_c1, buy_c2 = st.columns(2)
+
+        with buy_c1:
+            st.markdown("**📊 FRED Undervalued Troughs (<100% of GDP)**")
             if not buy_df.empty:
                 b1, b2, b3 = st.columns(3)
                 b1.metric("Avg 1Y Return", f"{buy_df['1Y'].dropna().mean():+.1f}%")
                 b2.metric("Avg 3Y Return", f"{buy_df['3Y'].dropna().mean():+.1f}%")
                 b3.metric("Avg 5Y Return", f"{buy_df['5Y'].dropna().mean():+.1f}%")
-                st.caption("S&P 500 returns from the trough of each undervalued episode (<100%)")
-
-                display_buy = buy_df[["date", "buffett_pct", "1Y", "3Y", "5Y"]].copy()
-                display_buy["Date"]      = pd.to_datetime(display_buy["date"]).dt.strftime("%b %Y")
-                display_buy["Level (%)"] = display_buy["buffett_pct"].map(lambda x: f"{x:.1f}%")
+                dbuy = buy_df[["date", "buffett_pct", "1Y", "3Y", "5Y"]].copy()
+                dbuy["Date"]       = pd.to_datetime(dbuy["date"]).dt.strftime("%b %Y")
+                dbuy["BI (% GDP)"] = dbuy["buffett_pct"].map(lambda x: f"{x:.1f}%")
                 for c in ["1Y", "3Y", "5Y"]:
-                    display_buy[c] = display_buy[c].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
-                st.dataframe(display_buy[["Date", "Level (%)", "1Y", "3Y", "5Y"]],
-                             use_container_width=True, hide_index=True)
+                    dbuy[c] = dbuy[c].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
+                st.dataframe(
+                    dbuy[["Date", "BI (% GDP)", "1Y", "3Y", "5Y"]],
+                    use_container_width=True, hide_index=True,
+                )
             else:
-                st.info("No historical undervalued episodes found in available data.")
+                st.info(
+                    "No undervalued episodes (<100%) in current FRED window. "
+                    "See historical anchors for the great buying opportunities. →"
+                )
 
-            st.markdown(
-                "**Key conditions for strong buy signals:**\n"
-                "- Buffett Indicator < 100% (at or below Fair Value)\n"
-                "- Near end of NBER recession or early recovery\n"
-                "- CFNAI 3M avg turning positive\n"
-                "- Recession probability falling from a peak"
+        with buy_c2:
+            st.markdown("**📚 Historical Buy Anchors (1950–present)**")
+            st.caption("Approx. S&P 500 total returns from each signal date.")
+            st.dataframe(
+                pd.DataFrame(_HIST_BUY_ANCHORS),
+                use_container_width=True, hide_index=True,
             )
 
-        # ── 🔴 WHEN TO SELL ──────────────────────────────────────────────────
-        with col_sell:
-            st.markdown("#### 🔴 When to Sell / Reduce")
-
-            if current_ratio >= 165:
-                sell_signal = f"Significantly Overvalued — {current_ratio:.0f}% of GDP"
-                sell_color  = "#c0392b"
-            elif current_ratio >= 135:
-                sell_signal = f"Overvalued — {current_ratio:.0f}% of GDP"
-                sell_color  = "#e74c3c"
-            elif current_ratio >= 115:
-                sell_signal = f"Modestly Overvalued — {current_ratio:.0f}% of GDP"
-                sell_color  = "#e67e22"
-            else:
-                sell_signal = "Not in sell zone"
-                sell_color  = "#2ecc71"
-
-            st.markdown(
-                f'<div style="background:{_hex_rgba(sell_color,0.12)};border:1px solid '
-                f'{_hex_rgba(sell_color,0.4)};border-radius:8px;padding:10px 14px;margin-bottom:10px;">'
-                f'<span style="color:{sell_color};font-weight:700;">Current Signal: </span>'
-                f'<span style="color:#fff;">{sell_signal}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-            if not sell_df.empty:
-                s1, s2, s3 = st.columns(3)
-                s1.metric("Avg 1Y Return", f"{sell_df['1Y'].dropna().mean():+.1f}%", delta_color="inverse")
-                s2.metric("Avg 3Y Return", f"{sell_df['3Y'].dropna().mean():+.1f}%", delta_color="inverse")
-                s3.metric("Avg 5Y Return", f"{sell_df['5Y'].dropna().mean():+.1f}%", delta_color="inverse")
-                st.caption("S&P 500 returns from the first crossing of 135%+ per episode")
-
-                display_sell = sell_df[["date", "buffett_pct", "1Y", "3Y", "5Y"]].copy()
-                display_sell["Date"]      = pd.to_datetime(display_sell["date"]).dt.strftime("%b %Y")
-                display_sell["Level (%)"] = display_sell["buffett_pct"].map(lambda x: f"{x:.1f}%")
-                for c in ["1Y", "3Y", "5Y"]:
-                    display_sell[c] = display_sell[c].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
-                st.dataframe(display_sell[["Date", "Level (%)", "1Y", "3Y", "5Y"]],
-                             use_container_width=True, hide_index=True)
-            else:
-                st.info("No historical overvaluation episodes found in available data.")
-
-            st.markdown(
-                "**Warning signs to watch alongside a high reading:**\n"
-                "- Yield curve inverting or dis-inverting rapidly\n"
-                "- CFNAI 3M avg rolling over below 0\n"
-                "- Sahm Rule approaching 0.5pp trigger\n"
-                "- Credit spreads widening from a low base"
-            )
-
-        # ── Forward Return by Zone chart ──────────────────────────────────────
-        st.markdown("---")
-        st.markdown("##### Forward S&P 500 Returns by Buffett Indicator Zone")
-        st.caption(
-            "Median S&P 500 return over the next 1, 3, and 5 years from each quarterly Buffett "
-            "observation, grouped by valuation zone. Shows how forward returns decay as the "
-            "indicator rises. Only zones with ≥3 observations shown."
-        )
-
+        # ── Forward Return by Zone chart ───────────────────────────────────────
         if not fwd_df.empty:
+            st.markdown("---")
+            st.markdown("##### Median S&P 500 Forward Returns by Buffett Indicator Zone")
+            st.caption(
+                "Median return over the next 1, 3, and 5 years from each quarterly Buffett "
+                "observation grouped by valuation zone. Shows the statistical decay in expected "
+                "returns as valuations rise. Only zones with ≥3 observations included."
+            )
+
             zone_stats = (
                 fwd_df.groupby("zone")[["1Y", "3Y", "5Y"]]
                 .median()
@@ -561,41 +812,38 @@ def render_tab9(model_output, phase_output) -> None:
             zone_counts = fwd_df.groupby("zone").size()
             zone_stats  = zone_stats[zone_counts[zone_stats.index] >= 3]
 
-            fig_z = go.Figure()
-            for col, line_color in [("1Y", "#3498db"), ("3Y", "#9b59b6"), ("5Y", "#1abc9c")]:
-                fig_z.add_trace(go.Bar(
-                    name=f"{col} Forward Return",
-                    x=zone_stats.index.tolist(),
-                    y=zone_stats[col].tolist(),
-                    marker_color=[
-                        _hex_rgba("#2ecc71", 0.85) if v >= 0 else _hex_rgba("#e74c3c", 0.85)
-                        for v in zone_stats[col].tolist()
-                    ],
-                    marker_line_color=line_color,
-                    marker_line_width=1.5,
-                    hovertemplate=f"<b>%{{x}}</b><br>{col} median: <b>%{{y:+.1f}}%</b><extra></extra>",
-                ))
+            if not zone_stats.empty:
+                fig_z = go.Figure()
+                for col, line_color in [("1Y", "#3498db"), ("3Y", "#9b59b6"), ("5Y", "#1abc9c")]:
+                    if col not in zone_stats.columns:
+                        continue
+                    fig_z.add_trace(go.Bar(
+                        name=f"{col} Median Return",
+                        x=zone_stats.index.tolist(),
+                        y=zone_stats[col].tolist(),
+                        marker_color=[
+                            _hex_rgba("#2ecc71", 0.85) if v >= 0 else _hex_rgba("#e74c3c", 0.85)
+                            for v in zone_stats[col].tolist()
+                        ],
+                        marker_line_color=line_color,
+                        marker_line_width=1.5,
+                        hovertemplate=(
+                            f"<b>%{{x}}</b><br>{col} median: <b>%{{y:+.1f}}%</b>"
+                            "<extra></extra>"
+                        ),
+                    ))
 
-            fig_z.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
-            fig_z = dark_layout(fig_z, yaxis_title="Median Forward Return (%)")
-            fig_z.update_layout(
-                height=360, barmode="group",
-                xaxis={"tickangle": -20},
-                legend={"orientation": "h", "y": -0.22},
-            )
-            st.plotly_chart(fig_z, use_container_width=True, key="tab9_zone_returns")
-
-            if "Significantly Overvalued" in zone_stats.index and "Significantly Undervalued" in zone_stats.index:
-                best_5y  = zone_stats.loc["Significantly Undervalued", "5Y"]
-                worst_5y = zone_stats.loc["Significantly Overvalued",  "5Y"]
-                render_action_item(
-                    f"The data speaks clearly: buying when significantly undervalued (<75%) has "
-                    f"historically yielded a median {best_5y:+.1f}% 5-year return, versus "
-                    f"{worst_5y:+.1f}% when significantly overvalued (>165%). "
-                    f"The Buffett Indicator is a long-horizon tool — its signal strengthens "
-                    f"over 3–5 year holding periods.",
-                    "#2ecc71" if best_5y > 30 else "#f39c12",
+                fig_z.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
+                fig_z = dark_layout(fig_z, yaxis_title="Median Forward Return (%)")
+                fig_z.update_layout(
+                    height=380, barmode="group",
+                    xaxis={"tickangle": -20},
+                    legend={"orientation": "h", "y": -0.28},
                 )
+                st.plotly_chart(fig_z, use_container_width=True, key="tab9_zone_returns")
+
+    else:
+        st.info("S&P 500 data unavailable — forward return analysis skipped.")
 
     st.markdown("---")
 
