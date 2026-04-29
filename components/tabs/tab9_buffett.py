@@ -49,22 +49,27 @@ def render_tab9(model_output, phase_output) -> None:
         "The Warren Buffett Indicator measures total US stock market capitalisation "
         "relative to US GDP — Buffett's preferred gauge of market valuation. "
         "He called it 'probably the best single measure of where valuations stand at any given moment.' "
-        "Approximated using the Wilshire 5000 Full Cap Index as a market cap proxy against nominal GDP."
+        "Market cap sourced from the Federal Reserve Z.1 Flow of Funds "
+        "(NCBEILQ027S — Nonfinancial Corporate Equities at Market Value, billions USD) "
+        "against nominal GDP (billions USD). Both series are quarterly and in identical units."
     )
 
     # ── Fetch data ────────────────────────────────────────────────────────────
+    # Primary: Fed Z.1 Flow of Funds — Nonfinancial Corporate Equities at Market Value
+    # (WILL5000INDFC was discontinued by Wilshire Associates and removed from FRED)
+    # NCBEILQ027S is in billions USD; GDP is also in billions USD → ratio is directly comparable
     with st.spinner("Loading market cap and GDP data…"):
-        wilshire = fetch_series("WILL5000INDFC", start_date="1971-01-01")
-        gdp      = fetch_series("GDP",           start_date="1971-01-01")
+        wilshire = fetch_series("NCBEILQ027S", start_date="1945-01-01")
+        gdp      = fetch_series("GDP",         start_date="1945-01-01")
 
     if wilshire["data"].empty or gdp["data"].empty:
         st.error("Unable to fetch required data — check FRED API connection.")
         return
 
     # ── Compute ratio ─────────────────────────────────────────────────────────
-    # Wilshire 5000 Full Cap ≈ total US market cap (index pts ≈ billions $)
-    # GDP is nominal quarterly in billions
-    # Both in compatible units → ratio gives approximate Buffett Indicator %
+    # NCBEILQ027S = total nonfinancial corporate equity market cap (billions USD)
+    # GDP = nominal GDP (billions USD)
+    # ratio = (market_cap / GDP) × 100  →  Buffett Indicator %
     w_q = wilshire["data"].resample("QE").last().dropna()
     g_q = gdp["data"].resample("QE").last().ffill().dropna()
 
@@ -152,9 +157,9 @@ def render_tab9(model_output, phase_output) -> None:
     st.markdown("---")
 
     # ── Historical chart ──────────────────────────────────────────────────────
-    st.markdown("##### Buffett Indicator — Historical (1971–Present)")
+    st.markdown("##### Buffett Indicator — Historical (1945–Present)")
     st.caption(
-        "Each quarterly data point shows total US market cap as a % of nominal GDP. "
+        "Each quarterly data point shows US nonfinancial corporate equity market cap as a % of nominal GDP. "
         "Grey shading = NBER recessions. "
         "Coloured bands show Buffett's own valuation zones. "
         "The dotted line is the long-run average."
@@ -203,7 +208,7 @@ def render_tab9(model_output, phase_output) -> None:
             annotation_position="top right", annotation_font_size=9,
         )
 
-    fig = add_nber(fig, start_date="1971-01-01")
+    fig = add_nber(fig, start_date="1945-01-01")
     fig = dark_layout(fig, yaxis_title="Market Cap / GDP (%)")
     fig.update_layout(
         height=440,
@@ -214,8 +219,8 @@ def render_tab9(model_output, phase_output) -> None:
     # ── Market cap vs GDP divergence chart ────────────────────────────────────
     st.markdown("##### Market Cap vs GDP — Divergence (Rebased to 100 at Start)")
     st.caption(
-        "When the blue line (market cap growth) diverges above the green line (GDP growth), "
-        "the Buffett Indicator rises — prices are growing faster than the economy. "
+        "When the blue line (nonfinancial corporate equity market cap) diverges above the green line (GDP), "
+        "the Buffett Indicator rises — prices are growing faster than the real economy. "
         "Sustained divergence historically signals stretched valuations."
     )
 
@@ -226,7 +231,7 @@ def render_tab9(model_output, phase_output) -> None:
     fig2.add_trace(go.Scatter(
         x=w_norm.index, y=w_norm.values,
         mode="lines", line={"color": "#3498db", "width": 2},
-        name="Total Market Cap (rebased to 100)",
+        name="Nonfinancial Corp. Market Cap (rebased to 100)",
         hovertemplate="%{x|%b %Y}: <b>%{y:.0f}</b><extra></extra>",
     ))
     fig2.add_trace(go.Scatter(
@@ -235,8 +240,8 @@ def render_tab9(model_output, phase_output) -> None:
         name="Nominal GDP (rebased to 100)",
         hovertemplate="%{x|%b %Y}: <b>%{y:.0f}</b><extra></extra>",
     ))
-    fig2 = add_nber(fig2, start_date="1971-01-01")
-    fig2 = dark_layout(fig2, yaxis_title="Index (1971 = 100)")
+    fig2 = add_nber(fig2, start_date="1945-01-01")
+    fig2 = dark_layout(fig2, yaxis_title="Index (1945 = 100)")
     fig2.update_layout(height=300)
     st.plotly_chart(fig2, use_container_width=True, key="tab9_buffett_diverge")
 
