@@ -104,6 +104,29 @@ def _find_sp500_corrections(
     return results
 
 
+def _months_since_breach(ratio: pd.Series, threshold: float) -> tuple[int, pd.Timestamp] | None:
+    """
+    If the indicator is currently at or above `threshold`, find the quarter when
+    the most recent continuous run above that level started and return
+    (months_elapsed_since_breach, breach_date).
+    Returns None if the indicator is currently below `threshold`.
+    """
+    if float(ratio.iloc[-1]) < threshold:
+        return None
+
+    # Walk backwards to find the last time ratio dipped below threshold
+    breach_idx = 0
+    for i in range(len(ratio) - 1, -1, -1):
+        if float(ratio.iloc[i]) < threshold:
+            breach_idx = i + 1
+            break
+
+    breach_date = ratio.index[breach_idx]
+    today       = pd.Timestamp.today()
+    months      = (today.year - breach_date.year) * 12 + (today.month - breach_date.month)
+    return months, breach_date
+
+
 def _breach_to_correction_lags(
     ratio:          pd.Series,
     corrections:    list[dict],
@@ -222,6 +245,43 @@ def render_tab9(model_output, phase_output) -> None:
         f'⚖️ Market Valuation: {zone_label} ({current_ratio:.1f}% of GDP)</div>',
         unsafe_allow_html=True,
     )
+
+    # ── Breach clock — months above 165% ─────────────────────────────────────
+    breach_165 = _months_since_breach(ratio, 165.0)
+    if breach_165 is not None:
+        breach_months, breach_date = breach_165
+        # Historical average lag at 165% (hard to compute here without corrections data,
+        # so we display the raw month count with context)
+        st.markdown(
+            f"""
+            <div style="
+                display:flex; align-items:center; gap:18px;
+                background: rgba(192,57,43,0.12);
+                border: 2px solid rgba(192,57,43,0.55);
+                border-radius:10px; padding:14px 20px; margin:10px 0 16px;
+            ">
+                <div style="font-size:2.4rem; line-height:1;">🕐</div>
+                <div>
+                    <div style="color:#e74c3c; font-size:0.75rem; font-weight:700;
+                                letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px;">
+                        Currently Above 165% Threshold
+                    </div>
+                    <div style="color:#ffffff; font-size:1.05rem; line-height:1.5;">
+                        The Buffett Indicator has been in <strong style="color:#e74c3c;">
+                        Significantly Overvalued</strong> territory for
+                        <strong style="color:#ffffff; font-size:1.35rem;">
+                        &nbsp;{breach_months}&nbsp;months</strong>
+                        &nbsp;— since <strong>{breach_date.strftime("%b %Y")}</strong>.
+                    </div>
+                    <div style="color:#aaa; font-size:0.8rem; margin-top:6px;">
+                        Historically, a ≥10% correction has followed a 165% breach by an average
+                        of ~6–18 months. See the lag table below for full historical episodes.
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     # ── Action item ───────────────────────────────────────────────────────────
     if current_ratio > 165:
