@@ -219,6 +219,28 @@ def render_tab9(model_output, phase_output) -> None:
     premium        = current_ratio - hist_mean
     zone_label, zone_color = _get_zone(current_ratio)
 
+    # ── Time window selector ──────────────────────────────────────────────────
+    _TW_OPTIONS = ["10Y", "20Y", "30Y", "50Y", "All"]
+    _tw_col, _ = st.columns([3, 5])
+    with _tw_col:
+        tw_choice = st.radio(
+            "Time window",
+            options=_TW_OPTIONS,
+            index=2,                      # default: 30Y
+            horizontal=True,
+            key="tab9_time_window",
+            label_visibility="collapsed",
+            help="Adjust the x-axis range across all charts on this page",
+        )
+    _today = pd.Timestamp.today()
+    _offsets = {"10Y": 10, "20Y": 20, "30Y": 30, "50Y": 50}
+    x_start = (
+        str((_today - pd.DateOffset(years=_offsets[tw_choice])).date())
+        if tw_choice != "All" else "1945-01-01"
+    )
+    x_end   = str(_today.date())
+    x_range = [x_start, x_end]
+
     # ── Metric row ────────────────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
     qoq_delta = current_ratio - float(ratio.iloc[-2]) if len(ratio) >= 2 else None
@@ -380,7 +402,8 @@ def render_tab9(model_output, phase_output) -> None:
     fig = dark_layout(fig, yaxis_title="Market Cap / GDP (%)")
     fig.update_layout(
         height=440,
-        yaxis={"range": [0, min(300, max(ratio.values) * 1.15)]},
+        yaxis ={"range": [0, min(300, max(ratio.values) * 1.15)]},
+        xaxis ={"range": x_range},
     )
     st.plotly_chart(fig, use_container_width=True, key="tab9_buffett_main")
 
@@ -410,7 +433,7 @@ def render_tab9(model_output, phase_output) -> None:
     ))
     fig2 = add_nber(fig2, start_date="1945-01-01")
     fig2 = dark_layout(fig2, yaxis_title="Index (1945 = 100)")
-    fig2.update_layout(height=300)
+    fig2.update_layout(height=300, xaxis={"range": x_range})
     st.plotly_chart(fig2, use_container_width=True, key="tab9_buffett_diverge")
 
     st.markdown("---")
@@ -522,6 +545,7 @@ def render_tab9(model_output, phase_output) -> None:
                 "showgrid":   False,
                 "tickfont":   {"color": "#3498db"},
             },
+            xaxis ={"range": x_range},
             legend={"orientation": "h", "y": -0.10},
         )
         st.plotly_chart(fig_c, use_container_width=True, key="tab9_corrections_overlay")
