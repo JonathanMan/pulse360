@@ -1154,4 +1154,85 @@ def render_tab9(model_output, phase_output) -> None:
             st.markdown(st.session_state["buffett_brief_text"])
 
     st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # BOTTOM LINE — single decisive action
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # Derive action from composite score + current valuation
+    if composite_score >= 70:
+        action_verb  = "BUY / OVERWEIGHT"
+        action_color = "#2ecc71"
+        action_body  = (
+            f"The Buffett Indicator ({current_ratio:.1f}% of GDP) sits in favourable territory "
+            f"and macro conditions support it. Add equity exposure — Buffett would be deploying capital."
+        )
+    elif composite_score >= 55:
+        action_verb  = "HOLD — FULL ALLOCATION"
+        action_color = "#27ae60"
+        action_body  = (
+            f"Valuation is reasonable and macro backdrop is supportive. "
+            f"Maintain your strategic equity allocation. No urgency to buy or sell."
+        )
+    elif composite_score >= 40:
+        action_verb  = "HOLD — RAISE QUALITY BAR"
+        action_color = "#f1c40f"
+        action_body  = (
+            f"At {current_ratio:.1f}% of GDP the market is modestly stretched. "
+            f"Hold existing positions but avoid new equity risk at elevated prices. "
+            f"Tilt toward quality, profitable businesses trading at reasonable multiples."
+        )
+    elif composite_score >= 25:
+        action_verb  = "REDUCE — RAISE CASH"
+        action_color = "#e67e22"
+        action_body  = (
+            f"At {current_ratio:.1f}% of GDP ({premium:+.1f}pp above the {hist_mean:.0f}% "
+            f"historical average) and a recession probability of {rec_prob:.1f}%, "
+            f"the risk/reward skews unfavourable. "
+            f"Trim equity exposure, raise above-average cash, and wait for better entry points."
+        )
+    else:
+        action_verb  = "DEFENSIVE — ACCUMULATE CASH"
+        action_color = "#e74c3c"
+        action_body  = (
+            f"At {current_ratio:.1f}% of GDP ({hist_pct:.0f}th historical percentile), "
+            f"this is among the most overvalued readings on record. "
+            f"Buffett's playbook at these levels: stop buying, let cash build, be patient. "
+            f"'The price you pay determines your return.' Every dollar deployed here "
+            f"buys less future earnings power."
+        )
+
+    st.markdown(
+        f"""
+        <div style="
+            background: {_hex_rgba(action_color, 0.10)};
+            border: 2px solid {_hex_rgba(action_color, 0.65)};
+            border-left: 6px solid {action_color};
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin: 8px 0 20px;
+        ">
+          <div style="color: #888; font-size: 0.7rem; font-weight: 700;
+                      letter-spacing: .09em; text-transform: uppercase; margin-bottom: 8px;">
+            ⚡ Bottom Line — What Should You Do?
+          </div>
+          <div style="color: {action_color}; font-size: 1.55rem; font-weight: 800;
+                      letter-spacing: .02em; margin-bottom: 10px; line-height: 1.1;">
+            {action_verb}
+          </div>
+          <div style="color: #e0e0e0; font-size: 0.92rem; line-height: 1.65; max-width: 820px;">
+            {action_body}
+          </div>
+          <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid {_hex_rgba(action_color, 0.25)};
+                      display: flex; gap: 24px; font-size: 0.75rem; color: #888;">
+            <span>Score <strong style="color: {action_color};">{composite_score}/100</strong></span>
+            <span>BI <strong style="color: {action_color};">{current_ratio:.1f}% GDP</strong></span>
+            <span>Rec. Risk <strong style="color: {action_color};">{rec_prob:.1f}%</strong></span>
+            <span>Phase <strong style="color: {action_color};">{phase_output.phase}</strong></span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.caption(DISCLAIMER)
