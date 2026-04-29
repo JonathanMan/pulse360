@@ -23,7 +23,6 @@ from components.tabs.tab5_monetary  import render_tab5
 from components.tabs.tab6_markets   import render_tab6
 from components.tabs.tab7_housing   import render_tab7
 from components.tabs.tab8_global    import render_tab8
-from components.tabs.tab9_buffett   import render_tab9
 
 from data.fred_client import (
     compute_lei_growth,
@@ -146,7 +145,6 @@ tabs = st.tabs([
     "6 · Markets",
     "7 · Housing & Consumer",
     "8 · Global",
-    "9 · Buffett Indicator",
 ])
 
 
@@ -182,9 +180,6 @@ with tabs[6]:
 
 with tabs[7]:
     render_tab8(model_output, phase_output)
-
-with tabs[8]:
-    render_tab9(model_output, phase_output)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
