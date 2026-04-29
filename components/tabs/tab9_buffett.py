@@ -220,6 +220,61 @@ _HIST_BUY_ANCHORS = [
 ]
 
 
+def _dca_analysis(ratio: pd.Series, sp_monthly: pd.Series) -> pd.DataFrame:
+    """
+    For every quarterly Buffett Indicator observation, simulate:
+      - Monthly DCA: invest $1 each month for 12 / 36 / 60 months, measure
+        annualised return on total capital deployed.
+      - Lump Sum: invest everything at t=0, measure return at end of horizon.
+
+    Returns one row per quarter with columns:
+      date, buffett_pct, zone,
+      dca_1Y, lump_1Y,
+      dca_3Y, lump_3Y,
+      dca_5Y, lump_5Y
+    """
+    records: list[dict] = []
+    for dt, bval in ratio.items():
+        sp_t = sp_monthly.asof(dt)
+        if pd.isna(sp_t) or sp_t <= 0:
+            continue
+        zone_label, _ = _get_zone(float(bval))
+        row: dict = {"date": dt, "buffett_pct": round(float(bval), 1), "zone": zone_label}
+
+        for months, col in [(12, "1Y"), (36, "3Y"), (60, "5Y")]:
+            # Gather monthly prices inside the DCA window
+            prices = []
+            for m in range(1, months + 1):
+                p = sp_monthly.asof(dt + pd.DateOffset(months=m))
+                if not pd.isna(p) and p > 0:
+                    prices.append(float(p))
+
+            # Require ≥ 80 % of months to be present
+            if len(prices) < months * 0.8:
+                row[f"dca_{col}"]  = None
+                row[f"lump_{col}"] = None
+                continue
+
+            final_price = prices[-1]
+            n = len(prices)
+
+            # DCA: invest $1/month → total invested = n, shares = Σ(1/price_i)
+            shares    = sum(1.0 / p for p in prices)
+            dca_ret   = (shares * final_price / n - 1) * 100
+
+            # Lump sum: invest n dollars at t=0
+            lump_ret  = (final_price / sp_t - 1) * 100
+
+            row[f"dca_{col}"]  = round(dca_ret,  1)
+            row[f"lump_{col}"] = round(lump_ret, 1)
+
+        records.append(row)
+
+    cols = ["date", "buffett_pct", "zone",
+            "dca_1Y", "lump_1Y", "dca_3Y", "lump_3Y", "dca_5Y", "lump_5Y"]
+    return pd.DataFrame(records) if records else pd.DataFrame(columns=cols)
+
+
 def _entry_exit_analysis(
     ratio:     pd.Series,
     sp_monthly: pd.Series,
@@ -1235,4 +1290,335 @@ def render_tab9(model_output, phase_output) -> None:
         unsafe_allow_html=True,
     )
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOLLAR COST AVERAGING ANALYSIS
+    # ══════════════════════════════════════════════════════════════════════════
+
+    st.markdown("### 💰 Does Dollar Cost Averaging Still Make Sense?")
+    st.caption(
+        "DCA into the S&P 500 is analysed across all six Buffett Indicator valuation zones "
+        "since 1950. For each quarterly observation, a monthly DCA strategy is simulated over "
+        "1, 3, and 5 years and compared to an equivalent lump-sum investment. "
+        "Key insight: DCA doesn't eliminate valuation risk — it mitigates entry-timing risk."
+    )
+
+    if not sp_monthly.empty:
+        with st.spinner("Computing DCA scenarios…"):
+            dca_df = _dca_analysis(ratio, sp_monthly)
+
+        if not dca_df.empty:
+            cur_zone_mask = dca_df["zone"] == zone_label
+            cur_zone_data = dca_df[cur_zone_mask]
+
+            # ── DCA verdict card ──────────────────────────────────────────────
+            # Probability of positive 5Y DCA return at current zone
+            dca_5y_vals = cur_zone_data["dca_5Y"].dropna()
+            lump_5y_vals = cur_zone_data["lump_5Y"].dropna()
+
+            p_dca_pos  = float((dca_5y_vals > 0).mean() * 100)   if len(dca_5y_vals)  >= 3 else None
+            p_dca_wins = float((
+                (dca_df.loc[cur_zone_mask, "dca_5Y"].dropna() >
+                 dca_df.loc[cur_zone_mask, "lump_5Y"].dropna())
+            ).mean() * 100) if len(dca_5y_vals) >= 3 else None
+            med_dca_5y = float(dca_5y_vals.median()) if len(dca_5y_vals) >= 3 else None
+
+            if p_dca_pos is None:
+                verdict       = "INSUFFICIENT DATA"
+                verdict_color = "#888"
+                verdict_body  = "Not enough historical observations at this valuation level."
+            elif p_dca_pos >= 85 and current_ratio < 135:
+                verdict       = "YES — CONTINUE OR INCREASE DCA"
+                verdict_color = "#2ecc71"
+                verdict_body  = (
+                    f"At {current_ratio:.1f}% of GDP, historical data shows a {p_dca_pos:.0f}% "
+                    f"probability of a positive 5-year DCA return. "
+                    f"Conditions strongly support continuing or increasing a regular S&P 500 DCA programme."
+                )
+            elif p_dca_pos >= 70:
+                verdict       = "YES — CONTINUE WITH NORMAL CADENCE"
+                verdict_color = "#27ae60"
+                verdict_body  = (
+                    f"At {current_ratio:.1f}% of GDP, {p_dca_pos:.0f}% of historical DCA "
+                    f"starting points at this zone produced positive 5-year returns. "
+                    f"DCA still makes sense — maintain your regular schedule but temper return expectations."
+                )
+            elif p_dca_pos >= 55:
+                verdict       = "YES — BUT REDUCE SIZE OR EXTEND HORIZON"
+                verdict_color = "#f39c12"
+                verdict_body  = (
+                    f"At {current_ratio:.1f}% of GDP, the probability of positive 5Y DCA returns "
+                    f"is {p_dca_pos:.0f}% historically. DCA is still rational but expected returns "
+                    f"are meaningfully below average. Consider reducing monthly contribution size "
+                    f"or extending your investment horizon to 7–10 years."
+                )
+            else:
+                verdict       = "CONTINUE — BUT EXPECT MUTED RETURNS"
+                verdict_color = "#e74c3c"
+                verdict_body  = (
+                    f"At {current_ratio:.1f}% of GDP ({hist_pct:.0f}th percentile), "
+                    f"only {p_dca_pos:.0f}% of historical DCA starting points at this zone "
+                    f"produced positive 5-year returns. "
+                    f"DCA still reduces timing risk vs. a lump sum, but the return headwind from "
+                    f"elevated valuations is significant. Consider holding a larger cash reserve "
+                    f"and deploying it if/when the indicator pulls back toward fair value."
+                )
+
+            # Build the key stats
+            p_dca_wins_str = f"{p_dca_wins:.0f}%" if p_dca_wins is not None else "—"
+            med_dca_5y_str = f"{med_dca_5y:+.1f}%" if med_dca_5y is not None else "—"
+
+            st.markdown(
+                f"""
+                <div style="
+                    background: {_hex_rgba(verdict_color, 0.09)};
+                    border: 2px solid {_hex_rgba(verdict_color, 0.55)};
+                    border-radius: 10px;
+                    padding: 18px 22px;
+                    margin: 8px 0 18px;
+                ">
+                  <div style="color: #888; font-size: 0.7rem; font-weight: 700;
+                              letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px;">
+                    💰 DCA Verdict at {zone_label} ({current_ratio:.1f}% of GDP)
+                  </div>
+                  <div style="color: {verdict_color}; font-size: 1.4rem; font-weight: 800;
+                              margin-bottom: 10px; line-height: 1.15;">
+                    {verdict}
+                  </div>
+                  <div style="color: #ddd; font-size: 0.88rem; line-height: 1.65; max-width: 820px;
+                              margin-bottom: 14px;">
+                    {verdict_body}
+                  </div>
+                  <div style="display: flex; gap: 28px; flex-wrap: wrap;">
+                    <div style="text-align: center;">
+                      <div style="color: {verdict_color}; font-size: 1.5rem; font-weight: 800;">
+                        {p_dca_pos:.0f}%
+                      </div>
+                      <div style="color: #888; font-size: 0.7rem; text-transform: uppercase;
+                                  letter-spacing: .05em;">P(5Y DCA&nbsp;>&nbsp;0)</div>
+                    </div>
+                    <div style="text-align: center;">
+                      <div style="color: {verdict_color}; font-size: 1.5rem; font-weight: 800;">
+                        {med_dca_5y_str}
+                      </div>
+                      <div style="color: #888; font-size: 0.7rem; text-transform: uppercase;
+                                  letter-spacing: .05em;">Median 5Y DCA Return</div>
+                    </div>
+                    <div style="text-align: center;">
+                      <div style="color: {verdict_color}; font-size: 1.5rem; font-weight: 800;">
+                        {p_dca_wins_str}
+                      </div>
+                      <div style="color: #888; font-size: 0.7rem; text-transform: uppercase;
+                                  letter-spacing: .05em;">P(DCA beats Lump Sum, 5Y)</div>
+                    </div>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # ── DCA vs Lump Sum by zone table ─────────────────────────────────
+            st.markdown("##### DCA vs Lump Sum — All Valuation Zones (Historical, 1950–present)")
+            st.caption(
+                "P(DCA>0) = probability that a 5-year DCA programme produces a positive return. "
+                "P(DCA>LS) = probability that DCA outperforms an equivalent lump-sum investment "
+                "(DCA wins when the market falls after the initial investment date)."
+            )
+
+            th = ("background:#1a1a2e;color:#aaa;font-size:0.72rem;font-weight:700;"
+                  "letter-spacing:.04em;text-transform:uppercase;padding:7px 10px;"
+                  "border-bottom:1px solid #333;white-space:nowrap;")
+            th_r = th + "text-align:right;"
+            th_l = th + "text-align:left;"
+            td   = "padding:7px 10px;font-size:0.82rem;border-bottom:1px solid #1e1e2e;"
+
+            def _dca_color(v: float | None) -> tuple[str, str]:
+                if v is None:
+                    return "#555", "—"
+                t = f"{v:+.1f}%"
+                if v >= 30:   return "#2ecc71", t
+                if v >= 10:   return "#27ae60", t
+                if v >=  0:   return "#f1c40f", t
+                return "#e74c3c", t
+
+            def _pct_color(v: float | None) -> tuple[str, str]:
+                if v is None:
+                    return "#555", "—"
+                t = f"{v:.0f}%"
+                if v >= 80:  return "#2ecc71", t
+                if v >= 65:  return "#27ae60", t
+                if v >= 50:  return "#f1c40f", t
+                return "#e74c3c", t
+
+            zone_rows_html = ""
+            for zone in _ZONE_ORDER:
+                z_color = _ZONE_COLORS.get(zone, "#888")
+                mask    = dca_df["zone"] == zone
+                n       = int(mask.sum())
+                if n < 3:
+                    continue
+                sub = dca_df[mask]
+                is_current = zone == zone_label
+                row_bg = f"background:{_hex_rgba(z_color, 0.07)};" if is_current else ""
+                cur_tag = (
+                    f' <span style="font-size:0.65rem;background:{z_color};color:#000;'
+                    f'border-radius:3px;padding:1px 5px;font-weight:700;">NOW</span>'
+                ) if is_current else ""
+
+                cells = (
+                    f'<td style="{td}{row_bg}text-align:left;">'
+                    f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;'
+                    f'background:{z_color};margin-right:6px;vertical-align:middle;"></span>'
+                    f'<span style="color:#fff;font-weight:{"800" if is_current else "500"};">'
+                    f'{zone}</span>{cur_tag}</td>'
+                    f'<td style="{td}{row_bg}color:#888;text-align:right;">{n}</td>'
+                )
+
+                for col in ["1Y", "3Y", "5Y"]:
+                    dv = sub[f"dca_{col}"].dropna()
+                    lv = sub[f"lump_{col}"].dropna()
+                    med_d = float(round(dv.median(), 1)) if len(dv) >= 3 else None
+                    med_l = float(round(lv.median(), 1)) if len(lv) >= 3 else None
+
+                    both  = sub[[f"dca_{col}", f"lump_{col}"]].dropna()
+                    p_pos  = float((both[f"dca_{col}"] > 0).mean() * 100) if len(both) >= 3 else None
+                    p_wins = float((both[f"dca_{col}"] > both[f"lump_{col}"]).mean() * 100) if len(both) >= 3 else None
+
+                    dc, dv_s = _dca_color(med_d)
+                    lc, lv_s = _dca_color(med_l)
+                    ppc, ppv = _pct_color(p_pos)
+                    pwc, pwv = _pct_color(p_wins)
+                    cells += (
+                        f'<td style="{td}{row_bg}color:{dc};font-weight:600;text-align:right;">{dv_s}</td>'
+                        f'<td style="{td}{row_bg}color:{lc};text-align:right;">{lv_s}</td>'
+                        f'<td style="{td}{row_bg}color:{ppc};text-align:right;">{ppv}</td>'
+                        f'<td style="{td}{row_bg}color:{pwc};text-align:right;">{pwv}</td>'
+                    )
+                zone_rows_html += f"<tr>{cells}</tr>"
+
+            st.markdown(
+                f"""
+                <div style="overflow-x:auto;margin:8px 0 12px;">
+                  <table style="width:100%;border-collapse:collapse;background:#0e1117;
+                                border-radius:8px;overflow:hidden;">
+                    <thead>
+                      <tr>
+                        <th style="{th_l}" rowspan="2">Zone</th>
+                        <th style="{th_r}" rowspan="2">n</th>
+                        <th style="{th_r}" colspan="4">1-Year Horizon</th>
+                        <th style="{th_r}" colspan="4">3-Year Horizon</th>
+                        <th style="{th_r}" colspan="4">5-Year Horizon</th>
+                      </tr>
+                      <tr>
+                        <th style="{th_r}">DCA Med</th><th style="{th_r}">LS Med</th>
+                        <th style="{th_r}">P(DCA>0)</th><th style="{th_r}">P(DCA>LS)</th>
+                        <th style="{th_r}">DCA Med</th><th style="{th_r}">LS Med</th>
+                        <th style="{th_r}">P(DCA>0)</th><th style="{th_r}">P(DCA>LS)</th>
+                        <th style="{th_r}">DCA Med</th><th style="{th_r}">LS Med</th>
+                        <th style="{th_r}">P(DCA>0)</th><th style="{th_r}">P(DCA>LS)</th>
+                      </tr>
+                    </thead>
+                    <tbody>{zone_rows_html}</tbody>
+                  </table>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                "DCA Med = median return of monthly DCA strategy. LS Med = median lump-sum return. "
+                "P(DCA>0) = % of starting points where DCA produced positive returns. "
+                "P(DCA>LS) = % of starting points where DCA outperformed lump sum. "
+                "Highlighted row = current valuation zone. Zones with <3 observations hidden."
+            )
+
+            # ── DCA vs Lump Sum chart ──────────────────────────────────────────
+            fig_dca = go.Figure()
+
+            zone_order_present = [z for z in _ZONE_ORDER if z in dca_df["zone"].unique()]
+            dca_med_5y   = []
+            lump_med_5y  = []
+            p_dca_pos_5y = []
+            zone_labels_chart = []
+            zone_colors_chart = []
+
+            for z in zone_order_present:
+                sub = dca_df[dca_df["zone"] == z]
+                dv  = sub["dca_5Y"].dropna()
+                lv  = sub["lump_5Y"].dropna()
+                if len(dv) < 3:
+                    continue
+                zone_labels_chart.append(z)
+                zone_colors_chart.append(_ZONE_COLORS.get(z, "#888"))
+                dca_med_5y.append(float(round(dv.median(), 1)))
+                lump_med_5y.append(float(round(lv.median(), 1)))
+                p_dca_pos_5y.append(float(round((dv > 0).mean() * 100, 1)))
+
+            if zone_labels_chart:
+                fig_dca.add_trace(go.Bar(
+                    name="DCA Median 5Y Return",
+                    x=zone_labels_chart,
+                    y=dca_med_5y,
+                    marker_color=[
+                        _hex_rgba("#2ecc71", 0.85) if v >= 0 else _hex_rgba("#e74c3c", 0.85)
+                        for v in dca_med_5y
+                    ],
+                    marker_line_color="#3498db",
+                    marker_line_width=1.5,
+                    hovertemplate="<b>%{x}</b><br>DCA median 5Y: <b>%{y:+.1f}%</b><extra></extra>",
+                ))
+                fig_dca.add_trace(go.Bar(
+                    name="Lump Sum Median 5Y Return",
+                    x=zone_labels_chart,
+                    y=lump_med_5y,
+                    marker_color=[
+                        _hex_rgba("#9b59b6", 0.55) if v >= 0 else _hex_rgba("#e74c3c", 0.55)
+                        for v in lump_med_5y
+                    ],
+                    marker_line_color="#9b59b6",
+                    marker_line_width=1.5,
+                    hovertemplate="<b>%{x}</b><br>Lump sum median 5Y: <b>%{y:+.1f}%</b><extra></extra>",
+                ))
+                fig_dca.add_trace(go.Scatter(
+                    name="P(DCA > 0) — right axis",
+                    x=zone_labels_chart,
+                    y=p_dca_pos_5y,
+                    mode="lines+markers",
+                    yaxis="y2",
+                    line={"color": "#f39c12", "width": 2, "dash": "dot"},
+                    marker={"size": 8, "color": "#f39c12"},
+                    hovertemplate="<b>%{x}</b><br>P(DCA>0): <b>%{y:.1f}%</b><extra></extra>",
+                ))
+
+                fig_dca.add_hline(y=0,  line_dash="dash", line_color="#555", line_width=1)
+                fig_dca.add_hline(
+                    y=50, line_dash="dot", line_color="#f39c12", line_width=1,
+                    yref="y2",
+                    annotation_text="50% breakeven",
+                    annotation_font_color="#f39c12",
+                    annotation_position="top right",
+                    annotation_font_size=9,
+                )
+
+                fig_dca = dark_layout(fig_dca, yaxis_title="Median 5Y Return (%)")
+                fig_dca.update_layout(
+                    height=420,
+                    barmode="group",
+                    xaxis={"tickangle": -20},
+                    yaxis2={
+                        "title":      {"text": "P(DCA > 0) %", "font": {"color": "#f39c12"}},
+                        "overlaying": "y",
+                        "side":       "right",
+                        "range":      [0, 110],
+                        "showgrid":   False,
+                        "tickfont":   {"color": "#f39c12"},
+                    },
+                    legend={"orientation": "h", "y": -0.28},
+                )
+                st.plotly_chart(fig_dca, use_container_width=True, key="tab9_dca_chart")
+
+        else:
+            st.info("Insufficient data to compute DCA analysis.")
+    else:
+        st.info("S&P 500 data unavailable — DCA analysis skipped.")
+
+    st.markdown("---")
     st.caption(DISCLAIMER)
