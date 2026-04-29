@@ -515,13 +515,12 @@ def render_tab9(model_output, phase_output) -> None:
                 "title": "Buffett Indicator (%)",
             },
             yaxis2={
-                "title":      "S&P 500 (log)",
+                "title":      {"text": "S&P 500 (log)", "font": {"color": "#3498db"}},
                 "overlaying": "y",
                 "side":       "right",
                 "type":       "log",
                 "showgrid":   False,
                 "tickfont":   {"color": "#3498db"},
-                "titlefont":  {"color": "#3498db"},
             },
             legend={"orientation": "h", "y": -0.10},
         )
