@@ -6,8 +6,8 @@ Buffett called it "probably the best single measure of where
 valuations stand at any given moment."
 
 Data sources:
-  WILL5000INDFC — Wilshire 5000 Full Cap Index (total market cap proxy)
-  GDP           — US Nominal GDP (quarterly, billions $)
+  NCBEILQ027S — Fed Z.1 Nonfinancial Corporate Equities (millions USD, quarterly)
+  GDP         — US Nominal GDP (billions USD, quarterly)
 """
 
 from __future__ import annotations
@@ -15,6 +15,13 @@ from __future__ import annotations
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+
+
+def _hex_rgba(hex_color: str, alpha: float) -> str:
+    """Convert a 6-char hex color to an rgba() string (Plotly-compatible)."""
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
 
 from ai.claude_client import get_buffett_analysis
 from components.chart_utils import add_nber, dark_layout, render_action_item
@@ -67,10 +74,10 @@ def render_tab9(model_output, phase_output) -> None:
         return
 
     # ── Compute ratio ─────────────────────────────────────────────────────────
-    # NCBEILQ027S = total nonfinancial corporate equity market cap (billions USD)
-    # GDP = nominal GDP (billions USD)
-    # ratio = (market_cap / GDP) × 100  →  Buffett Indicator %
-    w_q = wilshire["data"].resample("QE").last().dropna()
+    # NCBEILQ027S is in MILLIONS of USD; GDP is in BILLIONS of USD
+    # → divide market cap by 1000 to convert millions → billions before computing ratio
+    # ratio = (market_cap_billions / GDP_billions) × 100  →  Buffett Indicator %
+    w_q = (wilshire["data"] / 1000).resample("QE").last().dropna()   # millions → billions
     g_q = gdp["data"].resample("QE").last().ffill().dropna()
 
     common = w_q.index.intersection(g_q.index)
@@ -108,7 +115,7 @@ def render_tab9(model_output, phase_output) -> None:
     # ── Zone badge ────────────────────────────────────────────────────────────
     st.markdown(
         f'<div style="text-align:center; margin:10px 0 18px; '
-        f'background:{zone_color}22; border:2px solid {zone_color}66; '
+        f'background:{_hex_rgba(zone_color, 0.13)}; border:2px solid {_hex_rgba(zone_color, 0.4)}; '
         f'border-radius:10px; padding:12px; font-weight:700; '
         f'color:{zone_color}; font-size:1.15rem;">'
         f'⚖️ Market Valuation: {zone_label} ({current_ratio:.1f}% of GDP)</div>',
@@ -171,7 +178,7 @@ def render_tab9(model_output, phase_output) -> None:
     for lo, hi, label, color in _ZONES:
         fig.add_hrect(
             y0=lo, y1=min(hi, 300),
-            fillcolor=f"{color}14",
+            fillcolor=_hex_rgba(color, 0.08),
             line_width=0, layer="below",
             annotation_text=label,
             annotation_position="right",
@@ -185,7 +192,7 @@ def render_tab9(model_output, phase_output) -> None:
         mode="lines",
         line={"color": zone_color, "width": 2.5},
         name="Buffett Indicator (%)",
-        fill="tozeroy", fillcolor=f"{zone_color}18",
+        fill="tozeroy", fillcolor=_hex_rgba(zone_color, 0.10),
         hovertemplate="%{x|%b %Y}: <b>%{y:.1f}%</b><extra></extra>",
     ))
 
