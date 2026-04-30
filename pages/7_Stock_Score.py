@@ -244,6 +244,18 @@ def _macro_adj_score(base_score: int, sector: str | None, regime: str) -> int:
     return max(0, min(100, base_score + adj))
 
 
+def _macro_sens_cell(sector: str, regime: str) -> str:
+    """Return coloured HTML showing this sector's macro sensitivity for the given regime."""
+    if regime == "Normal":
+        return '<span style="color:#444;">—</span>'
+    adj = _MACRO_ADJ.get(regime, {}).get(sector, 0)
+    if adj == 0:
+        return '<span style="color:#555;">0</span>'
+    color  = "#2ecc71" if adj > 0 else "#e74c3c"
+    sign   = "+" if adj > 0 else ""
+    return f'<span style="color:{color};font-weight:700;">{sign}{adj}</span>'
+
+
 def _score_color(value: int, max_value: int) -> str:
     """Return a colour based on how the score compares to its maximum."""
     if max_value == 0:
@@ -960,14 +972,18 @@ def _compute_score(data: dict) -> dict:
     sh_cur = _sf(info.get("sharesOutstanding") or info.get("impliedSharesOutstanding"))
     sh_row = _row(bs, "Ordinary Shares Number", "Share Issued")
     sh_prev = _col1(sh_row)
+    sh_chg_val: float | None = None
     if sh_cur and sh_prev and sh_prev > 0:
         sh_chg = (sh_cur - sh_prev) / sh_prev * 100
+        sh_chg_val = round(sh_chg, 2)
         buyback = sh_chg < -1
         s5_item("Share count declining (buybacks)", 3, 3 if buyback else 0,
                 f"YoY share change = {sh_chg:+.1f}%",
                 "Buffett: buybacks at fair/cheap prices are the best capital allocation")
     else:
         s5_item("Share count declining", 3, 0, "Data unavailable")
+
+    results["sections"]["shareholder"]["sh_chg"] = sh_chg_val
 
     div_yield = _sf(info.get("dividendYield"))
     if mktc and fcf:
@@ -1844,6 +1860,7 @@ if run_screener:
                 "Valuation":  sc["sections"]["valuation"]["score"],
                 "Momentum":   sc["sections"]["momentum"]["score"],
                 "Shareholder":sc["sections"]["shareholder"]["score"],
+                "ShareChg":   sc["sections"]["shareholder"].get("sh_chg"),
                 "Trend":      t_arrow,
                 "TrendColor": t_color,
                 "TrendTip":   t_tip,
@@ -1926,6 +1943,25 @@ if st.session_state.get("screener_results"):
         if score >= 30: return "🟠 Red Flags"
         return "🔴 Fails"
 
+    # ── Data Status bar ──────────────────────────────────────────────────────────
+    _all_results = st.session_state.get("screener_results", [])
+    _n_live   = sum(1 for r in _all_results if not r.get("_cached"))
+    _n_cached = sum(1 for r in _all_results if r.get("_cached"))
+    _n_failed = len(st.session_state.get("screener_errors", []))
+    _status_parts = []
+    if _n_live:
+        _status_parts.append(f'<span style="color:#2ecc71;">🟢 {_n_live} live</span>')
+    if _n_cached:
+        _status_parts.append(f'<span style="color:#f39c12;">📦 {_n_cached} cached</span>')
+    if _n_failed:
+        _status_parts.append(f'<span style="color:#e74c3c;">⚠️ {_n_failed} failed</span>')
+    st.markdown(
+        f'<div style="font-size:0.75rem;color:#666;margin-bottom:8px;">'
+        f'Data status: &nbsp;' + ' &nbsp;·&nbsp; '.join(_status_parts) +
+        f'&nbsp;&nbsp;<span style="color:#444;font-style:italic;">· scores cached 1 hr</span></div>',
+        unsafe_allow_html=True,
+    )
+
     regime_label = "" if macro_regime == "Normal" else f" <span style='color:#f39c12;font-size:0.75rem;'>sorted by {macro_regime} macro-adjusted score</span>"
     st.markdown(
         f"#### Top 20 Results &nbsp; <span style='color:#888;font-size:0.8rem;'>({len(scr_df)} stocks scored)</span>{regime_label}",
@@ -1946,6 +1982,15 @@ if st.session_state.get("screener_results"):
         t_arrow      = row.get("Trend", "→")
         t_color      = row.get("TrendColor", "#888")
         t_tip        = row.get("TrendTip", "")
+        macro_sens   = _macro_sens_cell(row.get("Sector", ""), macro_regime)
+        sh_chg_val   = row.get("ShareChg")
+        if sh_chg_val is not None:
+            sh_color = "#2ecc71" if sh_chg_val <= -1 else ("#e74c3c" if sh_chg_val > 1 else "#f39c12")
+            sh_label = f"{sh_chg_val:+.1f}%"
+            sh_tip   = "Buybacks ✓" if sh_chg_val <= -1 else ("Dilution ⚠" if sh_chg_val > 1 else "Stable")
+            sh_cell  = f'<span style="color:{sh_color};font-weight:600;" title="{sh_tip}">{sh_label}</span>'
+        else:
+            sh_cell  = '<span style="color:#444;">—</span>'
 
         # Macro delta badge
         delta = mac_sc - sc
@@ -1966,11 +2011,13 @@ if st.session_state.get("screener_results"):
             f'<td style="color:#ccc;padding:7px 5px;font-size:0.78rem;">{row["Company"]}</td>'
             f'<td style="color:#999;padding:7px 5px;font-size:0.72rem;">{row["Sector"]}</td>'
             f'<td style="text-align:center;padding:7px 8px;">{mac_cell}</td>'
+            f'<td style="text-align:center;padding:7px 5px;font-size:0.78rem;">{macro_sens}</td>'
             f'<td style="color:{t_color};font-size:1.1rem;text-align:center;" title="{t_tip}">{t_arrow}</td>'
             f'<td style="color:{_score_color(int(row["Moat"]),40)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Moat"])}/40</td>'
             f'<td style="color:{_score_color(int(row["Fortress"]),25)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Fortress"])}/25</td>'
             f'<td style="color:{_score_color(int(row["Valuation"]),20)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Valuation"])}/20</td>'
             f'<td style="color:{_score_color(int(row["Momentum"]),10)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Momentum"])}/10</td>'
+            f'<td style="text-align:center;padding:7px 5px;font-size:0.75rem;">{sh_cell}</td>'
             f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
             f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
             f'<td style="color:#ccc;font-size:0.75rem;text-align:right;">{price_str}</td>'
@@ -1990,11 +2037,13 @@ if st.session_state.get("screener_results"):
               <th style="padding:7px 5px;text-align:left;">Company</th>
               <th style="padding:7px 5px;text-align:left;">Sector</th>
               <th style="padding:7px 8px;text-align:center;" title="Score (macro-adjusted if regime selected)">Score</th>
+              <th style="padding:7px 5px;text-align:center;" title="Sector sensitivity to selected macro regime (pts adjustment, ±15 max)">Macro Sens.</th>
               <th style="padding:7px 5px;text-align:center;" title="Fundamental trend: ↑ improving / → mixed / ↓ deteriorating">Trend</th>
               <th style="padding:7px 5px;text-align:center;">Moat</th>
               <th style="padding:7px 5px;text-align:center;">Fortress</th>
               <th style="padding:7px 5px;text-align:center;">Val.</th>
               <th style="padding:7px 5px;text-align:center;">Mom.</th>
+              <th style="padding:7px 5px;text-align:center;" title="YoY share count change — negative = buybacks (good), positive = dilution (bad)">Shares YoY</th>
               <th style="padding:7px 5px;text-align:center;" title="Free Cash Flow Yield = FCF / Market Cap">FCF Yld</th>
               <th style="padding:7px 5px;text-align:center;" title="Forward P/E ratio">Fwd P/E</th>
               <th style="padding:7px 5px;text-align:right;">Price</th>
@@ -2014,9 +2063,10 @@ if st.session_state.get("screener_results"):
                    + (" and more…" if len(errs) > 10 else ""))
 
     st.caption(
-        "💡 Trend arrow = YoY direction of Revenue, Net Income & OCF. "
-        "Macro-adjusted score = base ± sector sensitivity (capped ±15 pts). "
-        "FCF Yield = Free Cash Flow / Market Cap. Screener cached 1 hour."
+        "💡 Trend = YoY direction of Revenue, Net Income & OCF. "
+        "Macro Sens. = sector's score adjustment for the selected regime (capped ±15 pts). "
+        "Shares YoY = share count change — green (buybacks ✓) / red (dilution ⚠). "
+        "FCF Yield = FCF / Market Cap. Scores cached 1 hr."
     )
 
 st.markdown("---")
