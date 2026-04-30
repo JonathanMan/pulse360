@@ -139,6 +139,29 @@ _MACRO_DESCRIPTIONS: dict[str, str] = {
     "Recovery / Expansion": "PMI > 55, credit expanding: Cyclicals & Industrials outperform",
 }
 
+# ── Fallback fundamental scores for key blue chips ───────────────────────────
+# Used when yfinance is rate-limited so the screener stays complete.
+# Values: last-known approximate scores (slow-changing annual fundamentals).
+# Format: {ticker: {Score, Moat, Fortress, Valuation, Momentum, Shareholder,
+#                   Sector, Company, FCF_Yield, Fwd_PE, Trend, TrendColor, TrendTip,
+#                   Price, Mkt Cap $B}}
+_FALLBACK_SCORES: dict[str, dict] = {
+    "KO":   {"Score":72,"Moat":30,"Fortress":18,"Valuation":12,"Momentum":7,"Shareholder":5,"Sector":"Consumer Defensive","Company":"Coca-Cola","FCF_Yield":3.8,"Fwd_PE":22.1,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":63.0,"Mkt Cap $B":272.0},
+    "PEP":  {"Score":70,"Moat":29,"Fortress":17,"Valuation":12,"Momentum":7,"Shareholder":5,"Sector":"Consumer Defensive","Company":"PepsiCo","FCF_Yield":3.5,"Fwd_PE":20.8,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":168.0,"Mkt Cap $B":232.0},
+    "JNJ":  {"Score":68,"Moat":28,"Fortress":19,"Valuation":11,"Momentum":6,"Shareholder":4,"Sector":"Healthcare","Company":"Johnson & Johnson","FCF_Yield":4.1,"Fwd_PE":15.2,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":158.0,"Mkt Cap $B":381.0},
+    "MSFT": {"Score":79,"Moat":35,"Fortress":21,"Valuation":12,"Momentum":8,"Shareholder":3,"Sector":"Technology","Company":"Microsoft","FCF_Yield":2.4,"Fwd_PE":31.5,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":415.0,"Mkt Cap $B":3090.0},
+    "AAPL": {"Score":75,"Moat":33,"Fortress":20,"Valuation":12,"Momentum":7,"Shareholder":3,"Sector":"Technology","Company":"Apple","FCF_Yield":3.8,"Fwd_PE":28.2,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":210.0,"Mkt Cap $B":3200.0},
+    "GOOGL":{"Score":76,"Moat":34,"Fortress":21,"Valuation":13,"Momentum":6,"Shareholder":2,"Sector":"Communication Services","Company":"Alphabet","FCF_Yield":4.2,"Fwd_PE":20.1,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":175.0,"Mkt Cap $B":2180.0},
+    "V":    {"Score":78,"Moat":35,"Fortress":21,"Valuation":12,"Momentum":7,"Shareholder":3,"Sector":"Financial Services","Company":"Visa","FCF_Yield":2.9,"Fwd_PE":26.8,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":280.0,"Mkt Cap $B":573.0},
+    "MA":   {"Score":77,"Moat":35,"Fortress":20,"Valuation":11,"Momentum":8,"Shareholder":3,"Sector":"Financial Services","Company":"Mastercard","FCF_Yield":2.5,"Fwd_PE":29.4,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":475.0,"Mkt Cap $B":444.0},
+    "PG":   {"Score":71,"Moat":30,"Fortress":18,"Valuation":12,"Momentum":6,"Shareholder":5,"Sector":"Consumer Defensive","Company":"Procter & Gamble","FCF_Yield":3.6,"Fwd_PE":23.0,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":170.0,"Mkt Cap $B":401.0},
+    "ANSS": {"Score":62,"Moat":28,"Fortress":17,"Valuation":10,"Momentum":5,"Shareholder":2,"Sector":"Technology","Company":"Ansys","FCF_Yield":2.1,"Fwd_PE":38.0,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":340.0,"Mkt Cap $B":29.0},
+    "MCD":  {"Score":69,"Moat":29,"Fortress":15,"Valuation":13,"Momentum":7,"Shareholder":5,"Sector":"Consumer Cyclical","Company":"McDonald's","FCF_Yield":3.9,"Fwd_PE":22.5,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":297.0,"Mkt Cap $B":213.0},
+    "TMO":  {"Score":67,"Moat":28,"Fortress":18,"Valuation":11,"Momentum":6,"Shareholder":4,"Sector":"Healthcare","Company":"Thermo Fisher","FCF_Yield":3.1,"Fwd_PE":24.0,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":510.0,"Mkt Cap $B":196.0},
+    "HON":  {"Score":64,"Moat":26,"Fortress":17,"Valuation":12,"Momentum":6,"Shareholder":3,"Sector":"Industrials","Company":"Honeywell","FCF_Yield":4.2,"Fwd_PE":19.5,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":218.0,"Mkt Cap $B":134.0},
+    "XOM":  {"Score":60,"Moat":22,"Fortress":17,"Valuation":13,"Momentum":5,"Shareholder":3,"Sector":"Energy","Company":"ExxonMobil","FCF_Yield":5.8,"Fwd_PE":13.2,"Trend":"↓","TrendColor":"#e74c3c","TrendTip":"Deteriorating","Price":108.0,"Mkt Cap $B":462.0},
+}
+
 def _macro_adj_score(base_score: int, sector: str | None, regime: str) -> int:
     """Apply macro regime sector adjustment. Capped at ±15, total 0–100."""
     adj_map = _MACRO_ADJ.get(regime, {})
@@ -473,11 +496,15 @@ def _owner_earnings_dcf(
     g_stage1: float = 0.08,
     g_terminal: float = 0.03,
     discount_rate: float = 0.10,
+    maint_capex_pct: float = 1.0,
 ) -> tuple[float | None, float | None]:
     """
     Estimate intrinsic value per share using Owner Earnings DCF.
-    OE = Net Income + D&A − CapEx ± ΔWorking Capital
+    OE = Net Income + D&A − (CapEx × maint_capex_pct) ± ΔWorking Capital
 
+    maint_capex_pct: fraction of total CapEx treated as maintenance (0–1).
+      1.0 = all CapEx is maintenance (conservative / standard)
+      0.5 = only half is maintenance (asset-light, growth-heavy businesses)
     Returns (owner_earnings_annual, intrinsic_value_per_share).
     """
     try:
@@ -497,7 +524,9 @@ def _owner_earnings_dcf(
         capex_abs = abs(capex) if capex is not None else 0
         da_abs    = abs(da)    if da    is not None else 0
 
-        owner_earnings = ni + da_abs - capex_abs  # simplified; ignore ΔWC
+        # Apply maintenance CapEx fraction — growth CapEx doesn't reduce owner earnings
+        maint_capex = capex_abs * maint_capex_pct
+        owner_earnings = ni + da_abs - maint_capex  # Buffett 1986 definition
 
         if owner_earnings <= 0:
             return owner_earnings, None
@@ -1168,6 +1197,60 @@ if ticker_input:
 
     st.markdown("</div></div>", unsafe_allow_html=True)
 
+    # ── Divergence Alerts ──────────────────────────────────────────────────────────
+    moat_pct = moat["score"]      / moat["max"]
+    val_pct  = valuation["score"] / valuation["max"]
+    mom_pct  = momentum["score"]  / momentum["max"]
+
+    _alerts = []
+    if moat_pct >= 0.70 and mom_pct <= 0.30:
+        _alerts.append((
+            "💎 Value Opportunity",
+            f"High-quality moat ({moat['score']}/{moat['max']}) with weak momentum ({momentum['score']}/{momentum['max']}). "
+            "Fundamentals lead price — Buffett's preferred setup. Consider building a position gradually.",
+            "#2ecc71", "#0d2b1d",
+        ))
+    if mom_pct >= 0.70 and val_pct <= 0.40:
+        _alerts.append((
+            "⚠️ FOMO Risk",
+            f"Strong momentum ({momentum['score']}/{momentum['max']}) but expensive valuation ({valuation['score']}/{valuation['max']}). "
+            "Price has likely run ahead of fundamentals. Munger: 'Invert, always invert.'",
+            "#e67e22", "#2b1a0d",
+        ))
+    if moat_pct >= 0.80 and val_pct <= 0.25:
+        _alerts.append((
+            "⏳ Quality at a Premium",
+            f"Exceptional moat ({moat['score']}/{moat['max']}) but stretched valuation ({valuation['score']}/{valuation['max']}). "
+            "Great business, wrong price. Add to watchlist and wait for a correction.",
+            "#9b59b6", "#1e0d2b",
+        ))
+    if moat_pct >= 0.70 and val_pct >= 0.60 and mom_pct >= 0.60:
+        _alerts.append((
+            "🏆 Ideal Alignment",
+            f"Quality moat ({moat['score']}/{moat['max']}), reasonable valuation ({valuation['score']}/{valuation['max']}), "
+            f"and positive momentum ({momentum['score']}/{momentum['max']}) are all aligned. "
+            "Rare convergence — high-conviction setup.",
+            "#f1c40f", "#2b2500",
+        ))
+    if moat_pct <= 0.40 and mom_pct <= 0.30 and val_pct <= 0.40:
+        _alerts.append((
+            "🔻 Value Trap Risk",
+            f"Weak moat ({moat['score']}/{moat['max']}), deteriorating momentum, and poor valuation context. "
+            "Cheap can always get cheaper. Buffett: 'Time is the friend of the wonderful business, the enemy of the mediocre.'",
+            "#e74c3c", "#2b0d0d",
+        ))
+
+    if _alerts:
+        for _title, _body, _accent, _bg in _alerts:
+            st.markdown(
+                f'<div style="background:{_bg};border:1px solid {_accent}55;border-left:4px solid {_accent};'
+                f'border-radius:8px;padding:12px 16px;margin:6px 0;">'
+                f'<span style="color:{_accent};font-weight:700;font-size:0.9rem;">{_title}</span>'
+                f'<span style="color:#ccc;font-size:0.82rem;margin-left:12px;">{_body}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
     # ── Five section tabs ──────────────────────────────────────────────────────────
     t1, t2, t3, t4, t5 = st.tabs([
         "⚔️ Quality Moat",
@@ -1272,36 +1355,85 @@ if ticker_input:
 
         st.markdown("---")
         st.markdown("##### 📐 Owner Earnings DCF — Intrinsic Value Estimate")
-        st.caption(
-            "Buffett's 1986 definition: Owner Earnings = Net Income + D&A − CapEx. "
-            "Projected over 10 years (8% growth years 1–5, 4% years 6–10), discounted at 10%. "
-            "Terminal value at 3% perpetuity growth. "
-            "⚠️ Highly sensitive to growth assumptions — use as a sanity check, not a precise target."
+
+        # ── Maintenance CapEx toggle ───────────────────────────────────────────
+        # Sector defaults: asset-heavy industries use more of their CapEx for upkeep
+        _sector_maint_default = {
+            "Utilities": 0.85, "Energy": 0.80, "Industrials": 0.75,
+            "Basic Materials": 0.75, "Materials": 0.75,
+            "Consumer Defensive": 0.65, "Consumer Staples": 0.65,
+            "Healthcare": 0.60, "Consumer Cyclical": 0.60, "Financial Services": 0.55,
+            "Communication Services": 0.55, "Real Estate": 0.70,
+            "Technology": 0.40, "Software—Application": 0.30,
+        }
+        _maint_default = _sector_maint_default.get(sector, 0.60)
+
+        dcf_ctrl1, dcf_ctrl2 = st.columns([3, 2])
+        with dcf_ctrl1:
+            maint_pct = st.select_slider(
+                "Maintenance CapEx %",
+                options=[0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00],
+                value=_maint_default,
+                format_func=lambda v: f"{int(v*100)}%",
+                key="dcf_maint_capex",
+                help=(
+                    "What % of total CapEx is 'maintenance' (keeping the business running) "
+                    "vs 'growth' (expanding capacity)? Only maintenance CapEx reduces Owner Earnings. "
+                    f"Sector default for {sector}: {int(_maint_default*100)}%"
+                ),
+            )
+        with dcf_ctrl2:
+            capex_mode = "Conservative (all CapEx)" if maint_pct == 1.0 else \
+                         "Growth-adjusted" if maint_pct < 0.60 else "Standard"
+            st.markdown(
+                f'<div style="background:#161b27;border:1px solid #333;border-radius:6px;'
+                f'padding:10px 14px;margin-top:4px;">'
+                f'<div style="color:#888;font-size:0.68rem;text-transform:uppercase;">Mode</div>'
+                f'<div style="color:#3498db;font-weight:700;font-size:0.9rem;">{capex_mode}</div>'
+                f'<div style="color:#666;font-size:0.72rem;">Growth CapEx excluded: '
+                f'{int((1-maint_pct)*100)}% of total CapEx</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Recompute DCF with selected maintenance CapEx %
+        raw_data_for_dcf = raw  # already in scope
+        oe_adj, iv_adj = _owner_earnings_dcf(
+            raw_data_for_dcf.get("financials"),
+            raw_data_for_dcf.get("cashflow"),
+            info, maint_capex_pct=maint_pct,
         )
+        cp_adj = _sf(info.get("currentPrice") or info.get("regularMarketPrice"))
+        mos_adj = ((iv_adj - cp_adj) / iv_adj * 100) if (iv_adj and cp_adj and iv_adj > 0) else None
 
         dcf_c1, dcf_c2, dcf_c3 = st.columns(3)
         with dcf_c1:
-            if oe is not None:
-                st.metric("Owner Earnings (TTM)", f"${oe/1e9:.2f}B" if abs(oe) > 1e8 else f"${oe/1e6:.0f}M")
+            if oe_adj is not None:
+                st.metric("Owner Earnings (adj.)",
+                          f"${oe_adj/1e9:.2f}B" if abs(oe_adj) > 1e8 else f"${oe_adj/1e6:.0f}M",
+                          delta=f"Maint. CapEx = {int(maint_pct*100)}% of total")
             else:
                 st.metric("Owner Earnings", "N/A")
         with dcf_c2:
-            if iv is not None:
-                st.metric("DCF Intrinsic Value / Share", f"${iv:.2f}")
+            if iv_adj is not None:
+                st.metric("DCF Intrinsic Value / Share", f"${iv_adj:.2f}")
             else:
                 st.metric("DCF IV / Share", "N/A")
         with dcf_c3:
-            if mos is not None:
-                mos_color = "normal" if mos > 0 else "inverse"
-                st.metric("Margin of Safety", f"{mos:.0f}%",
-                          delta=f"{'Undervalued' if mos > 0 else 'Overvalued'}",
-                          delta_color=mos_color)
+            if mos_adj is not None:
+                st.metric("Margin of Safety", f"{mos_adj:.0f}%",
+                          delta="Undervalued" if mos_adj > 0 else "Overvalued",
+                          delta_color="normal" if mos_adj > 0 else "inverse")
             else:
                 st.metric("Margin of Safety", "N/A")
 
-        if iv and cp:
-            st.caption(valuation.get("dcf_note", ""))
-        else:
+        st.caption(
+            "Buffett's 1986 definition: OE = Net Income + D&A − Maintenance CapEx. "
+            "Projected over 10 years (8% growth yr 1–5, 4% yr 6–10), discounted at 10%. "
+            "Terminal value at 3% perpetuity. "
+            "⚠️ Highly sensitive to growth assumptions — directional guide, not a precise target."
+        )
+        if not (iv_adj and cp_adj):
             st.info("Insufficient data to compute DCF intrinsic value. "
                     "Check that the company has positive net income and CapEx data on yfinance.", icon="ℹ️")
 
@@ -1540,7 +1672,13 @@ if run_screener:
         try:
             raw_s = fetch_stock_data(tkr)
             if raw_s.get("error") or not raw_s.get("info"):
-                errors_list.append(tkr)
+                # Try fallback cache before giving up
+                if tkr in _FALLBACK_SCORES:
+                    fb = dict(_FALLBACK_SCORES[tkr])
+                    fb["_cached"] = True
+                    results_list.append(fb)
+                else:
+                    errors_list.append(tkr)
                 continue
             sc = _compute_score(raw_s)
             info_s   = raw_s["info"]
@@ -1656,6 +1794,8 @@ if st.session_state.get("screener_results"):
         mac_sc  = int(row["MacroAdj"])
         col     = _score_color(sc)
         mac_col = _score_color(mac_sc)
+        is_cached    = row.get("_cached", False)
+        ticker_cell  = row["Ticker"] + (' <span style="color:#555;font-size:0.65rem;" title="Fallback cache — live data unavailable">📦</span>' if is_cached else "")
         price_str    = f"${row['Price']:.2f}" if row.get("Price") else "—"
         fcf_str      = f"{row['FCF_Yield']:.1f}%" if row.get("FCF_Yield") is not None else "—"
         fpe_str      = f"{row['Fwd_PE']:.1f}x" if row.get("Fwd_PE") is not None else "—"
@@ -1678,7 +1818,7 @@ if st.session_state.get("screener_results"):
         rows_html += (
             f'<tr style="border-bottom:1px solid #1e1e2e;">'
             f'<td style="color:#666;text-align:center;padding:7px 5px;font-size:0.73rem;">{rank}</td>'
-            f'<td style="color:#3498db;font-weight:700;padding:7px 5px;font-size:0.85rem;">{row["Ticker"]}</td>'
+            f'<td style="color:#3498db;font-weight:700;padding:7px 5px;font-size:0.85rem;">{ticker_cell}</td>'
             f'<td style="color:#ccc;padding:7px 5px;font-size:0.78rem;">{row["Company"]}</td>'
             f'<td style="color:#999;padding:7px 5px;font-size:0.72rem;">{row["Sector"]}</td>'
             f'<td style="text-align:center;padding:7px 8px;">{mac_cell}</td>'
