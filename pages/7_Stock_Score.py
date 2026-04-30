@@ -1321,5 +1321,182 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+# ── Top 20 Screener ────────────────────────────────────────────────────────────
+st.markdown("---")
+st.markdown("### 🏆 Top 20 Stocks by Buffett Score")
+st.caption(
+    "Screens a curated universe of ~80 US large-cap stocks across all sectors. "
+    "Each stock is scored on the same 100-point Buffett framework. "
+    "Results are cached for 1 hour — click **Run Screener** to refresh."
+)
+
+# Curated universe: quality large-caps spanning all sectors
+_SCREENER_UNIVERSE = [
+    # Technology
+    "AAPL", "MSFT", "GOOGL", "META", "NVDA", "AVGO", "TXN", "QCOM", "ORCL", "IBM",
+    # Software
+    "CRM", "ADBE", "NOW", "INTU", "ANSS",
+    # Consumer Staples / Defensive (classic Buffett territory)
+    "KO", "PEP", "PG", "CL", "KMB", "MKC", "GIS", "HSY", "SJM", "CHD",
+    # Healthcare
+    "JNJ", "ABT", "MDT", "TMO", "DHR", "EW", "SYK", "BDX", "ISRG", "ZBH",
+    # Financials (flag with special-sector warning)
+    "BRK-B", "JPM", "BAC", "WFC", "AXP", "V", "MA", "BLK", "MS", "GS",
+    # Consumer Discretionary
+    "MCD", "SBUX", "NKE", "TJX", "ROST", "YUM", "DPZ",
+    # Industrials
+    "HON", "MMM", "CAT", "DE", "EMR", "ITW", "GWW", "FAST",
+    # Energy (quality names)
+    "XOM", "CVX", "PSX",
+    # Communication
+    "DIS", "NFLX", "CMCSA",
+    # Materials / Specialty
+    "ECL", "SHW", "APD",
+    # Real Estate / REITs (flagged)
+    "AMT", "PLD",
+    # Berkshire holdings / Buffett favourites
+    "OXY", "ALLY", "USB",
+]
+
+scr_col1, scr_col2 = st.columns([1, 4])
+with scr_col1:
+    run_screener = st.button("▶ Run Screener", key="run_top20", type="primary")
+    if st.session_state.get("screener_results"):
+        if st.button("🗑 Clear Results", key="clear_top20"):
+            st.session_state.pop("screener_results", None)
+            st.session_state.pop("screener_errors", None)
+            st.rerun()
+
+with scr_col2:
+    if run_screener:
+        st.session_state.pop("screener_results", None)
+        st.session_state.pop("screener_errors", None)
+
+if run_screener:
+    results_list = []
+    errors_list  = []
+    total_tickers = len(_SCREENER_UNIVERSE)
+    progress_bar  = st.progress(0, text="Starting screener…")
+    status_text   = st.empty()
+
+    for i, tkr in enumerate(_SCREENER_UNIVERSE, 1):
+        progress_bar.progress(i / total_tickers,
+                              text=f"Scoring {tkr}… ({i}/{total_tickers})")
+        status_text.caption(f"Fetching **{tkr}**")
+        try:
+            raw_s = fetch_stock_data(tkr)
+            if raw_s.get("error") or not raw_s.get("info"):
+                errors_list.append(tkr)
+                continue
+            sc = _compute_score(raw_s)
+            info_s   = raw_s["info"]
+            results_list.append({
+                "Ticker":     tkr,
+                "Company":    (info_s.get("shortName") or info_s.get("longName") or tkr)[:28],
+                "Sector":     (info_s.get("sector") or "—")[:20],
+                "Score":      sc["total"],
+                "Moat":       sc["sections"]["moat"]["score"],
+                "Fortress":   sc["sections"]["fortress"]["score"],
+                "Valuation":  sc["sections"]["valuation"]["score"],
+                "Momentum":   sc["sections"]["momentum"]["score"],
+                "Shareholder":sc["sections"]["shareholder"]["score"],
+                "Price":      _sf(info_s.get("currentPrice") or info_s.get("regularMarketPrice")),
+                "Mkt Cap $B": round(_sf(info_s.get("marketCap") or 0) / 1e9, 1),
+            })
+        except Exception as exc:
+            errors_list.append(f"{tkr} ({exc})")
+
+    progress_bar.empty()
+    status_text.empty()
+    st.session_state["screener_results"] = results_list
+    st.session_state["screener_errors"]  = errors_list
+
+# ── Render screener results ─────────────────────────────────────────────────────
+if st.session_state.get("screener_results"):
+    scr_df = (
+        pd.DataFrame(st.session_state["screener_results"])
+        .sort_values("Score", ascending=False)
+        .reset_index(drop=True)
+    )
+    top20 = scr_df.head(20).copy()
+    top20.index = range(1, len(top20) + 1)  # rank 1–20
+
+    # Verdict badge helper
+    def _badge(score: int) -> str:
+        if score >= 75: return "🟢 Strong Buy"
+        if score >= 60: return "🟢 Deep Dive"
+        if score >= 45: return "🟡 Caution"
+        if score >= 30: return "🟠 Red Flags"
+        return "🔴 Fails"
+
+    top20["Verdict"] = top20["Score"].apply(_badge)
+
+    st.markdown(f"#### Top 20 Results &nbsp; <span style='color:#888;font-size:0.8rem;'>({len(scr_df)} stocks scored)</span>", unsafe_allow_html=True)
+
+    # Render as HTML table for full styling control
+    rows_html = ""
+    for rank, row in top20.iterrows():
+        sc   = int(row["Score"])
+        col  = _score_color(sc)
+        price_str = f"${row['Price']:.2f}" if row["Price"] else "—"
+        rows_html += (
+            f'<tr style="border-bottom:1px solid #1e1e2e;">'
+            f'<td style="color:#888;text-align:center;padding:8px 6px;font-size:0.75rem;">{rank}</td>'
+            f'<td style="color:#3498db;font-weight:700;padding:8px 6px;">{row["Ticker"]}</td>'
+            f'<td style="color:#ccc;padding:8px 6px;font-size:0.82rem;">{row["Company"]}</td>'
+            f'<td style="color:#999;padding:8px 6px;font-size:0.78rem;">{row["Sector"]}</td>'
+            f'<td style="color:{col};font-weight:800;font-size:1rem;text-align:center;padding:8px 10px;">{sc}</td>'
+            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Moat"])}/{secs["moat"]["max"]}</td>'
+            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Fortress"])}/{secs["fortress"]["max"]}</td>'
+            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Valuation"])}/{secs["valuation"]["max"]}</td>'
+            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Momentum"])}/{secs["momentum"]["max"]}</td>'
+            f'<td style="color:#ccc;font-size:0.78rem;text-align:right;">{price_str}</td>'
+            f'<td style="color:#ccc;font-size:0.78rem;text-align:right;">{row["Mkt Cap $B"]}B</td>'
+            f'<td style="font-size:0.78rem;padding:8px 6px;">{row["Verdict"]}</td>'
+            f'</tr>'
+        )
+
+    st.markdown(
+        f"""
+        <div style="overflow-x:auto;margin:12px 0;">
+        <table style="width:100%;border-collapse:collapse;background:#0e1117;
+                      font-family:monospace;font-size:0.82rem;">
+          <thead>
+            <tr style="border-bottom:2px solid #333;color:#555;font-size:0.7rem;
+                       text-transform:uppercase;letter-spacing:.05em;">
+              <th style="padding:8px 6px;text-align:center;">#</th>
+              <th style="padding:8px 6px;text-align:left;">Ticker</th>
+              <th style="padding:8px 6px;text-align:left;">Company</th>
+              <th style="padding:8px 6px;text-align:left;">Sector</th>
+              <th style="padding:8px 10px;text-align:center;">Score</th>
+              <th style="padding:8px 6px;text-align:center;">Moat</th>
+              <th style="padding:8px 6px;text-align:center;">Fortress</th>
+              <th style="padding:8px 6px;text-align:center;">Val.</th>
+              <th style="padding:8px 6px;text-align:center;">Mom.</th>
+              <th style="padding:8px 6px;text-align:right;">Price</th>
+              <th style="padding:8px 6px;text-align:right;">Mkt Cap</th>
+              <th style="padding:8px 6px;text-align:left;">Verdict</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows_html}
+          </tbody>
+        </table>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    errs = st.session_state.get("screener_errors", [])
+    if errs:
+        st.caption(f"⚠️ Could not fetch data for: {', '.join(errs[:10])}"
+                   + (" and more…" if len(errs) > 10 else ""))
+
+    st.caption(
+        "💡 Click any ticker above in the search box to run its full analysis. "
+        "Screener results cached for 1 hour. Scores use the same 100-pt framework as the single-stock view."
+    )
+
 st.markdown("---")
 st.caption(DISCLAIMER)
