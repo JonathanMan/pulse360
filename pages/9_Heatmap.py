@@ -1,5 +1,5 @@
 """
-pages/9_Portfolio.py
+pages/9_Heatmap.py
 =====================
 Portfolio Macro Heatmap — Pulse360
 
@@ -51,6 +51,242 @@ REGIME_ICONS: dict[str, str] = {
 }
 
 _DEFAULT_TICKERS = "AAPL, MSFT, KO, JNJ, V, XOM, PG, GOOGL"
+
+# ── Action Engine — rules table ────────────────────────────────────────────────
+# Each rule: id, title, severity ("red"|"yellow"), regime_filter (list|None),
+#            check(holding_dict, regime_str) -> bool,
+#            why str, suggestion str.
+_ACTION_RULES: list[dict] = [
+    {
+        "id": "recession_weak_fortress",
+        "title": "Financial Fortress Too Weak for Recession",
+        "severity": "red",
+        "regime_filter": ["Recession Risk"],
+        "check": lambda d, r: d["regime_scores"][r] < 42,
+        "why": (
+            "In a recession, highly leveraged or low-profitability companies face "
+            "credit stress, dividend cuts, and potential insolvency. The Buffett "
+            "framework heavily penalises thin balance sheets in this regime."
+        ),
+        "suggestion": (
+            "The data suggests trimming these positions and rotating into "
+            "Consumer Staples, Healthcare, or Utilities names with high "
+            "composite scores in the Recession Risk column."
+        ),
+    },
+    {
+        "id": "inflation_pricing_gap",
+        "title": "Low Pricing Power in High Inflation",
+        "severity": "yellow",
+        "regime_filter": ["High Inflation"],
+        "check": lambda d, r: (d["base_score"] - d["regime_scores"][r]) >= 6,
+        "why": (
+            "When CPI is above 4%, companies without durable competitive moats "
+            "cannot fully pass cost increases to customers, compressing operating "
+            "margins. The macro overlay reduces their score to reflect this drag."
+        ),
+        "suggestion": (
+            "The data suggests favouring Energy, Materials, and Consumer Staples "
+            "names where the macro overlay is neutral or positive. Check the "
+            "Buffett Score → Moat sub-score for pricing power detail."
+        ),
+    },
+    {
+        "id": "rising_rates_duration",
+        "title": "Rate-Sensitive Holdings in Rising Rate Environment",
+        "severity": "red",
+        "regime_filter": ["Rising Rates"],
+        "check": lambda d, r: (
+            any(s in d["sector"] for s in ["Real Estate", "Utilities", "REIT"])
+            and d["regime_scores"][r] < 55
+        ),
+        "why": (
+            "Utilities and REITs carry long-duration liabilities. Rising rates "
+            "increase discount rates on their future cash flows and raise "
+            "refinancing costs, often leading to multiple compression and "
+            "dividend sustainability concerns."
+        ),
+        "suggestion": (
+            "The data suggests reducing duration exposure here. "
+            "Banks and Insurance names tend to benefit in this regime — "
+            "consider rotating some allocation toward financials."
+        ),
+    },
+    {
+        "id": "high_macro_beta",
+        "title": "High Macro Beta — Portfolio is Regime-Sensitive",
+        "severity": "yellow",
+        "regime_filter": None,  # fires in all regimes
+        "check": lambda d, r: d["macro_range"] >= 15,
+        "why": (
+            "A Macro Beta of 15+ means this holding's Buffett-adjusted score "
+            "swings dramatically across regimes. High-beta portfolios require "
+            "more active monitoring and rebalancing as macro conditions shift."
+        ),
+        "suggestion": (
+            "The data suggests balancing high-beta cyclicals with low-beta "
+            "defensive anchors (Consumer Staples, Healthcare) to reduce "
+            "overall portfolio regime sensitivity."
+        ),
+    },
+    {
+        "id": "recovery_defensive_drag",
+        "title": "Defensive Overweight May Lag in Expansion",
+        "severity": "yellow",
+        "regime_filter": ["Recovery / Expansion"],
+        "check": lambda d, r: (
+            any(s in d["sector"] for s in [
+                "Consumer Defensive", "Consumer Staples", "Utilities", "Healthcare"
+            ])
+            and d["regime_scores"][r] < 58
+        ),
+        "why": (
+            "Early-cycle expansions typically reward cyclicals and industrials. "
+            "Pure defensives often underperform significantly as risk appetite "
+            "returns and investors rotate into growth-oriented sectors."
+        ),
+        "suggestion": (
+            "The data suggests adding Industrials, Consumer Cyclicals, or "
+            "Energy exposure to capture expansion beta — while keeping your "
+            "defensive anchors as a portfolio floor."
+        ),
+    },
+    {
+        "id": "quality_gap",
+        "title": "Low Overall Quality — Portfolio Buffett Score Below Par",
+        "severity": "yellow",
+        "regime_filter": None,
+        "check": lambda d, r: d["base_score"] < 45,
+        "why": (
+            "A composite Buffett score below 45 indicates the business lacks "
+            "durable competitive advantages, has balance-sheet concerns, or "
+            "trades at a significant premium to intrinsic value. These names "
+            "carry elevated permanent capital loss risk."
+        ),
+        "suggestion": (
+            "The data suggests reviewing the full Buffett Score breakdown for "
+            "these holdings (Moat, Fortress, Valuation sub-scores). Consider "
+            "replacing with higher-quality alternatives from the Screener."
+        ),
+    },
+]
+
+def _run_action_engine_with_threshold(
+    scored_list: list[dict],
+    active_regime: str,
+    conviction_threshold: float = 0.25,
+) -> list[dict]:
+    """
+    Evaluate all action rules against the scored portfolio.
+    Returns a list of triggered alert dicts, sorted red-first.
+    """
+    n = len(scored_list)
+    if n == 0:
+        return []
+
+    triggered: list[dict] = []
+
+    for rule in _ACTION_RULES:
+        # Skip rules that don't apply to this regime
+        if rule["regime_filter"] and active_regime not in rule["regime_filter"]:
+            continue
+
+        flagged = [d for d in scored_list if rule["check"](d, active_regime)]
+        if not flagged:
+            continue
+
+        # Conviction threshold: downgrade RED → YELLOW if fewer than threshold% fire
+        severity = rule["severity"]
+        if severity == "red" and (len(flagged) / n) < conviction_threshold:
+            severity = "yellow"
+
+        triggered.append({
+            **rule,
+            "severity": severity,
+            "flagged": flagged,
+            "flagged_count": len(flagged),
+            "flagged_pct": round(len(flagged) / n * 100),
+        })
+
+    # Sort: red first, then yellow
+    triggered.sort(key=lambda a: 0 if a["severity"] == "red" else 1)
+    return triggered
+
+
+def _render_action_panel(alerts: list[dict], active_regime: str) -> None:
+    """Render the traffic-light action panel above the heatmap."""
+
+    has_red    = any(a["severity"] == "red"    for a in alerts)
+    has_yellow = any(a["severity"] == "yellow" for a in alerts)
+
+    # ── Overall status banner ────────────────────────────────────────────────
+    if has_red:
+        st.error(
+            "### 🔴 Action Required — Regime Misalignment Detected\n"
+            f"Your portfolio has **critical vulnerabilities** in the "
+            f"**{active_regime}** scenario. "
+            "Review the alerts below before your next rebalance."
+        )
+    elif has_yellow:
+        st.warning(
+            "### 🟡 Caution — Monitor These Positions\n"
+            f"Your portfolio shows **moderate sensitivity** to the "
+            f"**{active_regime}** regime. "
+            "No immediate action required, but monitor the flagged holdings."
+        )
+    else:
+        st.success(
+            "### 🟢 Portfolio Well-Positioned\n"
+            f"No significant vulnerabilities detected for the "
+            f"**{active_regime}** scenario. "
+            "Continue monitoring as macro conditions evolve."
+        )
+
+    if not alerts:
+        return
+
+    st.markdown("**Specific alerts:**")
+
+    for alert in alerts:
+        # Choose the right Streamlit call
+        if alert["severity"] == "red":
+            box = st.error
+            icon = "🔴"
+        else:
+            box = st.warning
+            icon = "🟡"
+
+        box(
+            f"{icon} **{alert['title']}**  \n"
+            f"Flagged: {', '.join(d['ticker'] for d in alert['flagged'])} "
+            f"({alert['flagged_count']} holding{'s' if alert['flagged_count'] != 1 else ''})"
+        )
+
+        with st.expander(f"Why did this trigger? — {alert['title']}", expanded=False):
+            st.markdown(f"**What the data shows:**  \n{alert['why']}")
+            st.markdown(f"**The data suggests:**  \n{alert['suggestion']}")
+            st.markdown("**Flagged holdings:**")
+            rows = [
+                {
+                    "Ticker":       d["ticker"],
+                    "Company":      d["company"],
+                    "Sector":       d["sector"],
+                    "Base Score":   d["base_score"],
+                    "Regime Score": d["regime_scores"][active_regime],
+                    "Macro Beta":   d["macro_range"],
+                }
+                for d in alert["flagged"]
+            ]
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.caption(
+                "Note: Scores are the composite Buffett quality framework "
+                "adjusted for the selected macro regime. They reflect "
+                "relative vulnerability — not a buy/sell instruction. "
+                "Always conduct your own research."
+            )
+
+    st.markdown("---")
+
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -138,7 +374,7 @@ def _build_heatmap_df(scored: list[dict]) -> tuple[pd.DataFrame, list[str], list
 
 # ── Page ───────────────────────────────────────────────────────────────────────
 
-st.title("🗂️ Portfolio Macro Heatmap")
+st.title("📋 Portfolio Macro Heatmap")
 st.caption(
     "Stress-test your holdings across 5 macro regimes. "
     "Green = quality tailwind · Red = regime headwind · Numbers = Buffett score."
@@ -224,10 +460,31 @@ most_stable = min(scored_list, key=lambda d: d["macro_range"])
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Holdings Scored", n)
 m2.metric("Avg Buffett Score", f"{avg_base:.0f} / 100")
-m3.metric("🔴 Most Macro-Sensitive", f"{most_sensitive['ticker']} (β {most_sensitive['macro_range']})")
-m4.metric("🟢 Most Regime-Stable", f"{most_stable['ticker']} (β {most_stable['macro_range']})")
+m3.metric("Most Macro-Sensitive", f"{most_sensitive['ticker']} (beta {most_sensitive['macro_range']})")
+m4.metric("Most Regime-Stable",   f"{most_stable['ticker']} (beta {most_stable['macro_range']})")
 
 st.markdown("---")
+
+# ── Action Engine ──────────────────────────────────────────────────────────────
+# Use focus_regime as the active scenario, falling back to "Normal"
+action_regime = focus_regime if focus_regime != "All regimes" else "Normal"
+
+with st.expander(
+    "Action Alerts — What the Data Suggests",
+    expanded=True,
+):
+    conviction_pct = st.slider(
+        "Alert conviction threshold (% of holdings that must trigger for a RED alert)",
+        min_value=10, max_value=50, value=25, step=5,
+        help=(
+            "Higher = fewer red alerts (requires more holdings to be vulnerable). "
+            "Lower = more sensitive — fires even when just a few holdings are exposed."
+        ),
+    )
+    alerts = _run_action_engine_with_threshold(
+        scored_list, action_regime, conviction_pct / 100
+    )
+    _render_action_panel(alerts, action_regime)
 
 # ── Heatmap ────────────────────────────────────────────────────────────────────
 hm_df, y_labels, x_labels = _build_heatmap_df(scored_list)
