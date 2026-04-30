@@ -75,6 +75,7 @@ pg = st.navigation(
             st.Page("pages/5_Briefing.py",  title="At a Glance",            icon="📋"),
             st.Page("pages/6_Buffett.py",   title="Buffett Indicator",      icon="⚖️"),
             st.Page("pages/4_Portfolio.py", title="Portfolio Health Check",  icon="🗂️"),
+            st.Page("pages/7_Stock_Score.py", title="Stock Score",           icon="🔍"),
         ],
         "Analysis": [
             st.Page("pages/1_Backtest.py",      title="Backtest",      icon="📉"),
