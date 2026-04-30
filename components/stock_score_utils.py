@@ -10,7 +10,8 @@ Import pattern:
         fetch_stock_data, _compute_score, _fundamentals_trend,
         _price_trend, _get_sbc,
         _score_color, _score_color_sub, _score_label, _hex_rgba,
-        _macro_adj_score, _macro_sens_cell, _owner_earnings_dcf,
+        _macro_adj_score, _macro_sens_cell, _macro_sensitivity, _macro_beta_cell,
+        _owner_earnings_dcf,
         _sector_percentile, _percentile_badge, _is_special_sector,
         _SECTOR_GM_STD, _SECTOR_NM_STD, _SECTOR_ROE_MEDIAN, _SECTOR_ROE_STD,
         _MACRO_ADJ, _MACRO_DESCRIPTIONS, _REGIME_FOCUS,
@@ -266,6 +267,46 @@ def _macro_adj_score(base_score: int, sector: str | None, regime: str) -> int:
             break
     adj = max(-15, min(15, adj))
     return max(0, min(100, base_score + adj))
+
+
+def _macro_sensitivity(base_score: int, sector: str | None) -> dict:
+    """
+    Compute Buffett score under every macro regime for a given base score + sector.
+    Returns a dict with:
+      range      — max_adj_score − min_adj_score (how sensitive this stock is to regime shifts)
+      best       — regime that gives the highest score
+      worst      — regime that gives the lowest score
+      best_score — score in best regime
+      worst_score— score in worst regime
+      scores     — {regime: adjusted_score} for all regimes
+    """
+    scores = {r: _macro_adj_score(base_score, sector, r) for r in _MACRO_ADJ}
+    best   = max(scores, key=scores.get)
+    worst  = min(scores, key=scores.get)
+    return {
+        "range":       scores[best] - scores[worst],
+        "best":        best,
+        "worst":       worst,
+        "best_score":  scores[best],
+        "worst_score": scores[worst],
+        "scores":      scores,
+    }
+
+
+def _macro_beta_cell(macro_range: int) -> str:
+    """Return coloured HTML for the Macro Beta (sensitivity range) cell."""
+    if macro_range <= 0:
+        return '<span style="color:#444;">—</span>'
+    if macro_range <= 8:
+        color, label = "#2ecc71", "stable"
+    elif macro_range <= 14:
+        color, label = "#f39c12", "moderate"
+    else:
+        color, label = "#e74c3c", "high"
+    return (
+        f'<span style="color:{color};font-weight:700;">{macro_range}</span>'
+        f'<span style="color:#555;font-size:0.65rem;margin-left:3px;">{label}</span>'
+    )
 
 
 def _macro_sens_cell(sector: str, regime: str) -> str:
