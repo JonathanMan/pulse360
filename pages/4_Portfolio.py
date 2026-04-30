@@ -1,12 +1,12 @@
 """
 Pulse360 — Investment Analyser
 ================================
-Upload a broker screenshot (PNG/JPG) or a CSV export and get a plain-English
-macro-aware analysis of your holdings — flagging concentration risks, cycle
-sensitivity, and what the current Pulse360 model state means for your portfolio.
+Upload any investment document — a broker screenshot, a fund brochure, a factsheet,
+or a CSV export — and get a plain-English macro-aware analysis flagging concentration
+risks, cycle sensitivity, and what the current Pulse360 model state means for the holdings.
 
 Two upload paths:
-  📸 Screenshot  — drag-and-drop a phone/desktop screenshot; Claude reads it
+  📸 Screenshot  — drag-and-drop a broker portfolio screenshot or fund brochure/factsheet; Claude reads it via vision
   📄 CSV         — export from IBKR / Schwab / Fidelity and upload
 
 The analysis streams in real time using Claude Sonnet with vision.
@@ -296,9 +296,9 @@ tl_label = {
 
 st.markdown("# 🗂️ Investment Analyser")
 st.markdown(
-    "Upload your portfolio — as a **screenshot** or **CSV** — and get a plain-English "
-    "breakdown of your holdings, risk flags, and what the current macro environment "
-    "means for each position."
+    "Upload any investment document — a **broker portfolio screenshot**, **fund brochure**, "
+    "**factsheet**, or **CSV export** — and get a plain-English breakdown of the holdings, "
+    "risk flags, and what the current macro environment means for each position."
 )
 
 # ── Macro context banner ──────────────────────────────────────────────────────
@@ -329,8 +329,9 @@ with tab_screenshot:
     with col_tip:
         st.markdown("""
 <div class="upload-tip">
-Works with any broker — <b>IBKR, Schwab, Fidelity, Robinhood, eToro</b> and more.<br>
-Just navigate to your Positions page, take a screenshot (phone or desktop), and drop it below.<br>
+Works with <b>broker portfolios</b> (IBKR, Schwab, Fidelity, Robinhood, eToro) and <b>fund documents</b> (brochures, factsheets, prospectuses).<br>
+For portfolios: navigate to your Positions page, take a screenshot (phone or desktop), and drop it below.<br>
+For funds: drop a brochure or factsheet page — Claude will extract holdings, strategy, and risk profile.<br>
 <b>Multiple screenshots</b> are supported — upload them all and Claude reads them together.<br>
 <em>Tip: landscape / desktop screenshots show more columns and give better results.</em>
 </div>
