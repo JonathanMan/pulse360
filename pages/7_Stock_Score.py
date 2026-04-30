@@ -1038,6 +1038,85 @@ if ticker_input:
             icon="🏦",
         )
 
+    # ── Price chart ───────────────────────────────────────────────────────────────
+    hist = raw.get("history", pd.DataFrame())
+    if not hist.empty and len(hist) >= 20:
+        close        = hist["Close"]
+        ma50_series  = close.rolling(50).mean()
+        ma200_series = close.rolling(200).mean()
+
+        # Candlestick if OHLC available, else line
+        fig_price = go.Figure()
+
+        if {"Open", "High", "Low", "Close"}.issubset(hist.columns):
+            fig_price.add_trace(go.Candlestick(
+                x=hist.index,
+                open=hist["Open"], high=hist["High"],
+                low=hist["Low"],   close=hist["Close"],
+                name="Price",
+                increasing_line_color="#2ecc71",
+                decreasing_line_color="#e74c3c",
+                increasing_fillcolor="#2ecc71",
+                decreasing_fillcolor="#e74c3c",
+                line={"width": 1},
+                showlegend=False,
+            ))
+        else:
+            fig_price.add_trace(go.Scatter(
+                x=close.index, y=close.values,
+                name="Price", line={"color": "#3498db", "width": 1.5},
+            ))
+
+        fig_price.add_trace(go.Scatter(
+            x=ma50_series.index, y=ma50_series.values,
+            name="50-day MA", line={"color": "#f39c12", "width": 1.5, "dash": "dot"},
+            hovertemplate="50MA: $%{y:.2f}<extra></extra>",
+        ))
+        fig_price.add_trace(go.Scatter(
+            x=ma200_series.index, y=ma200_series.values,
+            name="200-day MA", line={"color": "#e74c3c", "width": 2, "dash": "dash"},
+            hovertemplate="200MA: $%{y:.2f}<extra></extra>",
+        ))
+
+        # Volume bars on secondary y-axis
+        if "Volume" in hist.columns:
+            vol = hist["Volume"]
+            vol_colors = [
+                "#2ecc7155" if i == 0 or hist["Close"].iloc[i] >= hist["Close"].iloc[i - 1]
+                else "#e74c3c55"
+                for i in range(len(hist))
+            ]
+            fig_price.add_trace(go.Bar(
+                x=hist.index, y=vol.values,
+                name="Volume", marker_color=vol_colors,
+                yaxis="y2", showlegend=False,
+                hovertemplate="%{x|%b %d}: %{y:,.0f}<extra>Volume</extra>",
+            ))
+
+        fig_price = dark_layout(fig_price, yaxis_title="Price (USD)")
+        fig_price.update_layout(
+            height=380,
+            title=dict(
+                text=f"{ticker_input} — 2-Year Price History",
+                font=dict(size=13, color="#ccc"),
+            ),
+            legend=dict(
+                orientation="h", y=-0.18,
+                font=dict(size=11, color="#aaa"),
+            ),
+            xaxis=dict(
+                rangeslider=dict(visible=False),
+                type="date",
+            ),
+            yaxis2=dict(
+                overlaying="y", side="right",
+                showgrid=False, showticklabels=False,
+                range=[0, hist["Volume"].max() * 5] if "Volume" in hist.columns else None,
+            ),
+            margin=dict(t=36, b=0, l=0, r=0),
+        )
+        st.plotly_chart(fig_price, use_container_width=True, key="header_price_chart")
+
     # ── Compute score ─────────────────────────────────────────────────────────────
     with st.spinner("Computing scores…"):
         score_data = _compute_score(raw)
