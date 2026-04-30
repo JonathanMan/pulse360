@@ -75,6 +75,7 @@ pg = st.navigation(
             st.Page("pages/4_Portfolio.py",   title="Investment Analyser",    icon="🗂️"),
             st.Page("pages/5_Briefing.py",    title="AI Research Desk",       icon="🔬"),
             st.Page("pages/7_Stock_Score.py", title="Buffett Score",           icon="🔍"),
+            st.Page("pages/8_Screener.py",    title="Stock Screener",          icon="🏆"),
             st.Page("pages/6_Buffett.py",     title="Buffett Indicator",      icon="⚖️"),
         ],
         "Analysis": [
@@ -152,6 +153,12 @@ with st.sidebar:
     <div class="nav-guide-text">
       <div class="nav-guide-title">🔍 Buffett Score</div>
       <div class="nav-guide-desc">Is a stock high quality and fairly priced? Scored using the Buffett/Munger framework.</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">🏆 Stock Screener</div>
+      <div class="nav-guide-desc">Rank ~80 large-caps by Buffett score. Apply a macro overlay to re-rank by cycle.</div>
     </div>
   </div>
   <div class="nav-guide-item">
