@@ -108,18 +108,18 @@ with st.sidebar:
         line-height: 1.35;
     }
     .nav-guide-title {
-        font-size: 0.72rem;
+        font-size: 0.82rem;
         font-weight: 600;
         color: #cccccc;
     }
     .nav-guide-desc {
-        font-size: 0.67rem;
-        color: #777777;
+        font-size: 0.78rem;
+        color: #888888;
     }
     .nav-guide-section {
-        font-size: 0.65rem;
+        font-size: 0.72rem;
         font-weight: 700;
-        color: #555;
+        color: #666;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin: 12px 0 6px 0;
