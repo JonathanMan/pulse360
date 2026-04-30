@@ -98,6 +98,76 @@ _DEFAULT_GROSS_MARGIN = 38.0
 _DEFAULT_NET_MARGIN   = 10.0
 _DEFAULT_PE           = 20.0
 
+# Approximate standard deviations for sector percentile ranking
+# Source: Damodaran distribution data (rough estimates)
+_SECTOR_GM_STD: dict[str, float] = {
+    "Technology": 18.0, "Software—Application": 15.0, "Semiconductors": 16.0,
+    "Healthcare": 14.0, "Drug Manufacturers": 16.0, "Biotechnology": 20.0,
+    "Consumer Defensive": 9.0, "Consumer Staples": 9.0,
+    "Consumer Cyclical": 10.0, "Specialty Retail": 10.0,
+    "Financial Services": 12.0, "Banks": 8.0, "Energy": 12.0,
+    "Industrials": 9.0, "Communication Services": 13.0, "Utilities": 8.0,
+    "Real Estate": 12.0, "Materials": 9.0,
+}
+_SECTOR_NM_STD: dict[str, float] = {
+    "Technology": 10.0, "Software—Application": 10.0, "Healthcare": 8.0,
+    "Consumer Defensive": 4.0, "Consumer Staples": 4.0,
+    "Consumer Cyclical": 4.0, "Financial Services": 8.0, "Banks": 8.0,
+    "Energy": 7.0, "Industrials": 5.0, "Communication Services": 7.0,
+    "Utilities": 5.0, "Real Estate": 8.0, "Materials": 5.0,
+}
+_SECTOR_ROE_MEDIAN: dict[str, float] = {
+    "Technology": 28.0, "Software—Application": 35.0, "Healthcare": 18.0,
+    "Consumer Defensive": 22.0, "Consumer Cyclical": 15.0,
+    "Financial Services": 12.0, "Banks": 10.0, "Energy": 12.0,
+    "Industrials": 16.0, "Communication Services": 20.0, "Utilities": 10.0,
+    "Materials": 14.0,
+}
+_SECTOR_ROE_STD: dict[str, float] = {
+    "Technology": 18.0, "Software—Application": 22.0, "Healthcare": 12.0,
+    "Consumer Defensive": 10.0, "Consumer Cyclical": 10.0,
+    "Financial Services": 8.0, "Banks": 7.0, "Energy": 12.0,
+    "Industrials": 10.0, "Communication Services": 15.0, "Utilities": 6.0,
+    "Materials": 10.0,
+}
+
+
+def _sector_percentile(value: float, median: float, std: float) -> str:
+    """
+    Return a human-readable percentile label based on z-score approximation.
+    e.g. 'Top 5%', 'Top 15%', 'Top 30%', 'Median', 'Bottom 30%' etc.
+    """
+    if std <= 0:
+        return ""
+    z = (value - median) / std
+    # Approximate normal CDF via z-score buckets
+    if z >= 1.65:  return "Top 5%"
+    if z >= 1.04:  return "Top 15%"
+    if z >= 0.52:  return "Top 30%"
+    if z >= 0.13:  return "Above median"
+    if z >= -0.13: return "~Median"
+    if z >= -0.52: return "Below median"
+    if z >= -1.04: return "Bottom 30%"
+    if z >= -1.65: return "Bottom 15%"
+    return "Bottom 5%"
+
+
+def _percentile_badge(label: str) -> str:
+    """Return a styled HTML badge for a percentile label."""
+    if "Top 5"  in label: bg, fg = "#0d2b1d", "#2ecc71"
+    elif "Top 15" in label: bg, fg = "#0d2b1d", "#27ae60"
+    elif "Top 30" in label: bg, fg = "#1a2b0d", "#a8d08d"
+    elif "Above"  in label: bg, fg = "#1a2000", "#c8e06e"
+    elif "Median" in label: bg, fg = "#1e1e1e", "#888888"
+    elif "Below"  in label: bg, fg = "#2b1a0d", "#e67e22"
+    elif "Bottom 30" in label: bg, fg = "#2b0d0d", "#e74c3c"
+    else:                    bg, fg = "#2b0d0d", "#c0392b"
+    return (
+        f'<span style="background:{bg};color:{fg};border:1px solid {fg}55;'
+        f'border-radius:4px;padding:1px 6px;font-size:0.68rem;font-weight:700;'
+        f'margin-left:6px;white-space:nowrap;">{label}</span>'
+    )
+
 _SECTOR_SPECIAL = {
     "Financial Services", "Banks", "Insurance", "REIT",
     "Real Estate", "Mortgage Finance",
@@ -1096,34 +1166,61 @@ if ticker_input:
                 name="Price", line={"color": "#3498db", "width": 1.5},
             ))
 
+        # 200-day MA: solid weight-2 (primary trend reference)
+        # 50-day MA: dotted (short-term momentum)
+        fig_price.add_trace(go.Scatter(
+            x=ma200_series.index, y=ma200_series.values,
+            name="200-day MA", line={"color": "#e74c3c", "width": 2},
+            hovertemplate="200MA: $%{y:.2f}<extra></extra>",
+        ))
         fig_price.add_trace(go.Scatter(
             x=ma50_series.index, y=ma50_series.values,
             name="50-day MA", line={"color": "#f39c12", "width": 1.5, "dash": "dot"},
             hovertemplate="50MA: $%{y:.2f}<extra></extra>",
         ))
-        fig_price.add_trace(go.Scatter(
-            x=ma200_series.index, y=ma200_series.values,
-            name="200-day MA", line={"color": "#e74c3c", "width": 2, "dash": "dash"},
-            hovertemplate="200MA: $%{y:.2f}<extra></extra>",
-        ))
+
+        # Technical trend label
+        last_close   = float(close.iloc[-1])
+        last_ma200   = float(ma200_series.dropna().iloc[-1]) if not ma200_series.dropna().empty else None
+        last_ma50    = float(ma50_series.dropna().iloc[-1])  if not ma50_series.dropna().empty  else None
+        if last_ma200:
+            if last_close < last_ma200 * 0.97:
+                tech_label, tech_color = "⚠ Technical Downtrend", "#e74c3c"
+            elif last_close > last_ma200 * 1.03 and last_ma50 and last_ma50 > last_ma200:
+                tech_label, tech_color = "✓ Technical Uptrend", "#2ecc71"
+            else:
+                tech_label, tech_color = "→ Near 200-day MA", "#f39c12"
+        else:
+            tech_label, tech_color = "", "#888"
+
+        chart_title = f"{ticker_input} — 2-Year Price History"
+        if tech_label:
+            chart_title += f"  <span style='color:{tech_color}'>{tech_label}</span>"
 
         fig_price = dark_layout(fig_price, yaxis_title="Price (USD)")
         fig_price.update_layout(
             height=400,
             title=dict(
-                text=f"{ticker_input} — 2-Year Price History",
-                font=dict(size=13, color="#ccc"),
+                text=f"{ticker_input} — 2-Year Price History  |  {tech_label}",
+                font=dict(size=13, color=tech_color if tech_label else "#ccc"),
             ),
             legend=dict(
                 orientation="h", y=-0.15,
                 font=dict(size=11, color="#aaa"),
             ),
-            xaxis=dict(
-                rangeslider=dict(visible=False),
-                type="date",
-            ),
+            xaxis=dict(rangeslider=dict(visible=False), type="date"),
             margin=dict(t=40, b=0, l=0, r=0),
         )
+        # Shade the region when price is below 200-day MA
+        if last_ma200 and last_close < last_ma200:
+            fig_price.add_hrect(
+                y0=last_close * 0.85, y1=last_ma200,
+                fillcolor="rgba(231,76,60,0.05)",
+                line_width=0,
+                annotation_text="Below 200MA",
+                annotation_position="top left",
+                annotation_font={"size": 10, "color": "#e74c3c"},
+            )
         st.plotly_chart(fig_price, use_container_width=True, key="header_price_chart")
 
     # ── Compute score ─────────────────────────────────────────────────────────────
@@ -1270,12 +1367,47 @@ if ticker_input:
         )
         med_gm = score_data["med_gm"]
         med_nm = score_data["med_nm"]
-        st.info(
-            f"**Sector benchmarks for {sector}:** "
-            f"Gross Margin median = {med_gm:.0f}% · "
-            f"Net Margin median = {med_nm:.0f}%",
-            icon="📊",
-        )
+
+        # ── Percentile rank cards ──────────────────────────────────────────────
+        gm_pct  = _sf(info.get("grossMargins", 0) or 0) * 100
+        nm_pct  = _sf(info.get("profitMargins", 0) or 0) * 100
+        roe_val = (_sf(info.get("returnOnEquity")) or 0) * 100
+        gm_std  = _SECTOR_GM_STD.get(sector, 12.0)
+        nm_std  = _SECTOR_NM_STD.get(sector, 6.0)
+        roe_med = _SECTOR_ROE_MEDIAN.get(sector, 15.0)
+        roe_std = _SECTOR_ROE_STD.get(sector, 12.0)
+
+        prank_gm  = _sector_percentile(gm_pct,  med_gm,  gm_std)  if gm_pct  else ""
+        prank_nm  = _sector_percentile(nm_pct,  med_nm,  nm_std)  if nm_pct  else ""
+        prank_roe = _sector_percentile(roe_val, roe_med, roe_std) if roe_val else ""
+
+        rank_html = ""
+        for label, value, unit, prank in [
+            ("Gross Margin",  gm_pct,  "%", prank_gm),
+            ("Net Margin",    nm_pct,  "%", prank_nm),
+            ("Return on Equity", roe_val, "%", prank_roe),
+        ]:
+            if value:
+                badge = _percentile_badge(prank) if prank else ""
+                rank_html += (
+                    f'<div style="display:inline-block;background:#161b27;border:1px solid #333;'
+                    f'border-radius:6px;padding:8px 14px;margin:0 6px 8px 0;">'
+                    f'<div style="color:#666;font-size:0.68rem;text-transform:uppercase;'
+                    f'letter-spacing:.04em;">{label}</div>'
+                    f'<div style="color:#fff;font-weight:700;font-size:1.1rem;">'
+                    f'{value:.1f}{unit}{badge}</div>'
+                    f'<div style="color:#555;font-size:0.7rem;">sector median '
+                    f'{"" if label != "Return on Equity" else ""}'
+                    f'{med_gm if label == "Gross Margin" else (med_nm if label == "Net Margin" else roe_med):.0f}{unit}</div>'
+                    f'</div>'
+                )
+
+        if rank_html:
+            st.markdown(
+                f'<div style="margin:10px 0 14px;">{rank_html}</div>',
+                unsafe_allow_html=True,
+            )
+
         _render_section_items(moat["items"])
 
     # ── TAB 2: Financial Fortress ──────────────────────────────────────────────────
