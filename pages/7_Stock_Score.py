@@ -103,6 +103,88 @@ _SECTOR_SPECIAL = {
     "Real Estate", "Mortgage Finance",
 }
 
+# ── Macro regime sector adjustments (±pts on base score, capped ±15) ──────────
+# Source: historical factor performance across NBER/FRED cycles
+_MACRO_ADJ: dict[str, dict[str, int]] = {
+    "Normal": {},
+    "High Inflation": {
+        "Energy": 12, "Basic Materials": 10, "Materials": 10,
+        "Consumer Defensive": 5, "Consumer Staples": 5,
+        "Real Estate": -8, "Technology": -6, "Consumer Cyclical": -8,
+        "Communication Services": -3, "Utilities": -4,
+    },
+    "Rising Rates": {
+        "Financial Services": 8, "Banks": 10, "Insurance": 6,
+        "Utilities": -10, "Real Estate": -9, "Technology": -5,
+        "Consumer Defensive": -2, "Consumer Cyclical": -3,
+    },
+    "Recession Risk": {
+        "Consumer Defensive": 8, "Consumer Staples": 8,
+        "Healthcare": 7, "Utilities": 6,
+        "Consumer Cyclical": -10, "Industrials": -8, "Energy": -5,
+        "Financial Services": -4, "Technology": -3,
+    },
+    "Recovery / Expansion": {
+        "Consumer Cyclical": 9, "Industrials": 8, "Energy": 6,
+        "Technology": 5, "Financial Services": 4,
+        "Consumer Defensive": -4, "Utilities": -5, "Healthcare": -2,
+    },
+}
+
+_MACRO_DESCRIPTIONS: dict[str, str] = {
+    "Normal":               "No macro adjustment — pure Buffett score",
+    "High Inflation":       "CPI > 4%: Energy & Materials benefit; Tech & Real Estate hurt",
+    "Rising Rates":         "Fed tightening: Banks & Insurance benefit; Utilities & REITs hurt",
+    "Recession Risk":       "PMI < 50, yield curve inverted: Staples & Healthcare defensive",
+    "Recovery / Expansion": "PMI > 55, credit expanding: Cyclicals & Industrials outperform",
+}
+
+def _macro_adj_score(base_score: int, sector: str | None, regime: str) -> int:
+    """Apply macro regime sector adjustment. Capped at ±15, total 0–100."""
+    adj_map = _MACRO_ADJ.get(regime, {})
+    adj = 0
+    for key, delta in adj_map.items():
+        if sector and key.lower() in sector.lower():
+            adj = max(adj, abs(delta)) * (1 if delta > 0 else -1)
+            break
+    adj = max(-15, min(15, adj))
+    return max(0, min(100, base_score + adj))
+
+
+def _fundamentals_trend(raw_data: dict) -> tuple[str, str, str]:
+    """
+    Returns (arrow, color, tooltip) based on YoY direction of
+    Revenue, Net Income, and Operating Cash Flow.
+    ↑ = 2+ of 3 metrics improving  |  ↓ = 2+ deteriorating  |  → = mixed
+    """
+    fin = raw_data.get("financials")
+    cf  = raw_data.get("cashflow")
+
+    improving = 0
+    total     = 0
+    for row in [
+        _row(fin, "Total Revenue", "Revenue"),
+        _row(fin, "Net Income"),
+        _row(cf, "Operating Cash Flow", "Cash From Operations",
+             "Net Cash From Operating Activities"),
+    ]:
+        if row is not None:
+            vals = row.dropna()
+            if len(vals) >= 2:
+                total += 1
+                if float(vals.iloc[0]) > float(vals.iloc[1]):
+                    improving += 1
+
+    if total == 0:
+        return "→", "#777", "Trend: no data"
+    ratio = improving / total
+    if ratio >= 0.67:
+        return "↑", "#2ecc71", f"Improving: {improving}/{total} metrics up YoY"
+    if ratio <= 0.33:
+        return "↓", "#e74c3c", f"Deteriorating: {improving}/{total} metrics up YoY"
+    return "→", "#f39c12", f"Mixed: {improving}/{total} metrics up YoY"
+
+
 def _sector_gm(sector: str | None, industry: str | None) -> float:
     for key in [industry, sector]:
         if key and key in _SECTOR_GROSS_MARGIN:
@@ -963,6 +1045,7 @@ if ticker_input:
     total        = score_data["total"]
     s_color      = _score_color(total)
     s_label, s_emoji = _score_label(total)
+    trend_arrow, trend_color, trend_tip = _fundamentals_trend(raw)
     secs         = score_data["sections"]
     moat         = secs["moat"]
     fortress     = secs["fortress"]
@@ -982,12 +1065,20 @@ if ticker_input:
                           text-transform:uppercase;margin-bottom:6px;">
                 Buffett Score — {long_name}
               </div>
-              <div style="color:{s_color};font-size:3rem;font-weight:900;line-height:1;">
-                {total}
-                <span style="font-size:1rem;color:#555;font-weight:400;"> / 100</span>
+              <div style="display:flex;align-items:baseline;gap:10px;">
+                <div style="color:{s_color};font-size:3rem;font-weight:900;line-height:1;">
+                  {total}
+                  <span style="font-size:1rem;color:#555;font-weight:400;"> / 100</span>
+                </div>
+                <div title="{trend_tip}" style="color:{trend_color};font-size:1.8rem;
+                     font-weight:700;line-height:1;" >
+                  {trend_arrow}
+                </div>
               </div>
               <div style="color:{s_color};font-size:1rem;font-weight:700;margin-top:6px;">
                 {s_emoji} {s_label}
+                <span style="color:{trend_color};font-size:0.72rem;font-weight:400;
+                      margin-left:8px;">{trend_tip}</span>
               </div>
             </div>
             <div style="font-size:0.8rem;line-height:2.1;padding-top:4px;">
@@ -1394,18 +1485,31 @@ if run_screener:
                 continue
             sc = _compute_score(raw_s)
             info_s   = raw_s["info"]
+            t_arrow, t_color, t_tip = _fundamentals_trend(raw_s)
+            # FCF Yield
+            fcf  = _sf(info_s.get("freeCashflow"))
+            mktc = _sf(info_s.get("marketCap"))
+            fcf_yield = round(fcf / mktc * 100, 1) if (fcf and mktc and mktc > 0) else None
+            # Forward P/E
+            fwd_pe = _sf(info_s.get("forwardPE"))
+            sector_s = (info_s.get("sector") or "—")
             results_list.append({
                 "Ticker":     tkr,
                 "Company":    (info_s.get("shortName") or info_s.get("longName") or tkr)[:28],
-                "Sector":     (info_s.get("sector") or "—")[:20],
+                "Sector":     sector_s[:22],
                 "Score":      sc["total"],
                 "Moat":       sc["sections"]["moat"]["score"],
                 "Fortress":   sc["sections"]["fortress"]["score"],
                 "Valuation":  sc["sections"]["valuation"]["score"],
                 "Momentum":   sc["sections"]["momentum"]["score"],
                 "Shareholder":sc["sections"]["shareholder"]["score"],
+                "Trend":      t_arrow,
+                "TrendColor": t_color,
+                "TrendTip":   t_tip,
+                "FCF_Yield":  fcf_yield,
+                "Fwd_PE":     round(fwd_pe, 1) if fwd_pe and fwd_pe > 0 else None,
                 "Price":      _sf(info_s.get("currentPrice") or info_s.get("regularMarketPrice")),
-                "Mkt Cap $B": round(_sf(info_s.get("marketCap") or 0) / 1e9, 1),
+                "Mkt Cap $B": round((_sf(info_s.get("marketCap")) or 0) / 1e9, 1),
             })
         except Exception as exc:
             errors_list.append(f"{tkr} ({exc})")
@@ -1417,15 +1521,33 @@ if run_screener:
 
 # ── Render screener results ─────────────────────────────────────────────────────
 if st.session_state.get("screener_results"):
-    scr_df = (
-        pd.DataFrame(st.session_state["screener_results"])
-        .sort_values("Score", ascending=False)
-        .reset_index(drop=True)
-    )
-    top20 = scr_df.head(20).copy()
-    top20.index = range(1, len(top20) + 1)  # rank 1–20
+    scr_df = pd.DataFrame(st.session_state["screener_results"])
 
-    # Verdict badge helper
+    # ── Macro Overlay controls ───────────────────────────────────────────────────
+    st.markdown("#### 🌐 Macro Overlay")
+    mac_c1, mac_c2 = st.columns([2, 3])
+    with mac_c1:
+        macro_regime = st.selectbox(
+            "Current Macro Regime",
+            options=list(_MACRO_ADJ.keys()),
+            index=0,
+            key="screener_macro_regime",
+            help="Adjusts scores ±15 pts based on sector sensitivity to the selected macro environment.",
+        )
+    with mac_c2:
+        st.info(_MACRO_DESCRIPTIONS[macro_regime], icon="📡")
+
+    # Apply macro adjustment
+    scr_df["MacroAdj"] = scr_df.apply(
+        lambda r: _macro_adj_score(int(r["Score"]), r["Sector"], macro_regime), axis=1
+    )
+
+    # Sort by MacroAdj score
+    sort_col = "MacroAdj" if macro_regime != "Normal" else "Score"
+    scr_df = scr_df.sort_values(sort_col, ascending=False).reset_index(drop=True)
+    top20 = scr_df.head(20).copy()
+    top20.index = range(1, len(top20) + 1)
+
     def _badge(score: int) -> str:
         if score >= 75: return "🟢 Strong Buy"
         if score >= 60: return "🟢 Deep Dive"
@@ -1433,58 +1555,80 @@ if st.session_state.get("screener_results"):
         if score >= 30: return "🟠 Red Flags"
         return "🔴 Fails"
 
-    top20["Verdict"] = top20["Score"].apply(_badge)
+    regime_label = "" if macro_regime == "Normal" else f" <span style='color:#f39c12;font-size:0.75rem;'>sorted by {macro_regime} macro-adjusted score</span>"
+    st.markdown(
+        f"#### Top 20 Results &nbsp; <span style='color:#888;font-size:0.8rem;'>({len(scr_df)} stocks scored)</span>{regime_label}",
+        unsafe_allow_html=True,
+    )
 
-    st.markdown(f"#### Top 20 Results &nbsp; <span style='color:#888;font-size:0.8rem;'>({len(scr_df)} stocks scored)</span>", unsafe_allow_html=True)
-
-    # Render as HTML table for full styling control
     rows_html = ""
     for rank, row in top20.iterrows():
-        sc   = int(row["Score"])
-        col  = _score_color(sc)
-        price_str = f"${row['Price']:.2f}" if row["Price"] else "—"
+        sc      = int(row["Score"])
+        mac_sc  = int(row["MacroAdj"])
+        col     = _score_color(sc)
+        mac_col = _score_color(mac_sc)
+        price_str    = f"${row['Price']:.2f}" if row.get("Price") else "—"
+        fcf_str      = f"{row['FCF_Yield']:.1f}%" if row.get("FCF_Yield") is not None else "—"
+        fpe_str      = f"{row['Fwd_PE']:.1f}x" if row.get("Fwd_PE") is not None else "—"
+        t_arrow      = row.get("Trend", "→")
+        t_color      = row.get("TrendColor", "#888")
+        t_tip        = row.get("TrendTip", "")
+
+        # Macro delta badge
+        delta = mac_sc - sc
+        if macro_regime == "Normal" or delta == 0:
+            mac_cell = f'<span style="color:{col};font-weight:700;">{sc}</span>'
+        else:
+            d_color = "#2ecc71" if delta > 0 else "#e74c3c"
+            d_sign  = "+" if delta > 0 else ""
+            mac_cell = (
+                f'<span style="color:{mac_col};font-weight:800;">{mac_sc}</span>'
+                f'<span style="color:{d_color};font-size:0.68rem;margin-left:3px;">({d_sign}{delta})</span>'
+            )
+
         rows_html += (
             f'<tr style="border-bottom:1px solid #1e1e2e;">'
-            f'<td style="color:#888;text-align:center;padding:8px 6px;font-size:0.75rem;">{rank}</td>'
-            f'<td style="color:#3498db;font-weight:700;padding:8px 6px;">{row["Ticker"]}</td>'
-            f'<td style="color:#ccc;padding:8px 6px;font-size:0.82rem;">{row["Company"]}</td>'
-            f'<td style="color:#999;padding:8px 6px;font-size:0.78rem;">{row["Sector"]}</td>'
-            f'<td style="color:{col};font-weight:800;font-size:1rem;text-align:center;padding:8px 10px;">{sc}</td>'
-            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Moat"])}/40</td>'
-            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Fortress"])}/25</td>'
-            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Valuation"])}/20</td>'
-            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Momentum"])}/10</td>'
-            f'<td style="color:#ccc;font-size:0.78rem;text-align:right;">{price_str}</td>'
-            f'<td style="color:#ccc;font-size:0.78rem;text-align:right;">{row["Mkt Cap $B"]}B</td>'
-            f'<td style="font-size:0.78rem;padding:8px 6px;">{row["Verdict"]}</td>'
+            f'<td style="color:#666;text-align:center;padding:7px 5px;font-size:0.73rem;">{rank}</td>'
+            f'<td style="color:#3498db;font-weight:700;padding:7px 5px;font-size:0.85rem;">{row["Ticker"]}</td>'
+            f'<td style="color:#ccc;padding:7px 5px;font-size:0.78rem;">{row["Company"]}</td>'
+            f'<td style="color:#999;padding:7px 5px;font-size:0.72rem;">{row["Sector"]}</td>'
+            f'<td style="text-align:center;padding:7px 8px;">{mac_cell}</td>'
+            f'<td style="color:{t_color};font-size:1.1rem;text-align:center;" title="{t_tip}">{t_arrow}</td>'
+            f'<td style="color:#888;font-size:0.75rem;text-align:center;">{int(row["Moat"])}/40</td>'
+            f'<td style="color:#888;font-size:0.75rem;text-align:center;">{int(row["Fortress"])}/25</td>'
+            f'<td style="color:#888;font-size:0.75rem;text-align:center;">{int(row["Valuation"])}/20</td>'
+            f'<td style="color:#888;font-size:0.75rem;text-align:center;">{int(row["Momentum"])}/10</td>'
+            f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
+            f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
+            f'<td style="color:#ccc;font-size:0.75rem;text-align:right;">{price_str}</td>'
+            f'<td style="font-size:0.75rem;padding:7px 5px;">{_badge(mac_sc)}</td>'
             f'</tr>'
         )
 
     st.markdown(
         f"""
-        <div style="overflow-x:auto;margin:12px 0;">
-        <table style="width:100%;border-collapse:collapse;background:#0e1117;
-                      font-family:monospace;font-size:0.82rem;">
+        <div style="overflow-x:auto;margin:10px 0;">
+        <table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:0.8rem;">
           <thead>
-            <tr style="border-bottom:2px solid #333;color:#555;font-size:0.7rem;
+            <tr style="border-bottom:2px solid #333;color:#555;font-size:0.68rem;
                        text-transform:uppercase;letter-spacing:.05em;">
-              <th style="padding:8px 6px;text-align:center;">#</th>
-              <th style="padding:8px 6px;text-align:left;">Ticker</th>
-              <th style="padding:8px 6px;text-align:left;">Company</th>
-              <th style="padding:8px 6px;text-align:left;">Sector</th>
-              <th style="padding:8px 10px;text-align:center;">Score</th>
-              <th style="padding:8px 6px;text-align:center;">Moat</th>
-              <th style="padding:8px 6px;text-align:center;">Fortress</th>
-              <th style="padding:8px 6px;text-align:center;">Val.</th>
-              <th style="padding:8px 6px;text-align:center;">Mom.</th>
-              <th style="padding:8px 6px;text-align:right;">Price</th>
-              <th style="padding:8px 6px;text-align:right;">Mkt Cap</th>
-              <th style="padding:8px 6px;text-align:left;">Verdict</th>
+              <th style="padding:7px 5px;text-align:center;">#</th>
+              <th style="padding:7px 5px;text-align:left;">Ticker</th>
+              <th style="padding:7px 5px;text-align:left;">Company</th>
+              <th style="padding:7px 5px;text-align:left;">Sector</th>
+              <th style="padding:7px 8px;text-align:center;" title="Score (macro-adjusted if regime selected)">Score</th>
+              <th style="padding:7px 5px;text-align:center;" title="Fundamental trend: ↑ improving / → mixed / ↓ deteriorating">Trend</th>
+              <th style="padding:7px 5px;text-align:center;">Moat</th>
+              <th style="padding:7px 5px;text-align:center;">Fortress</th>
+              <th style="padding:7px 5px;text-align:center;">Val.</th>
+              <th style="padding:7px 5px;text-align:center;">Mom.</th>
+              <th style="padding:7px 5px;text-align:center;" title="Free Cash Flow Yield = FCF / Market Cap">FCF Yld</th>
+              <th style="padding:7px 5px;text-align:center;" title="Forward P/E ratio">Fwd P/E</th>
+              <th style="padding:7px 5px;text-align:right;">Price</th>
+              <th style="padding:7px 5px;text-align:left;">Verdict</th>
             </tr>
           </thead>
-          <tbody>
-            {rows_html}
-          </tbody>
+          <tbody>{rows_html}</tbody>
         </table>
         </div>
         """,
@@ -1493,12 +1637,13 @@ if st.session_state.get("screener_results"):
 
     errs = st.session_state.get("screener_errors", [])
     if errs:
-        st.caption(f"⚠️ Could not fetch data for: {', '.join(errs[:10])}"
+        st.caption(f"⚠️ Could not fetch: {', '.join(errs[:10])}"
                    + (" and more…" if len(errs) > 10 else ""))
 
     st.caption(
-        "💡 Click any ticker above in the search box to run its full analysis. "
-        "Screener results cached for 1 hour. Scores use the same 100-pt framework as the single-stock view."
+        "💡 Trend arrow = YoY direction of Revenue, Net Income & OCF. "
+        "Macro-adjusted score = base ± sector sensitivity (capped ±15 pts). "
+        "FCF Yield = Free Cash Flow / Market Cap. Screener cached 1 hour."
     )
 
 st.markdown("---")
