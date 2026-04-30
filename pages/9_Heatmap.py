@@ -561,10 +561,9 @@ fig = go.Figure(
         zmin=0,
         zmax=100,
         colorbar=dict(
-            title="Buffett Score",
-            titleside="right",
+            title=dict(text="Buffett Score", side="right"),
             tickvals=[0, 25, 50, 75, 100],
-            ticktext=["0 — Poor", "25", "50 — Avg", "75", "100 — Elite"],
+            ticktext=["0", "25", "50 (avg)", "75", "100 (elite)"],
             thickness=16,
             len=0.8,
         ),
