@@ -133,7 +133,7 @@ with st.sidebar:
   <div class="nav-guide-item">
     <div class="nav-guide-text">
       <div class="nav-guide-title">📊 Dashboard</div>
-      <div class="nav-guide-desc">Where are we in the economic cycle right now?</div>
+      <div class="nav-guide-desc">Live recession risk, cycle phase & 8-tab macro deep-dive.</div>
     </div>
   </div>
   <div class="nav-guide-item">
