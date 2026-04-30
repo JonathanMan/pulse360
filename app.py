@@ -78,9 +78,9 @@ pg = st.navigation(
             st.Page("pages/6_Buffett.py",     title="Buffett Indicator",      icon="⚖️"),
         ],
         "Analysis": [
-            st.Page("pages/1_Backtest.py",      title="Backtest",      icon="📉"),
-            st.Page("pages/2_Phase_Returns.py", title="Phase Returns", icon="📈"),
-            st.Page("pages/3_Simulator.py",     title="Simulator",     icon="🎛️"),
+            st.Page("pages/1_Backtest.py",      title="Model Track Record",   icon="📉"),
+            st.Page("pages/2_Phase_Returns.py", title="What to Own & When",   icon="📈"),
+            st.Page("pages/3_Simulator.py",     title="Stress Test",          icon="🎛️"),
         ],
     }
 )

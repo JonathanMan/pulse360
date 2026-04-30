@@ -1,5 +1,5 @@
 """
-Pulse360 — Backtest Page
+Pulse360 — Model Track Record
 =========================
 Historical validation of the recession probability model against
 NBER-dated recessions from 1997 to present.
@@ -32,7 +32,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# 📉 Model Backtest")
+st.markdown("# 📉 Model Track Record")
 st.caption(
     "Point-in-time historical validation · 1997–present · "
     "Covers 3 NBER recessions: 2001, 2007–09, 2020"

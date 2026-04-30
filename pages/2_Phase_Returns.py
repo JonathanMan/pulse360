@@ -1,5 +1,5 @@
 """
-Pulse360 — Historical Phase Returns Page
+Pulse360 — What to Own & When
 ==========================================
 Asset class return statistics broken down by economic cycle phase.
 Answers: what has historically happened to equities, bonds, gold, and oil
@@ -34,7 +34,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# 📊 Historical Phase Returns")
+st.markdown("# 📊 What to Own & When")
 st.caption(
     "How each asset class has performed during Expansion, Late Cycle, "
     "Contraction, and Recovery phases · 1997–present"

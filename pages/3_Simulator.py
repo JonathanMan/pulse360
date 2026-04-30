@@ -1,5 +1,5 @@
 """
-Pulse360 — Scenario Simulator
+Pulse360 — Stress Test
 ================================
 Adjust any of the 7 model inputs via sliders and watch the recession
 probability update in real time. Use preset scenarios to jump to
@@ -37,7 +37,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# 🎛️ Scenario Simulator")
+st.markdown("# 🎛️ Stress Test")
 st.caption(
     "Adjust any input to see how the recession probability responds · "
     "Hit 'Analyse' to get a Claude interpretation of the scenario"
