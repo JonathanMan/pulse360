@@ -28,6 +28,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
+from ai.claude_client import extract_tickers_from_screenshot
 from components.stock_score_utils import (
     fetch_stock_data,
     _compute_score,
@@ -381,10 +382,57 @@ st.caption(
 )
 
 # ── Ticker input ───────────────────────────────────────────────────────────────
-with st.expander("📋 Enter your portfolio tickers", expanded=True):
+with st.expander("Enter your portfolio tickers", expanded=True):
+
+    # ── Screenshot upload ────────────────────────────────────────────────────
+    uploaded_file = st.file_uploader(
+        "Upload a portfolio screenshot — Claude will read the tickers automatically",
+        type=["png", "jpg", "jpeg", "webp", "gif"],
+        help=(
+            "Works with any broker: Schwab, Fidelity, IBKR, Robinhood, eToro, etc. "
+            "Claude Haiku reads all visible ticker symbols from the image."
+        ),
+    )
+
+    if uploaded_file is not None:
+        img_col, btn_col = st.columns([3, 1])
+        with img_col:
+            st.image(uploaded_file, caption=uploaded_file.name, use_container_width=True)
+        with btn_col:
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            if st.button("Extract Tickers", type="secondary", use_container_width=True):
+                with st.spinner("Reading screenshot…"):
+                    found = extract_tickers_from_screenshot(
+                        uploaded_file.getvalue(),
+                        uploaded_file.type or "image/png",
+                    )
+                if found:
+                    st.session_state["heatmap_prefill"] = ", ".join(found)
+                    st.session_state["heatmap_extract_msg"] = (
+                        f"Found {len(found)} ticker"
+                        f"{'s' if len(found) != 1 else ''}: {', '.join(found)}"
+                    )
+                else:
+                    st.session_state["heatmap_extract_msg"] = (
+                        "No tickers found — try a higher-resolution screenshot "
+                        "or enter tickers manually below."
+                    )
+                st.rerun()
+
+        msg = st.session_state.get("heatmap_extract_msg", "")
+        if msg:
+            if msg.startswith("No tickers"):
+                st.warning(msg)
+            else:
+                st.success(msg)
+
+    st.markdown("---")
+
+    # ── Manual / pre-filled text area ────────────────────────────────────────
+    prefill = st.session_state.get("heatmap_prefill", _DEFAULT_TICKERS)
     raw_input = st.text_area(
-        "Tickers (comma or newline separated)",
-        value=_DEFAULT_TICKERS,
+        "Tickers (comma or newline separated — edit as needed)",
+        value=prefill,
         height=90,
         placeholder="e.g. AAPL, MSFT, KO, JNJ, V",
         help="Up to 20 tickers. Fetches live data then falls back to cached scores.",
@@ -401,7 +449,7 @@ with st.expander("📋 Enter your portfolio tickers", expanded=True):
             help="Focus the vulnerability table on a specific scenario",
         )
 
-    run_btn = st.button("🔍 Analyse Portfolio", type="primary", use_container_width=False)
+    run_btn = st.button("Analyse Portfolio", type="primary", use_container_width=False)
 
 # ── Run analysis ───────────────────────────────────────────────────────────────
 if not run_btn and "portfolio_scored" not in st.session_state:

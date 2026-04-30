@@ -372,6 +372,81 @@ def get_buffett_analysis(
         yield f"\n\n⚠️ Analysis unavailable: {exc}"
 
 
+def extract_tickers_from_screenshot(
+    image_bytes: bytes,
+    media_type: str,
+) -> list[str]:
+    """
+    Use Claude Haiku vision to extract stock ticker symbols from a broker
+    portfolio screenshot.
+
+    Args:
+        image_bytes: Raw bytes of the uploaded image.
+        media_type:  MIME type string, e.g. "image/png", "image/jpeg".
+
+    Returns:
+        Deduplicated list of uppercase ticker strings (e.g. ["AAPL", "MSFT"]).
+        Returns [] if nothing is found or on API error.
+    """
+    import base64
+
+    # Normalise media type — file_uploader sometimes returns "image/jpg"
+    _mt_map = {"image/jpg": "image/jpeg"}
+    media_type = _mt_map.get(media_type, media_type)
+
+    b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+
+    extraction_prompt = (
+        "Look at this brokerage or portfolio screenshot and extract every "
+        "stock / ETF ticker symbol that is visible.\n\n"
+        "Rules:\n"
+        "- Return ONLY the ticker symbols, one per line, no explanations.\n"
+        "- Use standard US exchange format (e.g. AAPL, BRK-B, SPY).\n"
+        "- If a company name appears without a ticker, infer it if obvious "
+        "(e.g. 'Apple Inc' -> AAPL, 'Microsoft' -> MSFT).\n"
+        "- Skip cash, money-market, and sweep funds (e.g. SPAXX, FDRXX, VMFXX).\n"
+        "- Skip duplicate entries.\n"
+        "- If you cannot find any stock tickers, respond with exactly: "
+        "NO_TICKERS_FOUND\n\n"
+        "Return ONLY the tickers, one per line, nothing else."
+    )
+
+    try:
+        client = _get_client()
+        response = client.messages.create(
+            model      = HAIKU,
+            max_tokens = 400,
+            messages   = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type":       "base64",
+                                "media_type": media_type,
+                                "data":       b64,
+                            },
+                        },
+                        {"type": "text", "text": extraction_prompt},
+                    ],
+                }
+            ],
+        )
+        raw = response.content[0].text.strip()
+        if "NO_TICKERS_FOUND" in raw.upper():
+            return []
+        tickers = [
+            t.strip().upper()
+            for t in raw.replace(",", "\n").splitlines()
+            if t.strip() and 1 <= len(t.strip()) <= 7
+        ]
+        return list(dict.fromkeys(tickers))  # preserve order, deduplicate
+    except Exception as exc:
+        logger.error("extract_tickers_from_screenshot failed: %s", exc)
+        return []
+
+
 def stream_briefing_section(
     prompt: str,
     max_tokens: int = 1200,
