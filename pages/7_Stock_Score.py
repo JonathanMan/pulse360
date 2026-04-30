@@ -180,12 +180,11 @@ def fetch_stock_data(ticker: str) -> dict:
         "cashflow": None, "history": pd.DataFrame(), "error": None,
     }
 
-    MAX_RETRIES = 3
+    MAX_RETRIES = 4
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             # Do NOT pass a custom session — newer yfinance requires its own
-            # curl_cffi session internally and raises an error if given a plain
-            # requests.Session.
+            # curl_cffi session internally (installed via curl_cffi in requirements.txt).
             t = yf.Ticker(ticker.upper().strip())
 
             info = t.info or {}
@@ -204,8 +203,8 @@ def fetch_stock_data(ticker: str) -> dict:
         except Exception as exc:
             err_str = str(exc)
             if attempt < MAX_RETRIES:
-                # Exponential back-off with jitter: 2s, 4s, …  ± 0–1s
-                wait = (2 ** attempt) + random.random()
+                # Exponential back-off with jitter: 3s → 6s → 12s ± 0–2s
+                wait = (3 * (2 ** (attempt - 1))) + (random.random() * 2)
                 time.sleep(wait)
             else:
                 result["error"] = err_str
@@ -897,11 +896,26 @@ if ticker_input:
         raw = fetch_stock_data(ticker_input)
 
     if raw.get("error") or not raw.get("info"):
-        st.error(
-            f"Could not load data for **{ticker_input}**. "
-            f"Error: {raw.get('error', 'No data returned')}. "
-            "Check the ticker is correct and try again."
-        )
+        err_msg = raw.get("error", "No data returned")
+        is_rate_limit = any(x in err_msg.lower() for x in ["too many", "rate limit", "429"])
+        if is_rate_limit:
+            st.warning(
+                f"⏱️ **Yahoo Finance is rate-limiting requests for {ticker_input}.** "
+                "This is temporary — Streamlit Cloud shares IPs and Yahoo throttles them. "
+                "Wait 15–30 seconds then click **Retry** below.",
+                icon="🔄",
+            )
+        else:
+            st.error(
+                f"Could not load data for **{ticker_input}**. "
+                f"Error: {err_msg}. "
+                "Check the ticker is correct and try again."
+            )
+        col_retry, _ = st.columns([1, 5])
+        with col_retry:
+            if st.button("🔄 Retry", key="retry_ticker"):
+                st.cache_data.clear()
+                st.rerun()
         ticker_input = ""  # fall through to screener only
 
 
