@@ -22,15 +22,35 @@ Data : yfinance (fundamentals + price history). Cached 1 hour.
 from __future__ import annotations
 
 import math
+import time
+import random
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import requests
 import streamlit as st
 import yfinance as yf
 
 from components.chart_utils import dark_layout
+
+
+def _make_yf_session() -> requests.Session:
+    """Return a requests.Session that mimics a real browser to avoid Yahoo rate limits."""
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+    })
+    return session
 
 # ── Styles ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -167,6 +187,7 @@ def _pct_change(new: float | None, old: float | None) -> float | None:
 def fetch_stock_data(ticker: str) -> dict:
     """
     Pull all fundamentals + price history from yfinance.
+    Uses a browser-like session + exponential-backoff retry to avoid Yahoo rate limits.
     Returns a normalised dict with sub-keys:
         info, financials, balance_sheet, cashflow, history, error
     """
@@ -174,15 +195,35 @@ def fetch_stock_data(ticker: str) -> dict:
         "info": {}, "financials": None, "balance_sheet": None,
         "cashflow": None, "history": pd.DataFrame(), "error": None,
     }
-    try:
-        t = yf.Ticker(ticker.upper().strip())
-        result["info"]          = t.info or {}
-        result["financials"]    = t.financials
-        result["balance_sheet"] = t.balance_sheet
-        result["cashflow"]      = t.cashflow
-        result["history"]       = t.history(period="2y")
-    except Exception as exc:
-        result["error"] = str(exc)
+
+    MAX_RETRIES = 3
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            session = _make_yf_session()
+            t = yf.Ticker(ticker.upper().strip(), session=session)
+
+            info = t.info or {}
+            # yfinance sometimes returns a minimal dict on rate-limit; detect it
+            if not info or list(info.keys()) == ["trailingPegRatio"]:
+                raise ValueError("Incomplete info response (likely rate-limited)")
+
+            result["info"]          = info
+            result["financials"]    = t.financials
+            result["balance_sheet"] = t.balance_sheet
+            result["cashflow"]      = t.cashflow
+            result["history"]       = t.history(period="2y")
+            result["error"]         = None
+            return result  # success — exit immediately
+
+        except Exception as exc:
+            err_str = str(exc)
+            if attempt < MAX_RETRIES:
+                # Exponential back-off with jitter: 2s, 4s, …  ± 0–1s
+                wait = (2 ** attempt) + random.random()
+                time.sleep(wait)
+            else:
+                result["error"] = err_str
+
     return result
 
 
