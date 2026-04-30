@@ -76,7 +76,7 @@ pg = st.navigation(
             st.Page("pages/5_Briefing.py",    title="AI Research Desk",       icon="🔬"),
             st.Page("pages/7_Stock_Score.py", title="Buffett Score",           icon="🔍"),
             st.Page("pages/8_Screener.py",    title="Stock Screener",          icon="🏆"),
-            st.Page("pages/9_Portfolio.py",   title="Portfolio Heatmap",       icon="📋"),
+            st.Page("pages/9_Heatmap.py",      title="Portfolio Heatmap",       icon="📋"),
             st.Page("pages/6_Buffett.py",     title="Buffett Indicator",      icon="⚖️"),
         ],
         "Analysis": [
