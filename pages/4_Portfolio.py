@@ -1,5 +1,5 @@
 """
-Pulse360 — Portfolio Analyser
+Pulse360 — Investment Analyser
 ================================
 Upload a broker screenshot (PNG/JPG) or a CSV export and get a plain-English
 macro-aware analysis of your holdings — flagging concentration risks, cycle
@@ -294,7 +294,7 @@ tl_label = {
 
 # ── Page header ───────────────────────────────────────────────────────────────
 
-st.markdown("# 🗂️ Portfolio Analyser")
+st.markdown("# 🗂️ Investment Analyser")
 st.markdown(
     "Upload your portfolio — as a **screenshot** or **CSV** — and get a plain-English "
     "breakdown of your holdings, risk flags, and what the current macro environment "
