@@ -244,6 +244,18 @@ def _macro_adj_score(base_score: int, sector: str | None, regime: str) -> int:
     return max(0, min(100, base_score + adj))
 
 
+def _score_color(value: int, max_value: int) -> str:
+    """Return a colour based on how the score compares to its maximum."""
+    if max_value == 0:
+        return "#888"
+    pct = value / max_value
+    if pct >= 0.75:
+        return "#2ecc71"   # green  — strong
+    if pct >= 0.50:
+        return "#f39c12"   # orange — moderate
+    return "#e74c3c"       # red    — weak
+
+
 def _fundamentals_trend(raw_data: dict) -> tuple[str, str, str]:
     """
     Returns (arrow, color, tooltip) based on YoY direction of
@@ -269,7 +281,7 @@ def _fundamentals_trend(raw_data: dict) -> tuple[str, str, str]:
                     improving += 1
 
     if total == 0:
-        return "→", "#777", "Trend: no data"
+        return "—", "#444", "Trend: no data available"
     ratio = improving / total
     if ratio >= 0.67:
         return "↑", "#2ecc71", f"Improving: {improving}/{total} metrics up YoY"
@@ -1955,10 +1967,10 @@ if st.session_state.get("screener_results"):
             f'<td style="color:#999;padding:7px 5px;font-size:0.72rem;">{row["Sector"]}</td>'
             f'<td style="text-align:center;padding:7px 8px;">{mac_cell}</td>'
             f'<td style="color:{t_color};font-size:1.1rem;text-align:center;" title="{t_tip}">{t_arrow}</td>'
-            f'<td style="color:#888;font-size:0.75rem;text-align:center;">{int(row["Moat"])}/40</td>'
-            f'<td style="color:#888;font-size:0.75rem;text-align:center;">{int(row["Fortress"])}/25</td>'
-            f'<td style="color:#888;font-size:0.75rem;text-align:center;">{int(row["Valuation"])}/20</td>'
-            f'<td style="color:#888;font-size:0.75rem;text-align:center;">{int(row["Momentum"])}/10</td>'
+            f'<td style="color:{_score_color(int(row["Moat"]),40)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Moat"])}/40</td>'
+            f'<td style="color:{_score_color(int(row["Fortress"]),25)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Fortress"])}/25</td>'
+            f'<td style="color:{_score_color(int(row["Valuation"]),20)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Valuation"])}/20</td>'
+            f'<td style="color:{_score_color(int(row["Momentum"]),10)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Momentum"])}/10</td>'
             f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
             f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
             f'<td style="color:#ccc;font-size:0.75rem;text-align:right;">{price_str}</td>'
