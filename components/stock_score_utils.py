@@ -8,11 +8,13 @@ Shared constants, helpers, data-fetching, and scoring engines used by both
 Import pattern:
     from components.stock_score_utils import (
         fetch_stock_data, _compute_score, _fundamentals_trend,
+        _price_trend, _get_sbc,
         _score_color, _score_color_sub, _score_label, _hex_rgba,
         _macro_adj_score, _macro_sens_cell, _owner_earnings_dcf,
         _sector_percentile, _percentile_badge, _is_special_sector,
         _SECTOR_GM_STD, _SECTOR_NM_STD, _SECTOR_ROE_MEDIAN, _SECTOR_ROE_STD,
-        _MACRO_ADJ, _MACRO_DESCRIPTIONS, _FALLBACK_SCORES, _SCREENER_UNIVERSE,
+        _MACRO_ADJ, _MACRO_DESCRIPTIONS, _REGIME_FOCUS,
+        _FALLBACK_SCORES, _SCREENER_UNIVERSE,
         DISCLAIMER, _sf,
     )
 """
@@ -235,6 +237,25 @@ def _percentile_badge(label: str) -> str:
 
 # ── Macro helpers ──────────────────────────────────────────────────────────────
 
+# Callout text surfaced under the regime selector in the screener.
+# Format: (focus_sectors, focus_section, rationale_one-liner)
+_REGIME_FOCUS: dict[str, tuple[str, str, str] | None] = {
+    "Normal":               None,
+    "High Inflation":       ("Energy, Materials, Staples",
+                             "Quality Moat",
+                             "Pricing power moats dominate — high-margin franchises pass costs on"),
+    "Rising Rates":         ("Banks, Insurance",
+                             "Financial Fortress",
+                             "Balance-sheet strength matters most; leverage kills in tightening cycles"),
+    "Recession Risk":       ("Consumer Staples, Healthcare, Utilities",
+                             "Quality Moat + Fortress",
+                             "Defensive durability and low debt are the only reliable shelters"),
+    "Recovery / Expansion": ("Cyclicals, Industrials, Energy",
+                             "Momentum",
+                             "Early-cycle leaders run on earnings acceleration, not just quality"),
+}
+
+
 def _macro_adj_score(base_score: int, sector: str | None, regime: str) -> int:
     """Apply macro regime sector adjustment. Capped at ±15, total 0–100."""
     adj_map = _MACRO_ADJ.get(regime, {})
@@ -373,6 +394,47 @@ def _is_special_sector(sector: str | None, industry: str | None) -> bool:
         if key and any(s in key for s in ["Bank", "Insurance", "REIT", "Financial", "Mortgage"]):
             return True
     return False
+
+
+# ── Price-momentum trend ──────────────────────────────────────────────────────
+
+def _price_trend(info: dict) -> tuple[str, str, str]:
+    """
+    Price-momentum trend based on 200-day and 50-day moving averages.
+    Returns (arrow, color, tooltip).
+
+    Rules (matches the institutional benchmark):
+      ↑ green  — price > 200MA by >3 %  (confirmed uptrend; extra ✓ if 50MA > 200MA)
+      ↓ red    — price < 200MA by >3 %  (technical downtrend)
+      → yellow — consolidating within ±3 % band of 200MA
+    """
+    cur   = _sf(info.get("currentPrice") or info.get("regularMarketPrice"))
+    ma200 = _sf(info.get("twoHundredDayAverage"))
+    ma50  = _sf(info.get("fiftyDayAverage"))
+
+    if not cur or not ma200 or ma200 <= 0:
+        return "—", "#444", "Price data unavailable"
+
+    pct_vs_200 = (cur - ma200) / ma200
+
+    if pct_vs_200 > 0.03:
+        if ma50 and ma50 > ma200:
+            tip = f"Uptrend confirmed: {pct_vs_200:+.1%} vs 200MA · 50MA above 200MA"
+        else:
+            tip = f"Above 200MA: {pct_vs_200:+.1%}"
+        return "↑", "#2ecc71", tip
+
+    if pct_vs_200 < -0.03:
+        tip = f"Technical downtrend: {pct_vs_200:+.1%} below 200MA"
+        return "↓", "#e74c3c", tip
+
+    # Within ±3% band — consolidating
+    if ma50:
+        pct_vs_50 = (cur - ma50) / ma50
+        tip = f"Consolidating: {pct_vs_200:+.1%} vs 200MA · {pct_vs_50:+.1%} vs 50MA"
+    else:
+        tip = f"Near 200MA: {pct_vs_200:+.1%}"
+    return "→", "#f39c12", tip
 
 
 # ── Fundamentals trend ────────────────────────────────────────────────────────
@@ -614,12 +676,22 @@ def _owner_earnings_dcf(
     g_terminal: float = 0.03,
     discount_rate: float = 0.10,
     maint_capex_pct: float = 1.0,
+    deduct_sbc: bool = True,
 ) -> tuple[float | None, float | None]:
     """
     Estimate intrinsic value per share using Owner Earnings DCF.
-    OE = Net Income + D&A − (CapEx × maint_capex_pct)
+    OE = Net Income + D&A − (CapEx × maint_capex_pct) [− SBC if deduct_sbc]
+
     maint_capex_pct: fraction of CapEx treated as maintenance (0–1).
+    deduct_sbc: if True, subtract Stock-Based Compensation from OE.
+      SBC is a real shareholder cost that does not appear in GAAP earnings —
+      Buffett's original definition pre-dates heavy SBC, but modern institutional
+      analysis treats it as a cash-equivalent dilution expense.
+
     Returns (owner_earnings_annual, intrinsic_value_per_share).
+    Also returns sbc_amount embedded in the OE calculation (accessible via
+    the raw value before returning, not surfaced here — callers needing SBC
+    should call _get_sbc() separately).
     """
     try:
         ni    = _col0(_row(fin, "Net Income"))
@@ -628,14 +700,19 @@ def _owner_earnings_dcf(
                              "Depreciation Amortization Depletion"))
         capex = _col0(_row(cf, "Capital Expenditure", "Capital Expenditures",
                              "Purchase Of Ppe", "Capital Expenditure Reported"))
+        sbc   = _col0(_row(cf, "Stock Based Compensation",
+                             "Share Based Compensation",
+                             "Stock-Based Compensation Expense",
+                             "Share-Based Compensation"))
 
         if ni is None:
             return None, None
 
         capex_abs      = abs(capex) if capex is not None else 0
         da_abs         = abs(da)    if da    is not None else 0
+        sbc_abs        = abs(sbc)   if sbc   is not None else 0
         maint_capex    = capex_abs * maint_capex_pct
-        owner_earnings = ni + da_abs - maint_capex
+        owner_earnings = ni + da_abs - maint_capex - (sbc_abs if deduct_sbc else 0)
 
         if owner_earnings <= 0:
             return owner_earnings, None
@@ -658,6 +735,15 @@ def _owner_earnings_dcf(
 
     except Exception:
         return None, None
+
+
+def _get_sbc(cf: pd.DataFrame | None) -> float | None:
+    """Return Stock-Based Compensation (absolute value) from a yfinance cashflow DF."""
+    sbc = _col0(_row(cf, "Stock Based Compensation",
+                        "Share Based Compensation",
+                        "Stock-Based Compensation Expense",
+                        "Share-Based Compensation"))
+    return abs(sbc) if sbc is not None else None
 
 
 def _compute_score(data: dict) -> dict:

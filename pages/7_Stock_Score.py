@@ -32,6 +32,7 @@ from components.stock_score_utils import (
     _SECTOR_ROE_STD,
     _compute_score,
     _fundamentals_trend,
+    _get_sbc,
     _hex_rgba,
     _is_special_sector,
     _owner_earnings_dcf,
@@ -511,6 +512,7 @@ if ticker_input:
         st.markdown("---")
         st.markdown("##### 📐 Owner Earnings DCF — Intrinsic Value Estimate")
 
+        # ── DCF controls row ───────────────────────────────────────────────────
         # Sector-default maintenance CapEx fractions
         _sector_maint_default = {
             "Utilities": 0.85, "Energy": 0.80, "Industrials": 0.75,
@@ -522,7 +524,7 @@ if ticker_input:
         }
         _maint_default = _sector_maint_default.get(sector, 0.60)
 
-        dcf_ctrl1, dcf_ctrl2 = st.columns([3, 2])
+        dcf_ctrl1, dcf_ctrl2, dcf_ctrl3 = st.columns([3, 2, 2])
         with dcf_ctrl1:
             maint_pct = st.select_slider(
                 "Maintenance CapEx %",
@@ -549,25 +551,76 @@ if ticker_input:
                 f'</div>',
                 unsafe_allow_html=True,
             )
+        with dcf_ctrl3:
+            # SBC toggle — default ON (institutional standard)
+            sbc_amount = _get_sbc(raw.get("cashflow"))
+            sbc_label  = (
+                f"SBC ${sbc_amount/1e9:.2f}B" if sbc_amount and sbc_amount > 1e8
+                else f"SBC ${sbc_amount/1e6:.0f}M" if sbc_amount
+                else "SBC (no data)"
+            )
+            deduct_sbc = st.toggle(
+                f"Deduct {sbc_label}",
+                value=True,
+                key="dcf_deduct_sbc",
+                help=(
+                    "Stock-Based Compensation is a real cost to shareholders — it dilutes ownership "
+                    "even though it doesn't appear in GAAP cash flow. "
+                    "Toggle OFF to see the traditional Buffett OE (pre-SBC awareness)."
+                ),
+            )
+            sbc_note = (
+                f'<div style="color:#{"e74c3c" if deduct_sbc and sbc_amount else "555"};'
+                f'font-size:0.7rem;margin-top:4px;">'
+                + (f"−{sbc_label} deducted" if deduct_sbc and sbc_amount
+                   else "SBC not deducted" if not deduct_sbc
+                   else "No SBC data")
+                + '</div>'
+            )
+            st.markdown(sbc_note, unsafe_allow_html=True)
 
+        # Recompute DCF with selected settings
         oe_adj, iv_adj = _owner_earnings_dcf(
             raw.get("financials"), raw.get("cashflow"),
-            info, maint_capex_pct=maint_pct,
+            info, maint_capex_pct=maint_pct, deduct_sbc=deduct_sbc,
         )
         cp_adj  = _sf(info.get("currentPrice") or info.get("regularMarketPrice"))
         mos_adj = ((iv_adj - cp_adj) / iv_adj * 100) if (iv_adj and cp_adj and iv_adj > 0) else None
 
-        dcf_c1, dcf_c2, dcf_c3 = st.columns(3)
+        dcf_c1, dcf_c2, dcf_c3, dcf_c4 = st.columns(4)
         with dcf_c1:
             if oe_adj is not None:
-                st.metric("Owner Earnings (adj.)",
+                sbc_delta = (f"−SBC {sbc_label}" if deduct_sbc and sbc_amount
+                             else f"Maint. CapEx {int(maint_pct*100)}%")
+                st.metric("Owner Earnings",
                           f"${oe_adj/1e9:.2f}B" if abs(oe_adj) > 1e8 else f"${oe_adj/1e6:.0f}M",
-                          delta=f"Maint. CapEx = {int(maint_pct*100)}% of total")
+                          delta=sbc_delta)
             else:
                 st.metric("Owner Earnings", "N/A")
         with dcf_c2:
-            st.metric("DCF Intrinsic Value / Share", f"${iv_adj:.2f}" if iv_adj else "N/A")
+            if sbc_amount:
+                sbc_pct_rev = None
+                rev_row = None
+                try:
+                    fin_df = raw.get("financials")
+                    if fin_df is not None and not fin_df.empty:
+                        rev_row = fin_df.loc[[i for i in fin_df.index
+                                              if "revenue" in str(i).lower()][0]]
+                        rev_val = float(rev_row.iloc[0])
+                        sbc_pct_rev = sbc_amount / rev_val * 100 if rev_val > 0 else None
+                except Exception:
+                    pass
+                sbc_display = (f"${sbc_amount/1e9:.2f}B" if sbc_amount > 1e8
+                               else f"${sbc_amount/1e6:.0f}M")
+                st.metric("SBC (annual)",
+                          sbc_display,
+                          delta=f"{sbc_pct_rev:.1f}% of revenue" if sbc_pct_rev else "of revenue",
+                          delta_color="inverse" if sbc_amount and sbc_amount > 0 else "off")
+            else:
+                st.metric("SBC (annual)", "N/A")
         with dcf_c3:
+            st.metric("DCF Intrinsic Value / Share", f"${iv_adj:.2f}" if iv_adj else "N/A")
+        with dcf_c4:
             if mos_adj is not None:
                 st.metric("Margin of Safety", f"{mos_adj:.0f}%",
                           delta="Undervalued" if mos_adj > 0 else "Overvalued",
@@ -577,9 +630,10 @@ if ticker_input:
 
         st.caption(
             "Buffett's 1986 definition: OE = Net Income + D&A − Maintenance CapEx. "
-            "Projected 10 years (8% growth yr 1–5, 4% yr 6–10), discounted at 10%. "
-            "Terminal value at 3% perpetuity. "
-            "⚠️ Highly sensitive to growth assumptions — directional guide only."
+            "**SBC toggle** (default ON): subtracts stock-based comp — a real dilution cost "
+            "omitted from GAAP cash flow. Projected 10 years (8% growth yr 1–5, 4% yr 6–10), "
+            "discounted at 10%. Terminal value at 3% perpetuity. "
+            "⚠️ Directional guide only — highly sensitive to growth assumptions."
         )
         if not (iv_adj and cp_adj):
             st.info("Insufficient data to compute DCF. "

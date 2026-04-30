@@ -9,10 +9,12 @@ Features:
   • Live yfinance data with 1-hour cache
   • Fallback scores for 14 key blue chips when rate-limited
   • Macro Overlay: Normal / High Inflation / Rising Rates / Recession Risk / Recovery
-  • Trend indicators (↑↓→) from Revenue, Net Income, OCF YoY direction
+  • Regime Focus callout — highlights which section and sectors matter most
+  • Price Trend column: ↑/→/↓ based on price vs 200-day MA (not just YoY fundamentals)
   • FCF Yield & Forward P/E columns
   • Share-count YoY (buyback detection)
   • Data-status bar (live vs cached vs failed count)
+  • Compact Mode toggle for dense professional layouts
 """
 
 from __future__ import annotations
@@ -24,11 +26,12 @@ from components.stock_score_utils import (
     DISCLAIMER,
     _FALLBACK_SCORES,
     _MACRO_ADJ,
+    _REGIME_FOCUS,
     _SCREENER_UNIVERSE,
     _compute_score,
-    _fundamentals_trend,
     _macro_adj_score,
     _macro_sens_cell,
+    _price_trend,
     _score_color,
     _score_color_sub,
     _sf,
@@ -51,6 +54,16 @@ st.caption(
     "200-day MA momentum. Apply a **Macro Overlay** to re-rank by cycle-adjusted score."
 )
 
+# ── Top control bar ───────────────────────────────────────────────────────────
+ctrl_left, ctrl_right = st.columns([7, 3])
+with ctrl_right:
+    compact = st.toggle(
+        "Compact Mode",
+        value=False,
+        key="screener_compact",
+        help="Reduces row height and font size for higher data density.",
+    )
+
 # ── Macro Overlay ─────────────────────────────────────────────────────────────
 _REGIME_META = {
     "Normal":               ("⚪", "#888888", "No adjustment — pure Buffett score"),
@@ -60,17 +73,18 @@ _REGIME_META = {
     "Recovery / Expansion": ("🟢", "#2ecc71", "Cyclicals & Industrials ↑  ·  Defensives ↓"),
 }
 
-st.markdown(
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
-    '<span style="font-size:1.15rem;">🌐</span>'
-    '<span style="font-size:1.05rem;font-weight:700;color:#fff;">Macro Overlay</span>'
-    '<span style="color:#555;font-size:0.78rem;margin-left:4px;">'
-    '— re-ranks by macro-adjusted score (±15 pts sector adjustment)</span>'
-    '</div>',
-    unsafe_allow_html=True,
-)
+with ctrl_left:
+    st.markdown(
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        '<span style="font-size:1.05rem;">🌐</span>'
+        '<span style="font-size:1.0rem;font-weight:700;color:#fff;">Macro Overlay</span>'
+        '<span style="color:#555;font-size:0.78rem;margin-left:4px;">'
+        '— re-ranks by macro-adjusted score (±15 pts sector adjustment)</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
-ov_left, ov_right = st.columns([4, 8])
+ov_left, ov_right = st.columns([3, 9])
 with ov_left:
     macro_regime = st.selectbox(
         "Regime",
@@ -92,6 +106,29 @@ with ov_right:
         f'&nbsp;&nbsp;<span style="color:#666;">|</span>&nbsp;&nbsp;'
         f'{summary}'
         f'</span></div>',
+        unsafe_allow_html=True,
+    )
+
+# ── Regime Focus callout ──────────────────────────────────────────────────────
+focus = _REGIME_FOCUS.get(macro_regime)
+if focus:
+    focus_sectors, focus_section, focus_rationale = focus
+    icon, accent, _ = _REGIME_META[macro_regime]
+    st.markdown(
+        f'<div style="background:#0e1220;border:1px solid {accent}33;'
+        f'border-left:3px solid {accent};border-radius:6px;'
+        f'padding:8px 14px;margin:6px 0 10px;display:flex;gap:14px;align-items:flex-start;">'
+        f'<div style="margin-top:1px;font-size:0.9rem;">{icon}</div>'
+        f'<div>'
+        f'<span style="color:{accent};font-size:0.75rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:.04em;">Regime Focus</span>'
+        f'&nbsp;&nbsp;'
+        f'<span style="color:#ccc;font-size:0.78rem;">'
+        f'Prioritise <strong style="color:#fff;">{focus_section}</strong>'
+        f' · Favoured sectors: <em style="color:#aaa;">{focus_sectors}</em>'
+        f'</span>'
+        f'<div style="color:#666;font-size:0.73rem;margin-top:3px;">{focus_rationale}</div>'
+        f'</div></div>',
         unsafe_allow_html=True,
     )
 
@@ -129,18 +166,19 @@ if run_screener:
             if raw_s.get("error") or not raw_s.get("info"):
                 if tkr in _FALLBACK_SCORES:
                     fb = dict(_FALLBACK_SCORES[tkr])
-                    fb["Ticker"]    = tkr
-                    fb["_cached"]   = True
-                    # Ensure ShareChg key exists for fallback rows
+                    fb["Ticker"]  = tkr
+                    fb["_cached"] = True
                     fb.setdefault("ShareChg", None)
                     results_list.append(fb)
                 else:
                     errors_list.append(tkr)
                 continue
 
-            sc       = _compute_score(raw_s)
-            info_s   = raw_s["info"]
-            t_arrow, t_color, t_tip = _fundamentals_trend(raw_s)
+            sc      = _compute_score(raw_s)
+            info_s  = raw_s["info"]
+
+            # Price-momentum trend (200MA / 50MA based) — more actionable than YoY fundamentals
+            t_arrow, t_color, t_tip = _price_trend(info_s)
 
             fcf  = _sf(info_s.get("freeCashflow"))
             mktc = _sf(info_s.get("marketCap"))
@@ -225,6 +263,16 @@ if st.session_state.get("screener_results"):
         if score >= 30: return "🟠 Red Flags"
         return "🔴 Fails"
 
+    # Row density settings driven by Compact Mode toggle
+    if compact:
+        row_pad  = "4px 5px"
+        row_font = "0.72rem"
+        cell_pad = "4px 4px"
+    else:
+        row_pad  = "7px 5px"
+        row_font = "0.8rem"
+        cell_pad = "7px 5px"
+
     rows_html = ""
     for rank, row in top20.iterrows():
         sc_val  = int(row["Score"])
@@ -270,55 +318,55 @@ if st.session_state.get("screener_results"):
             )
 
         rows_html += (
-            f'<tr style="border-bottom:1px solid #1e1e2e;">'
-            f'<td style="color:#666;text-align:center;padding:7px 5px;font-size:0.73rem;">{rank}</td>'
-            f'<td style="color:#3498db;font-weight:700;padding:7px 5px;font-size:0.85rem;">{ticker_cell}</td>'
-            f'<td style="color:#ccc;padding:7px 5px;font-size:0.78rem;">{row["Company"]}</td>'
-            f'<td style="color:#999;padding:7px 5px;font-size:0.72rem;">{row["Sector"]}</td>'
-            f'<td style="text-align:center;padding:7px 8px;">{mac_cell}</td>'
-            f'<td style="text-align:center;padding:7px 5px;font-size:0.78rem;">{macro_sens}</td>'
+            f'<tr style="border-bottom:1px solid #1a1a2a;">'
+            f'<td style="color:#666;text-align:center;padding:{cell_pad};font-size:0.73rem;">{rank}</td>'
+            f'<td style="color:#3498db;font-weight:700;padding:{cell_pad};font-size:{row_font};">{ticker_cell}</td>'
+            f'<td style="color:#ccc;padding:{cell_pad};font-size:{row_font};">{row["Company"]}</td>'
+            f'<td style="color:#999;padding:{cell_pad};font-size:0.72rem;">{row["Sector"]}</td>'
+            f'<td style="text-align:center;padding:{cell_pad};">{mac_cell}</td>'
+            f'<td style="text-align:center;padding:{cell_pad};font-size:{row_font};">{macro_sens}</td>'
             f'<td style="color:{t_color};font-size:1.1rem;text-align:center;" title="{t_tip}">{t_arrow}</td>'
             f'<td style="color:{_score_color_sub(int(row["Moat"]),40)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Moat"])}/40</td>'
             f'<td style="color:{_score_color_sub(int(row["Fortress"]),25)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Fortress"])}/25</td>'
             f'<td style="color:{_score_color_sub(int(row["Valuation"]),20)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Valuation"])}/20</td>'
             f'<td style="color:{_score_color_sub(int(row["Momentum"]),10)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Momentum"])}/10</td>'
-            f'<td style="text-align:center;padding:7px 5px;font-size:0.75rem;">{sh_cell}</td>'
+            f'<td style="text-align:center;padding:{cell_pad};font-size:0.75rem;">{sh_cell}</td>'
             f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
             f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
             f'<td style="color:#ccc;font-size:0.75rem;text-align:right;">{price_str}</td>'
-            f'<td style="font-size:0.75rem;padding:7px 5px;">{_badge(mac_sc)}</td>'
+            f'<td style="font-size:0.75rem;padding:{cell_pad};">{_badge(mac_sc)}</td>'
             f'</tr>'
         )
 
     st.markdown(
         f"""
         <div style="overflow-x:auto;margin:10px 0;">
-        <table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:0.8rem;">
+        <table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:{row_font};">
           <thead>
             <tr style="border-bottom:2px solid #333;color:#555;font-size:0.68rem;
                        text-transform:uppercase;letter-spacing:.05em;">
-              <th style="padding:7px 5px;text-align:center;">#</th>
-              <th style="padding:7px 5px;text-align:left;">Ticker</th>
-              <th style="padding:7px 5px;text-align:left;">Company</th>
-              <th style="padding:7px 5px;text-align:left;">Sector</th>
+              <th style="padding:{cell_pad};text-align:center;">#</th>
+              <th style="padding:{cell_pad};text-align:left;">Ticker</th>
+              <th style="padding:{cell_pad};text-align:left;">Company</th>
+              <th style="padding:{cell_pad};text-align:left;">Sector</th>
               <th style="padding:7px 8px;text-align:center;"
                   title="Score (macro-adjusted if regime selected)">Score</th>
-              <th style="padding:7px 5px;text-align:center;"
+              <th style="padding:{cell_pad};text-align:center;"
                   title="Sector sensitivity to selected macro regime (±15 pts max)">Macro Sens.</th>
-              <th style="padding:7px 5px;text-align:center;"
-                  title="Fundamental trend: ↑ improving / → mixed / ↓ deteriorating">Trend</th>
-              <th style="padding:7px 5px;text-align:center;">Moat</th>
-              <th style="padding:7px 5px;text-align:center;">Fortress</th>
-              <th style="padding:7px 5px;text-align:center;">Val.</th>
-              <th style="padding:7px 5px;text-align:center;">Mom.</th>
-              <th style="padding:7px 5px;text-align:center;"
+              <th style="padding:{cell_pad};text-align:center;"
+                  title="Price vs 200-day MA: ↑ confirmed uptrend · → consolidating · ↓ technical downtrend">Price Trend</th>
+              <th style="padding:{cell_pad};text-align:center;">Moat</th>
+              <th style="padding:{cell_pad};text-align:center;">Fortress</th>
+              <th style="padding:{cell_pad};text-align:center;">Val.</th>
+              <th style="padding:{cell_pad};text-align:center;">Mom.</th>
+              <th style="padding:{cell_pad};text-align:center;"
                   title="YoY share count change — negative = buybacks (good)">Shares YoY</th>
-              <th style="padding:7px 5px;text-align:center;"
+              <th style="padding:{cell_pad};text-align:center;"
                   title="Free Cash Flow Yield = FCF / Market Cap">FCF Yld</th>
-              <th style="padding:7px 5px;text-align:center;"
+              <th style="padding:{cell_pad};text-align:center;"
                   title="Forward P/E ratio">Fwd P/E</th>
-              <th style="padding:7px 5px;text-align:right;">Price</th>
-              <th style="padding:7px 5px;text-align:left;">Verdict</th>
+              <th style="padding:{cell_pad};text-align:right;">Price</th>
+              <th style="padding:{cell_pad};text-align:left;">Verdict</th>
             </tr>
           </thead>
           <tbody>{rows_html}</tbody>
@@ -336,8 +384,8 @@ if st.session_state.get("screener_results"):
         )
 
     st.caption(
-        "💡 **Trend** = YoY direction of Revenue, Net Income & OCF. "
-        "**Macro Sens.** = sector score adjustment for selected regime (capped ±15 pts). "
+        "💡 **Price Trend** = price vs 200-day MA: ↑ >+3% (uptrend) · ↓ <-3% (downtrend) · → consolidating. "
+        "**Macro Sens.** = sector score adjustment for selected regime (±15 pts max). "
         "**Shares YoY** = green (buybacks ✓) / red (dilution ⚠). "
         "**FCF Yield** = FCF / Market Cap. Scores cached 1 hr."
     )
@@ -351,7 +399,8 @@ else:
         Ready to screen
     </div>
     <div style="font-size:0.85rem;color:#444;max-width:480px;margin:0 auto;">
-        Select a macro regime above, then click <strong style="color:#3498db;">▶ Run Screener</strong>
+        Select a macro regime above, then click
+        <strong style="color:#3498db;">▶ Run Screener</strong>
         to score ~80 large-caps on the Buffett framework.
         Results are cached for 1 hour — subsequent runs are instant.
     </div>
