@@ -76,6 +76,7 @@ pg = st.navigation(
             st.Page("pages/5_Briefing.py",    title="AI Research Desk",       icon="🔬"),
             st.Page("pages/7_Stock_Score.py", title="Buffett Score",           icon="🔍"),
             st.Page("pages/8_Screener.py",    title="Stock Screener",          icon="🏆"),
+            st.Page("pages/9_Portfolio.py",   title="Portfolio Heatmap",       icon="🗂️"),
             st.Page("pages/6_Buffett.py",     title="Buffett Indicator",      icon="⚖️"),
         ],
         "Analysis": [
@@ -159,6 +160,12 @@ with st.sidebar:
     <div class="nav-guide-text">
       <div class="nav-guide-title">🏆 Stock Screener</div>
       <div class="nav-guide-desc">Rank ~80 large-caps by Buffett score. Apply a macro overlay to re-rank by cycle.</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">🗂️ Portfolio Heatmap</div>
+      <div class="nav-guide-desc">Paste your tickers — see every holding scored across 5 macro regimes instantly.</div>
     </div>
   </div>
   <div class="nav-guide-item">
