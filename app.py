@@ -78,9 +78,9 @@ pg = st.navigation(
             st.Page("pages/6_Buffett.py",     title="Buffett Indicator",      icon="⚖️"),
         ],
         "Analysis": [
-            st.Page("pages/1_Backtest.py",      title="Model Track Record",   icon="📉"),
             st.Page("pages/2_Phase_Returns.py", title="What to Own & When",   icon="📈"),
             st.Page("pages/3_Simulator.py",     title="Stress Test",          icon="🎛️"),
+            st.Page("pages/1_Backtest.py",      title="Model Track Record",   icon="📉"),
         ],
     }
 )
@@ -114,7 +114,11 @@ with st.sidebar:
     }
     .nav-guide-desc {
         font-size: 0.78rem;
-        color: #888888;
+        color: #aaaaaa;
+        border-left: 2px solid #3a3a6a;
+        padding-left: 7px;
+        margin-top: 3px;
+        font-style: italic;
     }
     .nav-guide-section {
         font-size: 0.72rem;
@@ -159,12 +163,6 @@ with st.sidebar:
   <div class="nav-guide-section">Analysis</div>
   <div class="nav-guide-item">
     <div class="nav-guide-text">
-      <div class="nav-guide-title">📉 Model Track Record</div>
-      <div class="nav-guide-desc">Did this model catch 2001, 2008, and 2020 in time?</div>
-    </div>
-  </div>
-  <div class="nav-guide-item">
-    <div class="nav-guide-text">
       <div class="nav-guide-title">📈 What to Own & When</div>
       <div class="nav-guide-desc">Stocks, bonds, gold, oil — what has performed best in each cycle phase?</div>
     </div>
@@ -173,6 +171,12 @@ with st.sidebar:
     <div class="nav-guide-text">
       <div class="nav-guide-title">🎛️ Stress Test</div>
       <div class="nav-guide-desc">Dial up a "what if" scenario and see how recession risk would change.</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">📉 Model Track Record</div>
+      <div class="nav-guide-desc">Did this model catch 2001, 2008, and 2020 in time?</div>
     </div>
   </div>
 </div>
