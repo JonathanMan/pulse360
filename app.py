@@ -85,4 +85,97 @@ pg = st.navigation(
     }
 )
 
+with st.sidebar:
+    st.markdown("""
+<style>
+    .nav-guide {
+        margin-top: 1.2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #2a2a4a;
+    }
+    .nav-guide-item {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+        align-items: flex-start;
+    }
+    .nav-guide-icon {
+        font-size: 0.75rem;
+        margin-top: 1px;
+        flex-shrink: 0;
+    }
+    .nav-guide-text {
+        line-height: 1.35;
+    }
+    .nav-guide-title {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #cccccc;
+    }
+    .nav-guide-desc {
+        font-size: 0.67rem;
+        color: #777777;
+    }
+    .nav-guide-section {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 12px 0 6px 0;
+    }
+</style>
+<div class="nav-guide">
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">📊 Dashboard</div>
+      <div class="nav-guide-desc">Where are we in the economic cycle right now?</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">🗂️ Investment Analyser</div>
+      <div class="nav-guide-desc">Upload your portfolio or a fund brochure for a macro-aware breakdown.</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">🔬 AI Research Desk</div>
+      <div class="nav-guide-desc">On-demand AI research — macro snapshot, M&A, short squeezes, hedges & more.</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">🔍 Buffett Score</div>
+      <div class="nav-guide-desc">Is a stock high quality and fairly priced? Scored using the Buffett/Munger framework.</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">⚖️ Buffett Indicator</div>
+      <div class="nav-guide-desc">Is the overall stock market cheap or expensive vs the economy?</div>
+    </div>
+  </div>
+  <div class="nav-guide-section">Analysis</div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">📉 Model Track Record</div>
+      <div class="nav-guide-desc">Did this model catch 2001, 2008, and 2020 in time?</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">📈 What to Own & When</div>
+      <div class="nav-guide-desc">Stocks, bonds, gold, oil — what has performed best in each cycle phase?</div>
+    </div>
+  </div>
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">🎛️ Stress Test</div>
+      <div class="nav-guide-desc">Dial up a "what if" scenario and see how recession risk would change.</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
 pg.run()
