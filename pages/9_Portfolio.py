@@ -39,9 +39,6 @@ from components.stock_score_utils import (
     DISCLAIMER,
 )
 
-# ── Page config ────────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Portfolio Heatmap · Pulse360", layout="wide")
-
 # ── Constants ──────────────────────────────────────────────────────────────────
 REGIMES: list[str] = list(_MACRO_ADJ.keys())
 
