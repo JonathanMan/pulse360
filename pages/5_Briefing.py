@@ -1,5 +1,5 @@
 """
-Pulse360 — At a Glance Briefing
+Pulse360 — AI Research Desk
 =================================
 Seven on-demand AI research sections, each running a structured prompt
 through Claude Sonnet. Fill in the parameters for each section and click
@@ -141,7 +141,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("## 📋 At a Glance Briefing")
+st.markdown("## 🔬 AI Research Desk")
 st.caption(
     "Seven AI-powered research sections — fill in your parameters and click **Run** to stream live analysis from Claude Sonnet. "
     "Results persist in your session until you clear them or restart the app."

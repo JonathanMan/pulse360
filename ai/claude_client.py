@@ -5,7 +5,7 @@ Handles all Anthropic API calls for the AI layer:
   • get_daily_briefing()          → cached 6h, returns markdown string
   • get_investment_implications() → cached 2h per tab, returns prose string
   • stream_chat_response()        → streaming generator for the chat sidebar
-  • stream_briefing_section()     → streaming generator for At a Glance sections
+  • stream_briefing_section()     → streaming generator for AI Research Desk sections
 """
 
 from __future__ import annotations
@@ -278,10 +278,10 @@ def format_features_for_prompt(features: list) -> list[dict]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# At a Glance Briefing — generic streaming section runner
+# AI Research Desk — generic streaming section runner
 # ─────────────────────────────────────────────────────────────────────────────
 
-_BRIEFING_SYSTEM = """You are the Pulse360 At a Glance research engine.
+_BRIEFING_SYSTEM = """You are the Pulse360 AI Research Desk engine.
 You produce high-signal, structured financial research for a sophisticated personal investor.
 
 RULES:
@@ -377,7 +377,7 @@ def stream_briefing_section(
     max_tokens: int = 1200,
 ) -> Generator[str, None, None]:
     """
-    Stream a response for one At a Glance briefing section.
+    Stream a response for one AI Research Desk section.
 
     Args:
         prompt:     The fully-rendered prompt for this section (placeholders already substituted).
