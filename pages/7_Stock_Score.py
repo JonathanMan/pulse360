@@ -1524,18 +1524,48 @@ if st.session_state.get("screener_results"):
     scr_df = pd.DataFrame(st.session_state["screener_results"])
 
     # ── Macro Overlay controls ───────────────────────────────────────────────────
-    st.markdown("#### 🌐 Macro Overlay")
-    mac_c1, mac_c2 = st.columns([2, 3])
-    with mac_c1:
+    _REGIME_META = {
+        "Normal":               ("⚪", "#888888", "No adjustment"),
+        "High Inflation":       ("🔴", "#e74c3c", "Energy & Materials ↑  ·  Tech & Real Estate ↓"),
+        "Rising Rates":         ("🟠", "#e67e22", "Banks & Insurance ↑  ·  Utilities & REITs ↓"),
+        "Recession Risk":       ("🟡", "#f1c40f", "Staples & Healthcare ↑  ·  Cyclicals & Industrials ↓"),
+        "Recovery / Expansion": ("🟢", "#2ecc71", "Cyclicals & Industrials ↑  ·  Defensives ↓"),
+    }
+
+    st.markdown(
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+        '<span style="font-size:1.15rem;">🌐</span>'
+        '<span style="font-size:1.05rem;font-weight:700;color:#fff;">Macro Overlay</span>'
+        '<span style="color:#555;font-size:0.78rem;margin-left:4px;">— re-ranks top 20 by macro-adjusted score (±15 pts)</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    ov_left, ov_right = st.columns([5, 7])
+    with ov_left:
         macro_regime = st.selectbox(
-            "Current Macro Regime",
+            "Regime",
             options=list(_MACRO_ADJ.keys()),
             index=0,
             key="screener_macro_regime",
+            label_visibility="collapsed",
             help="Adjusts scores ±15 pts based on sector sensitivity to the selected macro environment.",
         )
-    with mac_c2:
-        st.info(_MACRO_DESCRIPTIONS[macro_regime], icon="📡")
+    with ov_right:
+        icon, accent, summary = _REGIME_META[macro_regime]
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:10px;'
+            f'background:#161b27;border:1px solid {accent}44;border-left:3px solid {accent};'
+            f'border-radius:6px;padding:9px 14px;height:38px;box-sizing:border-box;">'
+            f'<span style="font-size:1rem;">{icon}</span>'
+            f'<span style="color:#ccc;font-size:0.82rem;font-weight:500;">'
+            f'<strong style="color:{accent};">{macro_regime}</strong>'
+            f'&nbsp;&nbsp;<span style="color:#666;">|</span>&nbsp;&nbsp;'
+            f'{summary}'
+            f'</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     # Apply macro adjustment
     scr_df["MacroAdj"] = scr_df.apply(
