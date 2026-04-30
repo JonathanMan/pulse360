@@ -899,427 +899,430 @@ with col_tip:
 if not ticker_input:
     st.markdown("""
 ---
-<div style="text-align:center; color:#555; padding:32px 0; font-size:0.95rem;">
-    Enter a ticker above to run the full Buffett Score analysis
+<div style="text-align:center; color:#555; padding:16px 0 8px; font-size:0.95rem;">
+    Enter a ticker above to run the full Buffett Score analysis — or use the screener below to find top-ranked stocks.
 </div>
 """, unsafe_allow_html=True)
-    st.caption(DISCLAIMER)
-    st.stop()
+    # Jump straight to screener — rendered below unconditionally
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-with st.spinner(f"Loading fundamentals for {ticker_input}…"):
-    raw = fetch_stock_data(ticker_input)
+if ticker_input:
+    with st.spinner(f"Loading fundamentals for {ticker_input}…"):
+        raw = fetch_stock_data(ticker_input)
 
-if raw.get("error") or not raw.get("info"):
-    st.error(
-        f"Could not load data for **{ticker_input}**. "
-        f"Error: {raw.get('error', 'No data returned')}. "
-        "Check the ticker is correct and try again."
-    )
-    st.stop()
+    if raw.get("error") or not raw.get("info"):
+        st.error(
+            f"Could not load data for **{ticker_input}**. "
+            f"Error: {raw.get('error', 'No data returned')}. "
+            "Check the ticker is correct and try again."
+        )
+        ticker_input = ""  # fall through to screener only
 
-info     = raw["info"]
-long_name = info.get("longName") or info.get("shortName") or ticker_input
-sector    = info.get("sector")   or info.get("sectorDisp") or "Unknown"
-industry  = info.get("industry") or info.get("industryDisp") or "Unknown"
-cur_price = _sf(info.get("currentPrice") or info.get("regularMarketPrice"))
-mktcap    = _sf(info.get("marketCap"))
 
-# ── Company header ────────────────────────────────────────────────────────────
-st.markdown("---")
-hc1, hc2, hc3, hc4 = st.columns([3, 1, 1, 1])
-with hc1:
-    st.markdown(f"## {long_name}")
-    st.caption(f"{ticker_input} · {sector} · {industry}")
-with hc2:
-    if cur_price:
-        st.metric("Price", f"${cur_price:,.2f}")
-with hc3:
-    if mktcap:
-        st.metric("Market Cap", f"${mktcap/1e9:.1f}B")
-with hc4:
-    ma200 = _sf(info.get("twoHundredDayAverage"))
-    if cur_price and ma200:
-        pct = (cur_price - ma200) / ma200 * 100
-        st.metric("vs 200-day MA", f"{pct:+.1f}%",
-                  delta_color="normal" if pct > 0 else "inverse")
+if ticker_input:
+    info     = raw["info"]
+    long_name = info.get("longName") or info.get("shortName") or ticker_input
+    sector    = info.get("sector")   or info.get("sectorDisp") or "Unknown"
+    industry  = info.get("industry") or info.get("industryDisp") or "Unknown"
+    cur_price = _sf(info.get("currentPrice") or info.get("regularMarketPrice"))
+    mktcap    = _sf(info.get("marketCap"))
 
-# Special sector warning
-if _is_special_sector(sector, industry):
-    st.warning(
-        f"⚠️ **{sector} / {industry}** — This is a financial or REIT sector company. "
-        "Standard Buffett rules (D/E, Gross Margin) are **not directly applicable** due to "
-        "the capital structure of financial firms. Treat the score directionally, not literally. "
-        "Piotroski F-Score and ROE remain meaningful.",
-        icon="🏦",
-    )
+    # ── Company header ────────────────────────────────────────────────────────────
+    st.markdown("---")
+    hc1, hc2, hc3, hc4 = st.columns([3, 1, 1, 1])
+    with hc1:
+        st.markdown(f"## {long_name}")
+        st.caption(f"{ticker_input} · {sector} · {industry}")
+    with hc2:
+        if cur_price:
+            st.metric("Price", f"${cur_price:,.2f}")
+    with hc3:
+        if mktcap:
+            st.metric("Market Cap", f"${mktcap/1e9:.1f}B")
+    with hc4:
+        ma200 = _sf(info.get("twoHundredDayAverage"))
+        if cur_price and ma200:
+            pct = (cur_price - ma200) / ma200 * 100
+            st.metric("vs 200-day MA", f"{pct:+.1f}%",
+                      delta_color="normal" if pct > 0 else "inverse")
 
-# ── Compute score ─────────────────────────────────────────────────────────────
-with st.spinner("Computing scores…"):
-    score_data = _compute_score(raw)
+    # Special sector warning
+    if _is_special_sector(sector, industry):
+        st.warning(
+            f"⚠️ **{sector} / {industry}** — This is a financial or REIT sector company. "
+            "Standard Buffett rules (D/E, Gross Margin) are **not directly applicable** due to "
+            "the capital structure of financial firms. Treat the score directionally, not literally. "
+            "Piotroski F-Score and ROE remain meaningful.",
+            icon="🏦",
+        )
 
-total        = score_data["total"]
-s_color      = _score_color(total)
-s_label, s_emoji = _score_label(total)
-secs         = score_data["sections"]
-moat         = secs["moat"]
-fortress     = secs["fortress"]
-valuation    = secs["valuation"]
-momentum     = secs["momentum"]
-shareholder  = secs["shareholder"]
+    # ── Compute score ─────────────────────────────────────────────────────────────
+    with st.spinner("Computing scores…"):
+        score_data = _compute_score(raw)
 
-# ── Composite score card ───────────────────────────────────────────────────────
-st.markdown(
-    f"""
-    <div style="background:#1a1a2e;border:2px solid {_hex_rgba(s_color, 0.6)};
-                border-radius:12px;padding:20px 24px;margin:12px 0;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;
-                  flex-wrap:wrap;gap:16px;margin-bottom:14px;">
-        <div>
-          <div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.08em;
-                      text-transform:uppercase;margin-bottom:6px;">
-            Buffett Score — {long_name}
-          </div>
-          <div style="color:{s_color};font-size:3rem;font-weight:900;line-height:1;">
-            {total}
-            <span style="font-size:1rem;color:#555;font-weight:400;"> / 100</span>
-          </div>
-          <div style="color:{s_color};font-size:1rem;font-weight:700;margin-top:6px;">
-            {s_emoji} {s_label}
-          </div>
-        </div>
-        <div style="font-size:0.8rem;line-height:2.1;padding-top:4px;">
-    """,
-    unsafe_allow_html=True,
-)
+    total        = score_data["total"]
+    s_color      = _score_color(total)
+    s_label, s_emoji = _score_label(total)
+    secs         = score_data["sections"]
+    moat         = secs["moat"]
+    fortress     = secs["fortress"]
+    valuation    = secs["valuation"]
+    momentum     = secs["momentum"]
+    shareholder  = secs["shareholder"]
 
-# Section breakdown rows
-for sec_key, sec_name, sec_color in [
-    ("moat",        "⚔️  Quality Moat",        "#3498db"),
-    ("fortress",    "🏰  Financial Fortress",   "#9b59b6"),
-    ("valuation",   "💰  Valuation",            "#2ecc71"),
-    ("momentum",    "📈  Momentum",             "#f39c12"),
-    ("shareholder", "🤝  Shareholder Alignment","#1abc9c"),
-]:
-    sec   = secs[sec_key]
-    pct   = sec["score"] / sec["max"] * 100
-    sc    = _score_color(int(pct))
+    # ── Composite score card ───────────────────────────────────────────────────────
     st.markdown(
-        f'<div style="font-size:0.8rem;line-height:2.0;">'
-        f'<span style="color:#888;">{sec_name}</span>'
-        f'&nbsp;<span style="color:{sc};font-weight:700;">{sec["score"]}/{sec["max"]}</span>'
-        f'&nbsp;<span style="color:#555;font-size:0.72rem;">'
-        f'{"▓" * int(pct // 10)}{"░" * (10 - int(pct // 10))}'
-        f'</span></div>',
+        f"""
+        <div style="background:#1a1a2e;border:2px solid {_hex_rgba(s_color, 0.6)};
+                    border-radius:12px;padding:20px 24px;margin:12px 0;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                      flex-wrap:wrap;gap:16px;margin-bottom:14px;">
+            <div>
+              <div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.08em;
+                          text-transform:uppercase;margin-bottom:6px;">
+                Buffett Score — {long_name}
+              </div>
+              <div style="color:{s_color};font-size:3rem;font-weight:900;line-height:1;">
+                {total}
+                <span style="font-size:1rem;color:#555;font-weight:400;"> / 100</span>
+              </div>
+              <div style="color:{s_color};font-size:1rem;font-weight:700;margin-top:6px;">
+                {s_emoji} {s_label}
+              </div>
+            </div>
+            <div style="font-size:0.8rem;line-height:2.1;padding-top:4px;">
+        """,
         unsafe_allow_html=True,
     )
 
-st.markdown("</div></div>", unsafe_allow_html=True)
-
-# ── Five section tabs ──────────────────────────────────────────────────────────
-t1, t2, t3, t4, t5 = st.tabs([
-    "⚔️ Quality Moat",
-    "🏰 Financial Fortress",
-    "💰 Valuation & DCF",
-    "📈 Momentum",
-    "🤝 Shareholder Alignment",
-])
-
-# ── TAB 1: Quality Moat ────────────────────────────────────────────────────────
-with t1:
-    st.markdown(f"#### Quality Moat — {moat['score']}/{moat['max']} pts")
-    st.caption(
-        "Gross Margin and Net Margin are benchmarked against the **sector median**, "
-        "not a flat 40% threshold. This avoids unfairly penalising high-quality tech "
-        "or healthcare companies and unfairly rewarding low-margin commodity businesses."
-    )
-    med_gm = score_data["med_gm"]
-    med_nm = score_data["med_nm"]
-    st.info(
-        f"**Sector benchmarks for {sector}:** "
-        f"Gross Margin median = {med_gm:.0f}% · "
-        f"Net Margin median = {med_nm:.0f}%",
-        icon="📊",
-    )
-    _render_section_items(moat["items"])
-
-# ── TAB 2: Financial Fortress ──────────────────────────────────────────────────
-with t2:
-    st.markdown(f"#### Financial Fortress — {fortress['score']}/{fortress['max']} pts")
-
-    col_f, col_z = st.columns(2)
-
-    with col_f:
-        f_score = fortress.get("piotroski_score", 0)
-        f_color = "#2ecc71" if f_score >= 7 else "#f39c12" if f_score >= 4 else "#e74c3c"
+    # Section breakdown rows
+    for sec_key, sec_name, sec_color in [
+        ("moat",        "⚔️  Quality Moat",        "#3498db"),
+        ("fortress",    "🏰  Financial Fortress",   "#9b59b6"),
+        ("valuation",   "💰  Valuation",            "#2ecc71"),
+        ("momentum",    "📈  Momentum",             "#f39c12"),
+        ("shareholder", "🤝  Shareholder Alignment","#1abc9c"),
+    ]:
+        sec   = secs[sec_key]
+        pct   = sec["score"] / sec["max"] * 100
+        sc    = _score_color(int(pct))
         st.markdown(
-            f'<div style="background:#1a1a2e;border:1px solid {_hex_rgba(f_color,0.4)};'
-            f'border-radius:8px;padding:14px;text-align:center;margin-bottom:12px;">'
-            f'<div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.06em;'
-            f'text-transform:uppercase;">Piotroski F-Score</div>'
-            f'<div style="color:{f_color};font-size:2.5rem;font-weight:800;">{f_score}<span style="font-size:1rem;color:#555;">/9</span></div>'
-            f'<div style="color:{f_color};font-size:0.8rem;">{"Strong 🟢" if f_score >= 7 else "Neutral 🟡" if f_score >= 4 else "Weak 🔴"}</div>'
-            f'</div>',
+            f'<div style="font-size:0.8rem;line-height:2.0;">'
+            f'<span style="color:#888;">{sec_name}</span>'
+            f'&nbsp;<span style="color:{sc};font-weight:700;">{sec["score"]}/{sec["max"]}</span>'
+            f'&nbsp;<span style="color:#555;font-size:0.72rem;">'
+            f'{"▓" * int(pct // 10)}{"░" * (10 - int(pct // 10))}'
+            f'</span></div>',
             unsafe_allow_html=True,
         )
-        st.caption("9 binary signals across profitability, leverage, and operating efficiency. "
-                   "F ≥ 7 = strengthening fundamentals; F ≤ 3 = deteriorating.")
-        for sig in fortress.get("piotroski_signals", []):
-            icon = "✅" if sig["pass"] is True else ("❌" if sig["pass"] is False else "⬜")
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+    # ── Five section tabs ──────────────────────────────────────────────────────────
+    t1, t2, t3, t4, t5 = st.tabs([
+        "⚔️ Quality Moat",
+        "🏰 Financial Fortress",
+        "💰 Valuation & DCF",
+        "📈 Momentum",
+        "🤝 Shareholder Alignment",
+    ])
+
+    # ── TAB 1: Quality Moat ────────────────────────────────────────────────────────
+    with t1:
+        st.markdown(f"#### Quality Moat — {moat['score']}/{moat['max']} pts")
+        st.caption(
+            "Gross Margin and Net Margin are benchmarked against the **sector median**, "
+            "not a flat 40% threshold. This avoids unfairly penalising high-quality tech "
+            "or healthcare companies and unfairly rewarding low-margin commodity businesses."
+        )
+        med_gm = score_data["med_gm"]
+        med_nm = score_data["med_nm"]
+        st.info(
+            f"**Sector benchmarks for {sector}:** "
+            f"Gross Margin median = {med_gm:.0f}% · "
+            f"Net Margin median = {med_nm:.0f}%",
+            icon="📊",
+        )
+        _render_section_items(moat["items"])
+
+    # ── TAB 2: Financial Fortress ──────────────────────────────────────────────────
+    with t2:
+        st.markdown(f"#### Financial Fortress — {fortress['score']}/{fortress['max']} pts")
+
+        col_f, col_z = st.columns(2)
+
+        with col_f:
+            f_score = fortress.get("piotroski_score", 0)
+            f_color = "#2ecc71" if f_score >= 7 else "#f39c12" if f_score >= 4 else "#e74c3c"
             st.markdown(
-                f'<div style="padding:4px 8px;border-bottom:1px solid #1e1e2e;font-size:0.82rem;">'
-                f'{icon} <span style="color:#ccc;">{sig["name"]}</span>'
-                f'<span style="color:#666;font-size:0.75rem;float:right;">{sig["detail"]}</span>'
+                f'<div style="background:#1a1a2e;border:1px solid {_hex_rgba(f_color,0.4)};'
+                f'border-radius:8px;padding:14px;text-align:center;margin-bottom:12px;">'
+                f'<div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.06em;'
+                f'text-transform:uppercase;">Piotroski F-Score</div>'
+                f'<div style="color:{f_color};font-size:2.5rem;font-weight:800;">{f_score}<span style="font-size:1rem;color:#555;">/9</span></div>'
+                f'<div style="color:{f_color};font-size:0.8rem;">{"Strong 🟢" if f_score >= 7 else "Neutral 🟡" if f_score >= 4 else "Weak 🔴"}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
+            st.caption("9 binary signals across profitability, leverage, and operating efficiency. "
+                       "F ≥ 7 = strengthening fundamentals; F ≤ 3 = deteriorating.")
+            for sig in fortress.get("piotroski_signals", []):
+                icon = "✅" if sig["pass"] is True else ("❌" if sig["pass"] is False else "⬜")
+                st.markdown(
+                    f'<div style="padding:4px 8px;border-bottom:1px solid #1e1e2e;font-size:0.82rem;">'
+                    f'{icon} <span style="color:#ccc;">{sig["name"]}</span>'
+                    f'<span style="color:#666;font-size:0.75rem;float:right;">{sig["detail"]}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
 
-    with col_z:
-        z_val  = fortress.get("altman_z")
-        z_zone = fortress.get("altman_zone", "N/A")
-        z_color = "#2ecc71" if (z_val and z_val > 2.99) else "#f39c12" if (z_val and z_val > 1.81) else "#e74c3c"
-        st.markdown(
-            f'<div style="background:#1a1a2e;border:1px solid {_hex_rgba(z_color,0.4)};'
-            f'border-radius:8px;padding:14px;text-align:center;margin-bottom:12px;">'
-            f'<div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.06em;'
-            f'text-transform:uppercase;">Altman Z-Score</div>'
-            f'<div style="color:{z_color};font-size:2.5rem;font-weight:800;">'
-            f'{f"{z_val:.2f}" if z_val else "N/A"}</div>'
-            f'<div style="color:{z_color};font-size:0.8rem;">{z_zone}</div>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-        st.caption(
-            "Bankruptcy risk indicator. "
-            "> 2.99: Safe zone. "
-            "1.81–2.99: Grey zone — monitor. "
-            "< 1.81: Distress — high financial risk. "
-            "Note: less reliable for financial/REIT sectors."
-        )
-        for item in fortress["items"]:
-            if "Altman" not in item["name"] and "Piotroski" not in item["name"]:
-                _render_section_items([item])
-
-# ── TAB 3: Valuation & DCF ─────────────────────────────────────────────────────
-with t3:
-    st.markdown(f"#### Valuation & DCF — {valuation['score']}/{valuation['max']} pts")
-    st.caption(
-        "A great company is only a great investment if you pay the right price. "
-        "P/E is benchmarked against the sector median. FCF Yield is Buffett's "
-        "preferred valuation metric. The Owner Earnings DCF estimates intrinsic value "
-        "per share and calculates margin of safety."
-    )
-
-    _render_section_items(valuation["items"])
-
-    # DCF detail card
-    oe  = valuation.get("owner_earnings")
-    iv  = valuation.get("iv_per_share")
-    cp  = valuation.get("current_price")
-    mos = valuation.get("margin_of_safety")
-
-    st.markdown("---")
-    st.markdown("##### 📐 Owner Earnings DCF — Intrinsic Value Estimate")
-    st.caption(
-        "Buffett's 1986 definition: Owner Earnings = Net Income + D&A − CapEx. "
-        "Projected over 10 years (8% growth years 1–5, 4% years 6–10), discounted at 10%. "
-        "Terminal value at 3% perpetuity growth. "
-        "⚠️ Highly sensitive to growth assumptions — use as a sanity check, not a precise target."
-    )
-
-    dcf_c1, dcf_c2, dcf_c3 = st.columns(3)
-    with dcf_c1:
-        if oe is not None:
-            st.metric("Owner Earnings (TTM)", f"${oe/1e9:.2f}B" if abs(oe) > 1e8 else f"${oe/1e6:.0f}M")
-        else:
-            st.metric("Owner Earnings", "N/A")
-    with dcf_c2:
-        if iv is not None:
-            st.metric("DCF Intrinsic Value / Share", f"${iv:.2f}")
-        else:
-            st.metric("DCF IV / Share", "N/A")
-    with dcf_c3:
-        if mos is not None:
-            mos_color = "normal" if mos > 0 else "inverse"
-            st.metric("Margin of Safety", f"{mos:.0f}%",
-                      delta=f"{'Undervalued' if mos > 0 else 'Overvalued'}",
-                      delta_color=mos_color)
-        else:
-            st.metric("Margin of Safety", "N/A")
-
-    if iv and cp:
-        st.caption(valuation.get("dcf_note", ""))
-    else:
-        st.info("Insufficient data to compute DCF intrinsic value. "
-                "Check that the company has positive net income and CapEx data on yfinance.", icon="ℹ️")
-
-# ── TAB 4: Momentum ────────────────────────────────────────────────────────────
-with t4:
-    st.markdown(f"#### Momentum & Trend — {momentum['score']}/{momentum['max']} pts")
-    st.caption(
-        "Addresses the 'value trap' problem: a fundamentally strong company whose stock "
-        "is in a sustained downtrend may be experiencing structural deterioration that "
-        "backward-looking ratios haven't yet captured. The 200-day MA is Buffett's "
-        "least-favourite indicator — but it's a useful filter for avoiding falling knives."
-    )
-    _render_section_items(momentum["items"])
-
-    # Price vs 200-day MA chart
-    hist = raw.get("history", pd.DataFrame())
-    if not hist.empty and len(hist) >= 60:
-        close = hist["Close"]
-        ma200_series = close.rolling(200).mean()
-        ma50_series  = close.rolling(50).mean()
-
-        fig_p = go.Figure()
-        fig_p.add_trace(go.Scatter(
-            x=close.index, y=close.values,
-            name="Price", line={"color": "#3498db", "width": 1.5},
-            hovertemplate="%{x|%b %Y}: $%{y:.2f}<extra></extra>",
-        ))
-        fig_p.add_trace(go.Scatter(
-            x=ma200_series.index, y=ma200_series.values,
-            name="200-day MA", line={"color": "#e74c3c", "width": 2, "dash": "dot"},
-            hovertemplate="200MA: $%{y:.2f}<extra></extra>",
-        ))
-        fig_p.add_trace(go.Scatter(
-            x=ma50_series.index, y=ma50_series.values,
-            name="50-day MA", line={"color": "#f39c12", "width": 1.5, "dash": "dash"},
-            hovertemplate="50MA: $%{y:.2f}<extra></extra>",
-        ))
-        fig_p = dark_layout(fig_p, yaxis_title="Price (USD)")
-        fig_p.update_layout(
-            height=360,
-            title=dict(text=f"{ticker_input} — Price vs Moving Averages (2Y)",
-                       font=dict(size=13, color="#ccc")),
-            legend={"orientation": "h", "y": -0.2},
-        )
-        st.plotly_chart(fig_p, use_container_width=True, key="stock_score_price_chart")
-
-# ── TAB 5: Shareholder Alignment ───────────────────────────────────────────────
-with t5:
-    st.markdown(f"#### Shareholder Alignment — {shareholder['score']}/{shareholder['max']} pts")
-    st.caption(
-        "Buffett's view: management quality is revealed by capital allocation decisions. "
-        "Share buybacks at fair prices are the single best use of excess capital. "
-        "A declining share count over 5 years is one of the strongest signals of "
-        "a shareholder-friendly management team."
-    )
-    _render_section_items(shareholder["items"])
-
-    # Share count trend chart from balance sheet
-    bs = raw.get("balance_sheet")
-    sh_row = _row(bs, "Ordinary Shares Number", "Share Issued",
-                  "Common Stock Shares Outstanding")
-    if sh_row is not None:
-        sh_data = sh_row.dropna()
-        if len(sh_data) >= 2:
-            sh_df = pd.DataFrame({
-                "Year": [str(d.year) for d in sh_data.index[::-1]],
-                "Shares (B)": [float(v) / 1e9 for v in sh_data.values[::-1]],
-            })
-            fig_sh = go.Figure()
-            fig_sh.add_trace(go.Bar(
-                x=sh_df["Year"], y=sh_df["Shares (B)"],
-                marker_color=[
-                    "#2ecc71" if i == 0 or sh_df["Shares (B)"].iloc[i] <= sh_df["Shares (B)"].iloc[i - 1]
-                    else "#e74c3c"
-                    for i in range(len(sh_df))
-                ],
-                hovertemplate="<b>%{x}</b>: %{y:.3f}B shares<extra></extra>",
-                name="Shares Outstanding",
-            ))
-            fig_sh = dark_layout(fig_sh, yaxis_title="Shares Outstanding (B)")
-            fig_sh.update_layout(
-                height=280,
-                title=dict(text="Shares Outstanding — Annual Trend",
-                           font=dict(size=13, color="#ccc")),
+        with col_z:
+            z_val  = fortress.get("altman_z")
+            z_zone = fortress.get("altman_zone", "N/A")
+            z_color = "#2ecc71" if (z_val and z_val > 2.99) else "#f39c12" if (z_val and z_val > 1.81) else "#e74c3c"
+            st.markdown(
+                f'<div style="background:#1a1a2e;border:1px solid {_hex_rgba(z_color,0.4)};'
+                f'border-radius:8px;padding:14px;text-align:center;margin-bottom:12px;">'
+                f'<div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.06em;'
+                f'text-transform:uppercase;">Altman Z-Score</div>'
+                f'<div style="color:{z_color};font-size:2.5rem;font-weight:800;">'
+                f'{f"{z_val:.2f}" if z_val else "N/A"}</div>'
+                f'<div style="color:{z_color};font-size:0.8rem;">{z_zone}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
             )
-            st.plotly_chart(fig_sh, use_container_width=True, key="stock_score_shares_chart")
-            st.caption("Green bars = share count fell or held flat (buybacks/neutral). "
-                       "Red bars = share count rose (dilution).")
+            st.caption(
+                "Bankruptcy risk indicator. "
+                "> 2.99: Safe zone. "
+                "1.81–2.99: Grey zone — monitor. "
+                "< 1.81: Distress — high financial risk. "
+                "Note: less reliable for financial/REIT sectors."
+            )
+            for item in fortress["items"]:
+                if "Altman" not in item["name"] and "Piotroski" not in item["name"]:
+                    _render_section_items([item])
 
-# ── Bottom Line verdict ────────────────────────────────────────────────────────
-st.markdown("---")
-st.markdown("### ⚡ Bottom Line")
+    # ── TAB 3: Valuation & DCF ─────────────────────────────────────────────────────
+    with t3:
+        st.markdown(f"#### Valuation & DCF — {valuation['score']}/{valuation['max']} pts")
+        st.caption(
+            "A great company is only a great investment if you pay the right price. "
+            "P/E is benchmarked against the sector median. FCF Yield is Buffett's "
+            "preferred valuation metric. The Owner Earnings DCF estimates intrinsic value "
+            "per share and calculates margin of safety."
+        )
 
-if total >= 75:
-    verdict_title = "STRONG BUY CANDIDATE"
-    verdict_color = "#2ecc71"
-    verdict_body  = (
-        f"{long_name} scores {total}/100 — clearing the bar for exceptional quality. "
-        f"Wide moat fundamentals, strong financial health, and reasonable valuation "
-        f"all align. Buffett would likely be interested. Conduct deeper qualitative "
-        f"research on the durability of the competitive advantage before sizing a position."
-    )
-elif total >= 60:
-    verdict_title = "WORTH DEEPER ANALYSIS"
-    verdict_color = "#27ae60"
-    verdict_body  = (
-        f"{long_name} scores {total}/100. Strong across most dimensions with some "
-        f"weaknesses. Review the failing checks above — are they structural or cyclical? "
-        f"If the moat is intact and the failures are temporary, this may still be a "
-        f"Buffett-grade business at the right price."
-    )
-elif total >= 45:
-    verdict_title = "PROCEED WITH CAUTION"
-    verdict_color = "#f1c40f"
-    verdict_body  = (
-        f"{long_name} scores {total}/100. Passes some key tests but shows meaningful "
-        f"weaknesses. Focus on understanding the failing sections before committing capital. "
-        f"Consider whether a lower entry price (higher margin of safety) would compensate "
-        f"for the quality shortfalls."
-    )
-elif total >= 30:
-    verdict_title = "SIGNIFICANT RED FLAGS"
-    verdict_color = "#e67e22"
-    verdict_body  = (
-        f"{long_name} scores {total}/100. Multiple fundamental weaknesses present. "
-        f"This stock does not meet Buffett's quality threshold as currently measured. "
-        f"Review whether it belongs in a value vs. quality framework, or avoid until "
-        f"fundamentals improve materially."
-    )
-else:
-    verdict_title = "DOES NOT PASS SCREEN"
-    verdict_color = "#e74c3c"
-    verdict_body  = (
-        f"{long_name} scores {total}/100 — failing across most Buffett criteria. "
-        f"The combination of weak moat, questionable financial health, and poor "
-        f"valuation context makes this a high-risk, low-conviction candidate. "
-        f"Buffett's advice: 'It's far better to buy a wonderful company at a fair price "
-        f"than a fair company at a wonderful price.'"
+        _render_section_items(valuation["items"])
+
+        # DCF detail card
+        oe  = valuation.get("owner_earnings")
+        iv  = valuation.get("iv_per_share")
+        cp  = valuation.get("current_price")
+        mos = valuation.get("margin_of_safety")
+
+        st.markdown("---")
+        st.markdown("##### 📐 Owner Earnings DCF — Intrinsic Value Estimate")
+        st.caption(
+            "Buffett's 1986 definition: Owner Earnings = Net Income + D&A − CapEx. "
+            "Projected over 10 years (8% growth years 1–5, 4% years 6–10), discounted at 10%. "
+            "Terminal value at 3% perpetuity growth. "
+            "⚠️ Highly sensitive to growth assumptions — use as a sanity check, not a precise target."
+        )
+
+        dcf_c1, dcf_c2, dcf_c3 = st.columns(3)
+        with dcf_c1:
+            if oe is not None:
+                st.metric("Owner Earnings (TTM)", f"${oe/1e9:.2f}B" if abs(oe) > 1e8 else f"${oe/1e6:.0f}M")
+            else:
+                st.metric("Owner Earnings", "N/A")
+        with dcf_c2:
+            if iv is not None:
+                st.metric("DCF Intrinsic Value / Share", f"${iv:.2f}")
+            else:
+                st.metric("DCF IV / Share", "N/A")
+        with dcf_c3:
+            if mos is not None:
+                mos_color = "normal" if mos > 0 else "inverse"
+                st.metric("Margin of Safety", f"{mos:.0f}%",
+                          delta=f"{'Undervalued' if mos > 0 else 'Overvalued'}",
+                          delta_color=mos_color)
+            else:
+                st.metric("Margin of Safety", "N/A")
+
+        if iv and cp:
+            st.caption(valuation.get("dcf_note", ""))
+        else:
+            st.info("Insufficient data to compute DCF intrinsic value. "
+                    "Check that the company has positive net income and CapEx data on yfinance.", icon="ℹ️")
+
+    # ── TAB 4: Momentum ────────────────────────────────────────────────────────────
+    with t4:
+        st.markdown(f"#### Momentum & Trend — {momentum['score']}/{momentum['max']} pts")
+        st.caption(
+            "Addresses the 'value trap' problem: a fundamentally strong company whose stock "
+            "is in a sustained downtrend may be experiencing structural deterioration that "
+            "backward-looking ratios haven't yet captured. The 200-day MA is Buffett's "
+            "least-favourite indicator — but it's a useful filter for avoiding falling knives."
+        )
+        _render_section_items(momentum["items"])
+
+        # Price vs 200-day MA chart
+        hist = raw.get("history", pd.DataFrame())
+        if not hist.empty and len(hist) >= 60:
+            close = hist["Close"]
+            ma200_series = close.rolling(200).mean()
+            ma50_series  = close.rolling(50).mean()
+
+            fig_p = go.Figure()
+            fig_p.add_trace(go.Scatter(
+                x=close.index, y=close.values,
+                name="Price", line={"color": "#3498db", "width": 1.5},
+                hovertemplate="%{x|%b %Y}: $%{y:.2f}<extra></extra>",
+            ))
+            fig_p.add_trace(go.Scatter(
+                x=ma200_series.index, y=ma200_series.values,
+                name="200-day MA", line={"color": "#e74c3c", "width": 2, "dash": "dot"},
+                hovertemplate="200MA: $%{y:.2f}<extra></extra>",
+            ))
+            fig_p.add_trace(go.Scatter(
+                x=ma50_series.index, y=ma50_series.values,
+                name="50-day MA", line={"color": "#f39c12", "width": 1.5, "dash": "dash"},
+                hovertemplate="50MA: $%{y:.2f}<extra></extra>",
+            ))
+            fig_p = dark_layout(fig_p, yaxis_title="Price (USD)")
+            fig_p.update_layout(
+                height=360,
+                title=dict(text=f"{ticker_input} — Price vs Moving Averages (2Y)",
+                           font=dict(size=13, color="#ccc")),
+                legend={"orientation": "h", "y": -0.2},
+            )
+            st.plotly_chart(fig_p, use_container_width=True, key="stock_score_price_chart")
+
+    # ── TAB 5: Shareholder Alignment ───────────────────────────────────────────────
+    with t5:
+        st.markdown(f"#### Shareholder Alignment — {shareholder['score']}/{shareholder['max']} pts")
+        st.caption(
+            "Buffett's view: management quality is revealed by capital allocation decisions. "
+            "Share buybacks at fair prices are the single best use of excess capital. "
+            "A declining share count over 5 years is one of the strongest signals of "
+            "a shareholder-friendly management team."
+        )
+        _render_section_items(shareholder["items"])
+
+        # Share count trend chart from balance sheet
+        bs = raw.get("balance_sheet")
+        sh_row = _row(bs, "Ordinary Shares Number", "Share Issued",
+                      "Common Stock Shares Outstanding")
+        if sh_row is not None:
+            sh_data = sh_row.dropna()
+            if len(sh_data) >= 2:
+                sh_df = pd.DataFrame({
+                    "Year": [str(d.year) for d in sh_data.index[::-1]],
+                    "Shares (B)": [float(v) / 1e9 for v in sh_data.values[::-1]],
+                })
+                fig_sh = go.Figure()
+                fig_sh.add_trace(go.Bar(
+                    x=sh_df["Year"], y=sh_df["Shares (B)"],
+                    marker_color=[
+                        "#2ecc71" if i == 0 or sh_df["Shares (B)"].iloc[i] <= sh_df["Shares (B)"].iloc[i - 1]
+                        else "#e74c3c"
+                        for i in range(len(sh_df))
+                    ],
+                    hovertemplate="<b>%{x}</b>: %{y:.3f}B shares<extra></extra>",
+                    name="Shares Outstanding",
+                ))
+                fig_sh = dark_layout(fig_sh, yaxis_title="Shares Outstanding (B)")
+                fig_sh.update_layout(
+                    height=280,
+                    title=dict(text="Shares Outstanding — Annual Trend",
+                               font=dict(size=13, color="#ccc")),
+                )
+                st.plotly_chart(fig_sh, use_container_width=True, key="stock_score_shares_chart")
+                st.caption("Green bars = share count fell or held flat (buybacks/neutral). "
+                           "Red bars = share count rose (dilution).")
+
+    # ── Bottom Line verdict ────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### ⚡ Bottom Line")
+
+    if total >= 75:
+        verdict_title = "STRONG BUY CANDIDATE"
+        verdict_color = "#2ecc71"
+        verdict_body  = (
+            f"{long_name} scores {total}/100 — clearing the bar for exceptional quality. "
+            f"Wide moat fundamentals, strong financial health, and reasonable valuation "
+            f"all align. Buffett would likely be interested. Conduct deeper qualitative "
+            f"research on the durability of the competitive advantage before sizing a position."
+        )
+    elif total >= 60:
+        verdict_title = "WORTH DEEPER ANALYSIS"
+        verdict_color = "#27ae60"
+        verdict_body  = (
+            f"{long_name} scores {total}/100. Strong across most dimensions with some "
+            f"weaknesses. Review the failing checks above — are they structural or cyclical? "
+            f"If the moat is intact and the failures are temporary, this may still be a "
+            f"Buffett-grade business at the right price."
+        )
+    elif total >= 45:
+        verdict_title = "PROCEED WITH CAUTION"
+        verdict_color = "#f1c40f"
+        verdict_body  = (
+            f"{long_name} scores {total}/100. Passes some key tests but shows meaningful "
+            f"weaknesses. Focus on understanding the failing sections before committing capital. "
+            f"Consider whether a lower entry price (higher margin of safety) would compensate "
+            f"for the quality shortfalls."
+        )
+    elif total >= 30:
+        verdict_title = "SIGNIFICANT RED FLAGS"
+        verdict_color = "#e67e22"
+        verdict_body  = (
+            f"{long_name} scores {total}/100. Multiple fundamental weaknesses present. "
+            f"This stock does not meet Buffett's quality threshold as currently measured. "
+            f"Review whether it belongs in a value vs. quality framework, or avoid until "
+            f"fundamentals improve materially."
+        )
+    else:
+        verdict_title = "DOES NOT PASS SCREEN"
+        verdict_color = "#e74c3c"
+        verdict_body  = (
+            f"{long_name} scores {total}/100 — failing across most Buffett criteria. "
+            f"The combination of weak moat, questionable financial health, and poor "
+            f"valuation context makes this a high-risk, low-conviction candidate. "
+            f"Buffett's advice: 'It's far better to buy a wonderful company at a fair price "
+            f"than a fair company at a wonderful price.'"
+        )
+
+    st.markdown(
+        f"""
+        <div style="background:{_hex_rgba(verdict_color, 0.10)};
+                    border:2px solid {_hex_rgba(verdict_color, 0.65)};
+                    border-left:6px solid {verdict_color};
+                    border-radius:10px;padding:20px 24px;margin:8px 0 20px;">
+          <div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.09em;
+                      text-transform:uppercase;margin-bottom:8px;">
+            Buffett Score Verdict — {long_name}
+          </div>
+          <div style="color:{verdict_color};font-size:1.55rem;font-weight:800;
+                      margin-bottom:10px;line-height:1.1;">
+            {verdict_title}
+          </div>
+          <div style="color:#e0e0e0;font-size:0.9rem;line-height:1.65;max-width:820px;">
+            {verdict_body}
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid {_hex_rgba(verdict_color, 0.25)};
+                      display:flex;gap:24px;font-size:0.75rem;color:#888;flex-wrap:wrap;">
+            <span>Score <strong style="color:{verdict_color};">{total}/100</strong></span>
+            <span>Moat <strong style="color:{_score_color(int(moat['score']/moat['max']*100))};">{moat['score']}/{moat['max']}</strong></span>
+            <span>Fortress <strong style="color:{_score_color(int(fortress['score']/fortress['max']*100))};">{fortress['score']}/{fortress['max']}</strong></span>
+            <span>Valuation <strong style="color:{_score_color(int(valuation['score']/valuation['max']*100))};">{valuation['score']}/{valuation['max']}</strong></span>
+            <span>Momentum <strong style="color:{_score_color(int(momentum['score']/momentum['max']*100))};">{momentum['score']}/{momentum['max']}</strong></span>
+            <span>Shareholder <strong style="color:{_score_color(int(shareholder['score']/shareholder['max']*100))};">{shareholder['score']}/{shareholder['max']}</strong></span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-st.markdown(
-    f"""
-    <div style="background:{_hex_rgba(verdict_color, 0.10)};
-                border:2px solid {_hex_rgba(verdict_color, 0.65)};
-                border-left:6px solid {verdict_color};
-                border-radius:10px;padding:20px 24px;margin:8px 0 20px;">
-      <div style="color:#888;font-size:0.7rem;font-weight:700;letter-spacing:.09em;
-                  text-transform:uppercase;margin-bottom:8px;">
-        Buffett Score Verdict — {long_name}
-      </div>
-      <div style="color:{verdict_color};font-size:1.55rem;font-weight:800;
-                  margin-bottom:10px;line-height:1.1;">
-        {verdict_title}
-      </div>
-      <div style="color:#e0e0e0;font-size:0.9rem;line-height:1.65;max-width:820px;">
-        {verdict_body}
-      </div>
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid {_hex_rgba(verdict_color, 0.25)};
-                  display:flex;gap:24px;font-size:0.75rem;color:#888;flex-wrap:wrap;">
-        <span>Score <strong style="color:{verdict_color};">{total}/100</strong></span>
-        <span>Moat <strong style="color:{_score_color(int(moat['score']/moat['max']*100))};">{moat['score']}/{moat['max']}</strong></span>
-        <span>Fortress <strong style="color:{_score_color(int(fortress['score']/fortress['max']*100))};">{fortress['score']}/{fortress['max']}</strong></span>
-        <span>Valuation <strong style="color:{_score_color(int(valuation['score']/valuation['max']*100))};">{valuation['score']}/{valuation['max']}</strong></span>
-        <span>Momentum <strong style="color:{_score_color(int(momentum['score']/momentum['max']*100))};">{momentum['score']}/{momentum['max']}</strong></span>
-        <span>Shareholder <strong style="color:{_score_color(int(shareholder['score']/shareholder['max']*100))};">{shareholder['score']}/{shareholder['max']}</strong></span>
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 
 # ── Top 20 Screener ────────────────────────────────────────────────────────────
@@ -1447,10 +1450,10 @@ if st.session_state.get("screener_results"):
             f'<td style="color:#ccc;padding:8px 6px;font-size:0.82rem;">{row["Company"]}</td>'
             f'<td style="color:#999;padding:8px 6px;font-size:0.78rem;">{row["Sector"]}</td>'
             f'<td style="color:{col};font-weight:800;font-size:1rem;text-align:center;padding:8px 10px;">{sc}</td>'
-            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Moat"])}/{secs["moat"]["max"]}</td>'
-            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Fortress"])}/{secs["fortress"]["max"]}</td>'
-            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Valuation"])}/{secs["valuation"]["max"]}</td>'
-            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Momentum"])}/{secs["momentum"]["max"]}</td>'
+            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Moat"])}/40</td>'
+            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Fortress"])}/25</td>'
+            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Valuation"])}/20</td>'
+            f'<td style="color:#888;font-size:0.78rem;text-align:center;">{int(row["Momentum"])}/10</td>'
             f'<td style="color:#ccc;font-size:0.78rem;text-align:right;">{price_str}</td>'
             f'<td style="color:#ccc;font-size:0.78rem;text-align:right;">{row["Mkt Cap $B"]}B</td>'
             f'<td style="font-size:0.78rem;padding:8px 6px;">{row["Verdict"]}</td>'
