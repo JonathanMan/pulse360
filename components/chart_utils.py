@@ -412,16 +412,17 @@ def render_action_item(text: str, color: str = "#f39c12") -> None:
     st.markdown(
         f"""
         <div style="
-            background: {color}18;
-            border-left: 4px solid {color};
-            border-radius: 0 8px 8px 0;
-            padding: 12px 18px;
+            background: {color}12;
+            border: 1px solid {color}55;
+            border-left: 3px solid {color};
+            border-radius: 8px;
+            padding: 10px 16px;
             margin: 10px 0 6px 0;
         ">
-            <span style="color:{color}; font-weight:700; font-size:14px; margin-right:6px;">
+            <span style="color:{color}; font-weight:700; font-size:13px; margin-right:6px;">
                 💡 Action
             </span>
-            <span style="color:#293241; font-size:14px; line-height:1.6;">
+            <span style="color:#293241; font-size:13px; line-height:1.6;">
                 {clean}
             </span>
         </div>

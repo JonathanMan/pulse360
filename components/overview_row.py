@@ -242,102 +242,103 @@ def render_overview_row(
     col_phase, col_gauge, col_lei = st.columns([1.6, 2, 1.4])
 
     with col_phase:
-        st.markdown("**Cycle Phase**")
-        st.markdown(
-            f"""
-            <div style="background:{phase_output.color}15;
-                        border:2px solid {phase_output.color};
-                        border-radius:12px; padding:14px 10px;
-                        text-align:center; margin-bottom:8px;">
-                <div style="font-size:34px; line-height:1;">{phase_output.emoji}</div>
-                <div style="font-size:17px; font-weight:700;
-                            color:#293241; margin-top:6px;">
-                    {phase_output.phase}
-                </div>
-                <div style="font-size:11px; color:#6c757d;
-                            margin-top:4px; font-weight:500;">
-                    {phase_output.confidence} confidence
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.caption(phase_output.notes)
-        for ind in phase_output.confirming_indicators[:3]:
-            st.markdown(
-                f"<div style='font-size:11px; color:#6c757d; margin-top:2px;'>✓ {ind}</div>",
-                unsafe_allow_html=True,
-            )
-        _pa_text = _phase_action(phase_output.phase)
-        _pa_color = phase_output.color if hasattr(phase_output, "color") else "#f39c12"
-        render_action_item(_pa_text, _pa_color)
-
-    with col_gauge:
-        st.markdown("**Recession Probability**")
-        st.plotly_chart(
-            _recession_gauge(model_output.probability, model_output.traffic_light),
-            use_container_width=True,
-            key="overview_gauge",
-        )
-        if prob_delta is not None:
-            delta_color  = "#e74c3c" if prob_delta > 0 else "#2ecc71"
-            delta_neutral = "#888888"
-            d_color = delta_color if abs(prob_delta) >= 0.1 else delta_neutral
-            d_arrow = "▲" if prob_delta > 0 else ("▼" if prob_delta < 0 else "─")
-            st.markdown(
-                f"<div style='text-align:center; font-size:13px; color:{d_color}; "
-                f"margin-top:-6px; margin-bottom:4px;'>"
-                f"{d_arrow} {prob_delta:+.1f}pp vs last month</div>",
-                unsafe_allow_html=True,
-            )
-        if model_output.has_stale_data:
-            st.warning(
-                f"⚠️ Stale: {', '.join(model_output.stale_features)}",
-                icon=None,
-            )
-        if model_output.data_as_of:
-            st.caption(f"Data as of {model_output.data_as_of.strftime('%Y-%m-%d')}")
-        _prob_color = "#2ecc71" if model_output.probability < 25 else "#f39c12" if model_output.probability < 50 else "#e74c3c"
-        render_action_item(_prob_action(model_output.probability), _prob_color)
-
-    with col_lei:
-        st.markdown("**LEI Momentum**")
-        if lei_growth is not None:
-            arrow = "↑" if lei_growth > 0 else "↓"
-            color = "#28a745" if lei_growth > 0 else "#e74c3c"
+        with st.container(border=True):
+            st.markdown("**Cycle Phase**")
             st.markdown(
                 f"""
-                <div style="background:#ffffff; border:1px solid #e9ecef;
-                            border-radius:12px; padding:16px; text-align:center;
-                            margin-top:4px;">
-                    <div style="font-size:30px; color:{color}; line-height:1;">
-                        {arrow}
+                <div style="background:{phase_output.color}15;
+                            border:2px solid {phase_output.color};
+                            border-radius:12px; padding:14px 10px;
+                            text-align:center; margin-bottom:8px;">
+                    <div style="font-size:34px; line-height:1;">{phase_output.emoji}</div>
+                    <div style="font-size:17px; font-weight:700;
+                                color:#293241; margin-top:6px;">
+                        {phase_output.phase}
                     </div>
-                    <div style="font-size:24px; font-weight:700; color:{color};
-                                margin-top:4px;">
-                        {lei_growth:+.1f}%
-                    </div>
-                    <div style="font-size:11px; color:#6c757d; margin-top:4px;">
-                        6-mo annualised
+                    <div style="font-size:11px; color:#6c757d;
+                                margin-top:4px; font-weight:500;">
+                        {phase_output.confidence} confidence
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-        else:
-            st.info("LEI data unavailable", icon="⚠️")
-        if lei_growth is not None:
-            _lei_color = "#2ecc71" if lei_growth > 1.0 else "#f39c12" if lei_growth >= 0 else "#e74c3c"
-            render_action_item(_lei_action(lei_growth), _lei_color)
+            st.caption(phase_output.notes)
+            for ind in phase_output.confirming_indicators[:3]:
+                st.markdown(
+                    f"<div style='font-size:11px; color:#6c757d; margin-top:2px;'>✓ {ind}</div>",
+                    unsafe_allow_html=True,
+                )
+            _pa_text = _phase_action(phase_output.phase)
+            _pa_color = phase_output.color if hasattr(phase_output, "color") else "#f39c12"
+            render_action_item(_pa_text, _pa_color)
+
+    with col_gauge:
+        with st.container(border=True):
+            st.markdown("**Recession Probability**")
+            st.plotly_chart(
+                _recession_gauge(model_output.probability, model_output.traffic_light),
+                use_container_width=True,
+                key="overview_gauge",
+            )
+            if prob_delta is not None:
+                delta_color  = "#e74c3c" if prob_delta > 0 else "#28a745"
+                delta_neutral = "#6c757d"
+                d_color = delta_color if abs(prob_delta) >= 0.1 else delta_neutral
+                d_arrow = "▲" if prob_delta > 0 else ("▼" if prob_delta < 0 else "─")
+                st.markdown(
+                    f"<div style='text-align:center; font-size:13px; color:{d_color}; "
+                    f"margin-top:-6px; margin-bottom:4px;'>"
+                    f"{d_arrow} {prob_delta:+.1f}pp vs last month</div>",
+                    unsafe_allow_html=True,
+                )
+            if model_output.has_stale_data:
+                st.warning(
+                    f"⚠️ Stale: {', '.join(model_output.stale_features)}",
+                    icon=None,
+                )
+            if model_output.data_as_of:
+                st.caption(f"Data as of {model_output.data_as_of.strftime('%Y-%m-%d')}")
+            _prob_color = "#28a745" if model_output.probability < 25 else "#f39c12" if model_output.probability < 50 else "#e74c3c"
+            render_action_item(_prob_action(model_output.probability), _prob_color)
+
+    with col_lei:
+        with st.container(border=True):
+            st.markdown("**LEI Momentum**")
+            if lei_growth is not None:
+                arrow = "↑" if lei_growth > 0 else "↓"
+                color = "#28a745" if lei_growth > 0 else "#e74c3c"
+                st.markdown(
+                    f"""
+                    <div style="text-align:center; padding:16px 8px 8px 8px;">
+                        <div style="font-size:30px; color:{color}; line-height:1;">
+                            {arrow}
+                        </div>
+                        <div style="font-size:24px; font-weight:700; color:{color};
+                                    margin-top:4px;">
+                            {lei_growth:+.1f}%
+                        </div>
+                        <div style="font-size:11px; color:#6c757d; margin-top:4px;">
+                            6-mo annualised
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info("LEI data unavailable", icon="⚠️")
+            if lei_growth is not None:
+                _lei_color = "#28a745" if lei_growth > 1.0 else "#f39c12" if lei_growth >= 0 else "#e74c3c"
+                render_action_item(_lei_action(lei_growth), _lei_color)
 
     # ── Row 2: risk scorecard ────────────────────────────────────────────────
-    st.markdown("<div style='margin-top:12px;'><b>Risk Scorecard</b></div>",
-                unsafe_allow_html=True)
-    _risk_scorecard(model_output)
-    _sc_stressed = sum(1 for f in model_output.features if f.stress_score > 0.66)
-    _sc_elevated = sum(1 for f in model_output.features if 0.33 < f.stress_score <= 0.66)
-    _sc_color = "#e74c3c" if _sc_stressed >= 3 else "#f39c12" if (_sc_stressed >= 1 or _sc_elevated >= 3) else "#2ecc71"
-    render_action_item(_scorecard_action(model_output), _sc_color)
+    with st.container(border=True):
+        st.markdown("**Risk Scorecard**")
+        _risk_scorecard(model_output)
+        _sc_stressed = sum(1 for f in model_output.features if f.stress_score > 0.66)
+        _sc_elevated = sum(1 for f in model_output.features if 0.33 < f.stress_score <= 0.66)
+        _sc_color = "#e74c3c" if _sc_stressed >= 3 else "#f39c12" if (_sc_stressed >= 1 or _sc_elevated >= 3) else "#28a745"
+        render_action_item(_scorecard_action(model_output), _sc_color)
 
     # ── Row 3: expandable model detail ───────────────────────────────────────
     with st.expander("📊 Recession Model — Feature Contributions", expanded=False):
