@@ -300,19 +300,6 @@ with st.sidebar:
     font-size:0.72rem; font-weight:700; color:#666;
     text-transform:uppercase; letter-spacing:.05em; margin:12px 0 6px 0;
   }}
-  .settings-link {{
-    display:block;
-    margin-top:18px;
-    padding:8px 12px;
-    border-radius:7px;
-    background:#0e0e1a;
-    border:1px solid #2a2a4a;
-    font-size:0.8rem;
-    color:#888;
-    text-decoration:none;
-    transition:border-color .2s, color .2s;
-  }}
-  .settings-link:hover {{ border-color:#6c63ff; color:#cccccc; }}
 </style>
 <div class="nav-guide">
 {items_html}
@@ -320,8 +307,5 @@ with st.sidebar:
 {locked_html}
 """, unsafe_allow_html=True)
 
-    # Settings shortcut at the very bottom of the sidebar
-    st.markdown("---")
-    st.page_link("pages/10_Settings.py", label="⚙️  Settings & profile", use_container_width=True)
 
 pg.run()
