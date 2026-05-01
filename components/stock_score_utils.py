@@ -1080,3 +1080,151 @@ def _compute_score(data: dict) -> dict:
     # ── Grand total ────────────────────────────────────────────────────────────
     results["total"] = min(sum(sec["score"] for sec in results["sections"].values()), 100)
     return results
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Disk-based score cache
+# ══════════════════════════════════════════════════════════════════════════════
+"""
+Cache-first scoring layer.
+
+When a live yfinance fetch succeeds, the flat scores dict is persisted to a
+JSON file in .ticker_cache/.  On subsequent failures (rate-limits, outages)
+the cached scores are returned with _stale=True and _cached_at set to the
+write timestamp, so the UI can display "data as of <date>" instead of an error.
+
+Cache location: <app_root>/.ticker_cache/<TICKER>.json
+  The app root is derived from this file's own path so it works both locally
+  and on Streamlit Cloud.
+"""
+
+import json
+import os
+from datetime import datetime, timezone
+
+# Resolve cache dir relative to this file so it works anywhere
+_CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", ".ticker_cache")
+
+
+def _cache_path(ticker: str) -> str:
+    return os.path.join(_CACHE_DIR, f"{ticker.upper()}.json")
+
+
+def _cache_write(ticker: str, scored: dict) -> None:
+    """
+    Persist a scored-ticker dict to disk.
+    Only serialisable scalar fields are kept (drops DataFrames, nested sections).
+    Silently swallows errors — a cache miss is never fatal.
+    """
+    try:
+        os.makedirs(_CACHE_DIR, exist_ok=True)
+        payload = {
+            k: v for k, v in scored.items()
+            if isinstance(v, (str, int, float, bool, type(None)))
+        }
+        payload["_cached_at"] = datetime.now(timezone.utc).isoformat()
+        payload["_stale"]     = False
+        with open(_cache_path(ticker), "w") as fh:
+            json.dump(payload, fh)
+    except Exception:
+        pass
+
+
+def _cache_read(ticker: str) -> dict | None:
+    """
+    Read a cached scored-ticker dict.
+    Returns the dict with _stale=True and a human-readable _cached_at string,
+    or None if no cache file exists.
+    """
+    try:
+        path = _cache_path(ticker)
+        if not os.path.exists(path):
+            return None
+        with open(path) as fh:
+            data = json.load(fh)
+        # Parse timestamp → friendly label, e.g. "May 1"
+        raw_ts = data.get("_cached_at", "")
+        try:
+            dt = datetime.fromisoformat(raw_ts).astimezone()
+            data["_cached_at"] = dt.strftime("%-d %b")   # "1 May"
+        except Exception:
+            data["_cached_at"] = "recent"
+        data["_stale"] = True
+        return data
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def score_ticker_cached(ticker: str) -> dict:
+    """
+    Score a ticker with automatic cache-first fallback.
+
+    Priority:
+      1. Live yfinance fetch + _compute_score  →  _stale=False, writes disk cache
+      2. Disk cache (any age)                  →  _stale=True,  _cached_at="1 May"
+      3. _FALLBACK_SCORES static dict          →  _stale=True,  _cached_at="built-in"
+      4. Empty dict {}                         →  caller should treat as failure
+
+    The returned dict always contains at minimum:
+        Ticker, Company, Sector, Score (=total), Moat, Fortress, Valuation,
+        Momentum, Price, FCF_Yield, Fwd_PE, Trend, TrendColor, TrendTip,
+        ShareChg, _stale, _cached_at
+    """
+    ticker = ticker.upper().strip()
+
+    # ── 1. Try live fetch ──────────────────────────────────────────────────────
+    data = fetch_stock_data(ticker)
+    if data and not data.get("error") and data.get("info"):
+        try:
+            scores   = _compute_score(data)
+            info     = data["info"]
+            total    = scores["total"]
+            secs     = scores["sections"]
+            trend, t_color, t_tip = _price_trend(data)
+
+            sh_chg_val = None
+            for sec in secs.values():
+                if "sh_chg" in sec:
+                    sh_chg_val = sec["sh_chg"]
+                    break
+
+            result = {
+                "Ticker":    ticker,
+                "Company":   info.get("shortName") or info.get("longName") or ticker,
+                "Sector":    info.get("sector") or info.get("sectorDisp") or "Unknown",
+                "Score":     total,
+                "Moat":      secs.get("moat",        {}).get("score", 0),
+                "Fortress":  secs.get("fortress",    {}).get("score", 0),
+                "Valuation": secs.get("valuation",   {}).get("score", 0),
+                "Momentum":  secs.get("momentum",    {}).get("score", 0),
+                "Price":     _sf(info.get("currentPrice") or info.get("regularMarketPrice")),
+                "FCF_Yield": data.get("fcf_yield"),
+                "Fwd_PE":    _sf(info.get("forwardPE")),
+                "Trend":     trend,
+                "TrendColor": t_color,
+                "TrendTip":  t_tip,
+                "ShareChg":  sh_chg_val,
+                "_stale":    False,
+                "_cached_at": None,
+            }
+            _cache_write(ticker, result)
+            return result
+        except Exception:
+            pass  # fall through to cache
+
+    # ── 2. Disk cache ──────────────────────────────────────────────────────────
+    cached = _cache_read(ticker)
+    if cached:
+        return cached
+
+    # ── 3. Static fallback ────────────────────────────────────────────────────
+    fb = _FALLBACK_SCORES.get(ticker)
+    if fb:
+        result = fb.copy()
+        result.setdefault("_stale",     True)
+        result.setdefault("_cached_at", "built-in")
+        return result
+
+    # ── 4. Total failure ──────────────────────────────────────────────────────
+    return {}

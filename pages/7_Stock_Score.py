@@ -135,25 +135,57 @@ if ticker_input:
         raw = fetch_stock_data(ticker_input)
 
     if raw.get("error") or not raw.get("info"):
-        err_msg = raw.get("error", "No data returned")
-        is_rate_limit = any(x in err_msg.lower() for x in ["too many", "rate limit", "429"])
-        if is_rate_limit:
+        from components.stock_score_utils import _cache_read
+        _disk = _cache_read(ticker_input)
+        if _disk:
+            # Serve stale data with a clear banner — better than a hard error
+            cached_at = _disk.get("_cached_at", "recently")
             st.warning(
-                f"⏱️ **Yahoo Finance is rate-limiting requests for {ticker_input}.** "
-                "This is temporary — wait 15–30 seconds then click **Retry** below.",
-                icon="🔄",
+                f"📦 **Live data unavailable for {ticker_input}** — "
+                f"showing cached data from **{cached_at}**. "
+                "Scores are based on the last successful fetch.",
+                icon="📦",
             )
+            col_retry, _ = st.columns([1, 5])
+            with col_retry:
+                if st.button("🔄 Retry live data", key="retry_ticker"):
+                    fetch_stock_data.clear()
+                    st.rerun()
+            # Inject cached data into `raw` so the rest of the page renders normally
+            raw = {
+                "info": {
+                    "shortName":       _disk.get("Company", ticker_input),
+                    "longName":        _disk.get("Company", ticker_input),
+                    "sector":          _disk.get("Sector", "Unknown"),
+                    "currentPrice":    _disk.get("Price"),
+                    "forwardPE":       _disk.get("Fwd_PE"),
+                    "twoHundredDayAverage": None,
+                    "marketCap":       None,
+                },
+                "financials": None, "balance_sheet": None,
+                "cashflow": None, "history": __import__("pandas").DataFrame(),
+                "error": None, "_from_disk_cache": True,
+            }
         else:
-            st.error(
-                f"Could not load data for **{ticker_input}**. "
-                f"Error: {err_msg}. Check the ticker is correct and try again."
-            )
-        col_retry, _ = st.columns([1, 5])
-        with col_retry:
-            if st.button("🔄 Retry", key="retry_ticker"):
-                st.cache_data.clear()
-                st.rerun()
-        ticker_input = ""
+            err_msg = raw.get("error", "No data returned")
+            is_rate_limit = any(x in err_msg.lower() for x in ["too many", "rate limit", "429"])
+            if is_rate_limit:
+                st.warning(
+                    f"⏱️ **Yahoo Finance is rate-limiting requests for {ticker_input}.** "
+                    "This is temporary — wait 15–30 seconds then click **Retry** below.",
+                    icon="🔄",
+                )
+            else:
+                st.error(
+                    f"Could not load data for **{ticker_input}**. "
+                    f"Error: {err_msg}. Check the ticker is correct and try again."
+                )
+            col_retry, _ = st.columns([1, 5])
+            with col_retry:
+                if st.button("🔄 Retry", key="retry_ticker"):
+                    fetch_stock_data.clear()
+                    st.rerun()
+            ticker_input = ""
 
 
 if ticker_input:

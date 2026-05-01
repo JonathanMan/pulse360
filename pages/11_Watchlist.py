@@ -31,15 +31,12 @@ from components.watchlist_store import (
 )
 from components.stock_score_utils import (
     DISCLAIMER,
-    _FALLBACK_SCORES,
     _MACRO_ADJ,
-    _compute_score,
     _macro_adj_score,
     _macro_sens_cell,
-    _price_trend,
     _score_color,
     _score_color_sub,
-    fetch_stock_data,
+    score_ticker_cached,
 )
 
 
@@ -63,31 +60,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Score a single ticker (cached) ────────────────────────────────────────────
-@st.cache_data(ttl=3600, show_spinner=False)
-def _score_ticker(ticker: str) -> dict:
-    data = fetch_stock_data(ticker)
-    if data:
-        scores = _compute_score(data)
-        scores["Ticker"]  = ticker
-        scores["Company"] = data.get("shortName", ticker)
-        scores["Sector"]  = data.get("sector", "Unknown")
-        scores["Price"]   = data.get("currentPrice")
-        scores["FCF_Yield"] = data.get("fcf_yield")
-        scores["Fwd_PE"]  = data.get("forwardPE")
-        trend, t_color, t_tip = _price_trend(data)
-        scores["Trend"]      = trend
-        scores["TrendColor"] = t_color
-        scores["TrendTip"]   = t_tip
-        scores["_cached"]    = False
-        return scores
-    # Fallback
-    fb = _FALLBACK_SCORES.get(ticker)
-    if fb:
-        sc = fb.copy()
-        sc["_cached"] = True
-        return sc
-    return {}
+# score_ticker_cached imported from stock_score_utils — handles live fetch,
+# disk cache fallback, and static fallback automatically.
 
 
 def _quick_action(score: int, sector: str, regime: str) -> tuple[str, str]:
@@ -177,7 +151,7 @@ with ctrl_right:
     refresh_btn = st.button("🔄 Refresh scores", use_container_width=True,
                             help="Clears the score cache and re-fetches live data.")
     if refresh_btn:
-        _score_ticker.clear()
+        score_ticker_cached.clear()
         st.rerun()
 
 st.markdown("---")
@@ -188,7 +162,7 @@ failed: list[str]  = []
 
 with st.spinner(f"Scoring {len(watchlist)} ticker(s)…"):
     for ticker in watchlist:
-        result = _score_ticker(ticker)
+        result = score_ticker_cached(ticker)
         if result:
             scored.append(result)
         else:
@@ -251,7 +225,8 @@ for s in scored:
     mac_sc   = int(s.get("MacroAdj", base_sc))
     col      = _score_color(base_sc)
     mac_col  = _score_color(mac_sc)
-    is_cached = s.get("_cached", False)
+    is_stale  = s.get("_stale", False)
+    cached_at = s.get("_cached_at") or ""
 
     # Score cell with delta
     delta = mac_sc - base_sc
@@ -266,10 +241,11 @@ for s in scored:
             f'({d_sign}{delta})</span>'
         )
 
-    # Cached indicator
+    # Stale data indicator
+    stale_tip = f"Stale data — as of {cached_at}" if cached_at else "Stale data"
     cache_tag = (
-        ' <span style="color:#555;font-size:0.65rem;" title="Fallback data">📦</span>'
-        if is_cached else ""
+        f' <span style="color:#f39c12;font-size:0.65rem;" title="{stale_tip}">📦</span>'
+        if is_stale else ""
     )
 
     price_str = f"${s['Price']:.2f}" if s.get("Price") else "—"

@@ -33,16 +33,14 @@ from components.stock_score_utils import (
     _MACRO_ADJ,
     _REGIME_FOCUS,
     _SCREENER_UNIVERSE,
-    _compute_score,
     _macro_adj_score,
     _macro_beta_cell,
     _macro_sens_cell,
     _macro_sensitivity,
-    _price_trend,
     _score_color,
     _score_color_sub,
     _sf,
-    fetch_stock_data,
+    score_ticker_cached,
 )
 
 # ── Page styles ───────────────────────────────────────────────────────────────
@@ -200,52 +198,13 @@ if run_screener:
         progress_bar.progress(i / total_tickers,
                               text=f"Scoring {tkr}… ({i}/{total_tickers})")
         status_text.caption(f"Fetching **{tkr}**")
-        try:
-            raw_s = fetch_stock_data(tkr)
-            if raw_s.get("error") or not raw_s.get("info"):
-                if tkr in _FALLBACK_SCORES:
-                    fb = dict(_FALLBACK_SCORES[tkr])
-                    fb["Ticker"]  = tkr
-                    fb["_cached"] = True
-                    fb.setdefault("ShareChg", None)
-                    results_list.append(fb)
-                else:
-                    errors_list.append(tkr)
-                continue
-
-            sc     = _compute_score(raw_s)
-            info_s = raw_s["info"]
-            t_arrow, t_color, t_tip = _price_trend(info_s)
-
-            fcf  = _sf(info_s.get("freeCashflow"))
-            mktc = _sf(info_s.get("marketCap"))
-            fcf_yield = round(fcf / mktc * 100, 1) if (fcf and mktc and mktc > 0) else None
-            fwd_pe    = _sf(info_s.get("forwardPE"))
-            sector_s  = info_s.get("sector") or "—"
-
-            results_list.append({
-                "Ticker":     tkr,
-                "Company":    (info_s.get("shortName") or info_s.get("longName") or tkr)[:28],
-                "Sector":     sector_s[:22],
-                "Score":      sc["total"],
-                "Moat":       sc["sections"]["moat"]["score"],
-                "Fortress":   sc["sections"]["fortress"]["score"],
-                "Valuation":  sc["sections"]["valuation"]["score"],
-                "Momentum":   sc["sections"]["momentum"]["score"],
-                "Shareholder":sc["sections"]["shareholder"]["score"],
-                "ShareChg":   sc["sections"]["shareholder"].get("sh_chg"),
-                "Trend":      t_arrow,
-                "TrendColor": t_color,
-                "TrendTip":   t_tip,
-                "FCF_Yield":  fcf_yield,
-                "Fwd_PE":     round(fwd_pe, 1) if fwd_pe and fwd_pe > 0 else None,
-                "Price":      _sf(info_s.get("currentPrice") or info_s.get("regularMarketPrice")),
-                "Mkt Cap $B": round((_sf(info_s.get("marketCap")) or 0) / 1e9, 1),
-                "_cached":    False,
-            })
-
-        except Exception as exc:
-            errors_list.append(f"{tkr} ({exc})")
+        result = score_ticker_cached(tkr)
+        if result:
+            result.setdefault("Shareholder", 0)
+            result.setdefault("Mkt Cap $B",  0)
+            results_list.append(result)
+        else:
+            errors_list.append(tkr)
 
     progress_bar.empty()
     status_text.empty()
@@ -281,12 +240,12 @@ if st.session_state.get("screener_results"):
 
     # ── Data status bar ────────────────────────────────────────────────────────
     _all  = st.session_state.get("screener_results", [])
-    _live = sum(1 for r in _all if not r.get("_cached"))
-    _cach = sum(1 for r in _all if r.get("_cached"))
+    _live = sum(1 for r in _all if not r.get("_stale"))
+    _cach = sum(1 for r in _all if r.get("_stale"))
     _fail = len(st.session_state.get("screener_errors", []))
     parts = []
     if _live: parts.append(f'<span style="color:#2ecc71;">🟢 {_live} live</span>')
-    if _cach: parts.append(f'<span style="color:#f39c12;">📦 {_cach} cached</span>')
+    if _cach: parts.append(f'<span style="color:#f39c12;">📦 {_cach} stale</span>')
     if _fail: parts.append(f'<span style="color:#e74c3c;">⚠️ {_fail} failed</span>')
     sort_label = (f' · sorted by <strong style="color:#3498db;">{sort_col}</strong>'
                   if sort_col != "Score" else "")
@@ -330,11 +289,13 @@ if st.session_state.get("screener_results"):
         col     = _score_color(sc_val)
         mac_col = _score_color(mac_sc)
 
-        is_cached   = row.get("_cached", False)
+        is_stale    = row.get("_stale", False)
+        cached_at   = row.get("_cached_at") or ""
+        stale_tip   = f"Stale data — as of {cached_at}" if cached_at else "Stale data"
         ticker_cell = (
             row["Ticker"]
-            + (' <span style="color:#555;font-size:0.65rem;"'
-               ' title="Fallback cache">📦</span>' if is_cached else "")
+            + (f' <span style="color:#f39c12;font-size:0.65rem;"'
+               f' title="{stale_tip}">📦</span>' if is_stale else "")
         )
 
         price_str  = f"${row['Price']:.2f}" if row.get("Price") else "—"
