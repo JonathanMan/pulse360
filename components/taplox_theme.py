@@ -10,7 +10,7 @@ Colour palette
 --------------
   BLUE        #3b7ddd   primary action / links
   BLUE_LIGHT  #e8f1fb   active nav bg / hover
-  PAGE_BG     #f5f7fb   outer page background
+  PAGE_BG     #ffffff   outer page background
   CARD_BG     #ffffff   cards / sidebar
   BORDER      #e9ecef   dividers / card borders
   TEXT_PRI    #293241   primary text
@@ -29,7 +29,7 @@ import streamlit as st
 # ── Public colour tokens (import these in pages for custom HTML) ──────────────
 BLUE        = "#3b7ddd"
 BLUE_LIGHT  = "#e8f1fb"
-PAGE_BG     = "#f5f7fb"
+PAGE_BG     = "#ffffff"
 CARD_BG     = "#ffffff"
 BORDER      = "#e9ecef"
 BORDER_DARK = "#dee2e6"
@@ -230,6 +230,14 @@ h1, h2, h3, h4, h5, h6,
 /* ── Horizontal dividers ─────────────────────────────────────────────────── */
 hr {{
     border-color: {BORDER} !important;
+}}
+
+/* ── Plotly chart borders ─────────────────────────────────────────────────── */
+[data-testid="stPlotlyChart"] > div {{
+    border: 1px solid {BORDER} !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+    background: {CARD_BG} !important;
 }}
 
 /* ── Scrollbar ───────────────────────────────────────────────────────────── */

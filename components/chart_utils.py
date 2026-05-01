@@ -39,7 +39,7 @@ _RANGESELECTOR = {
         {"count": 10, "label": "10Y", "step": "year", "stepmode": "backward"},
         {"step": "all", "label": "Max"},
     ],
-    "bgcolor":     "#f5f7fb",
+    "bgcolor":     "#ffffff",
     "activecolor": "#3b7ddd",
     "bordercolor": "#e9ecef",
     "borderwidth": 1,
@@ -75,7 +75,7 @@ def dark_layout(
     if rangeslider:
         xaxis_cfg["rangeslider"] = {
             "visible":     True,
-            "bgcolor":     "#f5f7fb",
+            "bgcolor":     "#ffffff",
             "bordercolor": "#e9ecef",
             "thickness":   0.05,
         }

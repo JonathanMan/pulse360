@@ -47,7 +47,7 @@ from components.stock_score_utils import (
 # ── Page styles ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .stApp { background-color: #f5f7fb; }
+    .stApp { background-color: #ffffff; }
     .main .block-container { padding-top: 1rem; max-width: 1350px; }
     .preset-btn button { font-size: 0.78rem !important; padding: 4px 10px !important; }
 </style>

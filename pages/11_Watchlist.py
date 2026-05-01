@@ -102,7 +102,7 @@ def _earnings_cell(ed_str: str | None, today: date) -> str:
 st.markdown("""
 <style>
     .main .block-container { max-width: 1200px; padding-top: 1rem; }
-    .stApp { background-color: #f5f7fb; }
+    .stApp { background-color: #ffffff; }
     .earnings-card {
         background: #f8f9fa; border-radius: 8px; padding: 10px 14px;
         border-left: 3px solid; text-align: center;

@@ -24,7 +24,7 @@ from components.chart_utils import dark_layout, add_nber
 
 st.markdown("""
 <style>
-    .stApp { background-color: #f5f7fb; }
+    .stApp { background-color: #ffffff; }
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
     div[data-testid="metric-container"] {
         background: #1a1a2e; border-radius: 8px;
