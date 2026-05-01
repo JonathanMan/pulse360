@@ -40,6 +40,12 @@ import streamlit as st
 _LS_KEY = "pulse360_watchlist"
 _MAX_TICKERS = 50
 
+# Path where the scheduled briefing agent reads the watchlist
+_EXPORT_PATH = (
+    "/Users/jonathanman/Library/CloudStorage/"
+    "GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/watchlist.json"
+)
+
 
 def _js_read() -> list[str]:
     """
@@ -81,6 +87,22 @@ def _js_write(tickers: list[str]) -> None:
         key="wl_write",
     )
     st.session_state["_watchlist_cache"] = tickers
+    _sync_export(tickers)
+
+
+def _sync_export(tickers: list[str]) -> None:
+    """
+    Write the watchlist to a JSON file so the scheduled briefing agent
+    can read it without needing browser localStorage access.
+    Silently swallows errors — export failure must never break the UI.
+    """
+    try:
+        import os
+        os.makedirs(os.path.dirname(_EXPORT_PATH), exist_ok=True)
+        with open(_EXPORT_PATH, "w") as fh:
+            json.dump(tickers, fh)
+    except Exception:
+        pass
 
 
 def load_watchlist() -> list[str]:
