@@ -97,13 +97,86 @@ st.markdown("""
 def _render_onboarding() -> None:
     """
     Full-page onboarding shown on first visit.
-    Sets st.session_state['pulse360_profile'] and reruns when complete.
+    Left column  — profile question + radio + Get Started button.
+    Right column — live nav preview that updates as the user picks a profile.
     Calls st.stop() to block normal page rendering until done.
     """
     from components.user_profile import PROFILES
 
+    # ── Full nav structure: (icon, label, min_level, section) ─────────────────
+    _NAV_ITEMS = [
+        # Main section
+        ("📊", "Dashboard",           0, ""),
+        ("🗂️", "Investment Analyser", 0, ""),
+        ("🔬", "AI Research Desk",    0, ""),
+        ("🔍", "Buffett Score",       0, ""),
+        ("⭐", "Watchlist",           0, ""),
+        ("🏆", "Stock Screener",      1, ""),
+        ("📋", "Portfolio Heatmap",   1, ""),
+        ("⚖️", "Buffett Indicator",   0, ""),
+        # Analysis section
+        ("📈", "What to Own & When",  0, "Analysis"),
+        ("🎛️", "Stress Test",         1, "Analysis"),
+        ("📉", "Model Track Record",  2, "Analysis"),
+        # Account section
+        ("⚙️", "Settings",            0, "Account"),
+    ]
+
+    # ── Styles ─────────────────────────────────────────────────────────────────
     st.markdown("""
-<div style="text-align:center; padding: 2rem 0 1rem 0;">
+<style>
+  .ob-nav-preview {
+    background: #0d0d1a;
+    border: 1px solid #2a2a4a;
+    border-radius: 12px;
+    padding: 16px 18px;
+    height: 100%;
+  }
+  .ob-nav-header {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin: 14px 0 6px 0;
+  }
+  .ob-nav-header:first-child { margin-top: 0; }
+  .ob-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    margin-bottom: 2px;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .ob-nav-item.available {
+    color: #e0e0e0;
+    background: #13132a;
+  }
+  .ob-nav-item.locked {
+    color: #383850;
+    background: transparent;
+  }
+  .ob-nav-item .ob-lock {
+    font-size: 0.65rem;
+    margin-left: auto;
+    color: #333;
+  }
+  .ob-profile-card {
+    border: 1px solid #2a2a4a;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 10px 0 18px 0;
+    background: #0e0e1a;
+  }
+</style>
+""", unsafe_allow_html=True)
+
+    # ── Page header ────────────────────────────────────────────────────────────
+    st.markdown("""
+<div style="text-align:center; padding: 2rem 0 1.2rem 0;">
   <div style="font-size:2.8rem; margin-bottom:0.3rem;">📊</div>
   <h1 style="font-size:2.2rem; font-weight:800; color:#ffffff; margin:0;">
     Welcome to Pulse360
@@ -116,13 +189,12 @@ def _render_onboarding() -> None:
 
     st.markdown("---")
 
-    _, col, _ = st.columns([1, 2, 1])
-    with col:
-        st.markdown(
-            "#### How would you describe yourself as an investor?",
-            help="This sets your starting view. You can change it any time from the sidebar.",
-        )
-        st.caption("Pulse360 adapts to your level — beginner-friendly or full analyst mode.")
+    left_col, right_col = st.columns([1, 1], gap="large")
+
+    # ── Left: profile question ─────────────────────────────────────────────────
+    with left_col:
+        st.markdown("#### How would you describe yourself as an investor?")
+        st.caption("Pulse360 adapts to your level. You can change this any time from ⚙️ Settings.")
 
         chosen = st.radio(
             "Profile",
@@ -132,31 +204,75 @@ def _render_onboarding() -> None:
             key="onboarding_choice",
         )
 
-        # Preview card for the chosen profile
-        p = PROFILES[chosen]
+        p       = PROFILES[chosen]
+        fg, bg  = {"Beginner": ("#2ecc71","#0e2a1a"),
+                   "Investor": ("#3498db","#0a1e2e"),
+                   "Analyst":  ("#9b59b6","#1a0e2a")}[chosen]
+
+        features_html = "".join(
+            f'<div style="color:#cccccc;font-size:0.83rem;margin-bottom:4px;">✓ {f}</div>'
+            for f in p["features"]
+        )
         st.markdown(f"""
-<div style="
-  border:1px solid #2a2a4a;
-  border-radius:10px;
-  padding:16px 18px;
-  margin: 12px 0 20px 0;
-  background:#0e0e1a;
-">
-  <div style="font-size:0.85rem; color:#888; margin-bottom:8px; text-transform:uppercase;
-              letter-spacing:.05em; font-weight:600;">What you'll see</div>
-  {''.join(f'<div style="color:#cccccc; font-size:0.85rem; margin-bottom:4px;">✓ {f}</div>'
-           for f in p['features'])}
-  {'<div style="margin-top:10px; font-size:0.8rem; color:#555;">Hidden for now (unlock by switching profile): '
-   + ', '.join(p['hidden']) + '</div>' if p['hidden'] else ''}
+<div class="ob-profile-card">
+  <div style="font-size:0.7rem;color:#555;text-transform:uppercase;
+              letter-spacing:.05em;font-weight:700;margin-bottom:8px;">
+    What you'll see
+  </div>
+  {features_html}
+  <div style="margin-top:10px;font-size:0.75rem;color:#555;line-height:1.4;">
+    You can change this any time — no data is lost when switching profiles.
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
-        if st.button("Get Started", type="primary", use_container_width=True):
+        if st.button("Get Started →", type="primary", use_container_width=True):
             st.session_state["pulse360_profile"] = chosen
-            # Clear any stale session data from a previous profile
             for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(key, None)
             st.rerun()
+
+    # ── Right: live nav preview ────────────────────────────────────────────────
+    with right_col:
+        level = PROFILES[chosen]["level"]
+
+        # Build nav item HTML
+        sections_seen: set[str] = set()
+        nav_html = ""
+        for icon, label, min_lvl, section in _NAV_ITEMS:
+            # Section header
+            if section not in sections_seen:
+                sections_seen.add(section)
+                if section:
+                    nav_html += (
+                        f'<div class="ob-nav-header">{section}</div>'
+                    )
+
+            available = level >= min_lvl
+            css_cls   = "available" if available else "locked"
+            lock_tag  = "" if available else '<span class="ob-lock">🔒</span>'
+            nav_html += (
+                f'<div class="ob-nav-item {css_cls}">'
+                f'<span>{icon}</span>'
+                f'<span>{label}</span>'
+                f'{lock_tag}'
+                f'</div>'
+            )
+
+        unlocked = sum(1 for _, _, ml, _ in _NAV_ITEMS if level >= ml)
+        total    = len(_NAV_ITEMS)
+
+        st.markdown(f"""
+<div class="ob-nav-preview">
+  <div style="font-size:0.72rem;font-weight:700;color:#555;
+              text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">
+    Your navigation
+    <span style="float:right;font-weight:400;color:#444;text-transform:none;
+                 letter-spacing:0;">{unlocked} of {total} pages</span>
+  </div>
+  {nav_html}
+</div>
+""", unsafe_allow_html=True)
 
     st.stop()
 
