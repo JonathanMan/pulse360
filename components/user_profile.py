@@ -167,4 +167,8 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
     if level >= 2:
         analysis_pages.append(st.Page("pages/1_Backtest.py", title="Model Track Record", icon="📉"))
 
-    return {"": main_pages, "Analysis": analysis_pages}
+    settings_pages = [
+        st.Page("pages/10_Settings.py", title="Settings", icon="⚙️"),
+    ]
+
+    return {"": main_pages, "Analysis": analysis_pages, "Account": settings_pages}
