@@ -28,6 +28,7 @@ from components.user_profile import feature_visible
 from components.watchlist_store import add_to_watchlist, in_watchlist, remove_from_watchlist
 from components.stock_score_utils import (
     DISCLAIMER,
+    _COMPLEXITY,
     _SECTOR_GM_STD,
     _SECTOR_NM_STD,
     _SECTOR_ROE_MEDIAN,
@@ -243,6 +244,33 @@ if ticker_input:
             "Standard Buffett rules (D/E, Gross Margin) are **not directly applicable**. "
             "Treat the score directionally. Piotroski F-Score and ROE remain meaningful.",
             icon="🏦",
+        )
+
+    # ── Circle of Competence banner ───────────────────────────────────────────
+    _coc_tier = _COMPLEXITY.get(ticker_input.upper(), None)
+    _investor_profile = st.session_state.get("investor_profile", "Analyst")
+    if _coc_tier == "specialist":
+        if _investor_profile == "Beginner":
+            st.warning(
+                "🔴 **Circle of Competence — Specialist Company**\n\n"
+                "This business requires deep domain knowledge to analyse correctly "
+                "(complex balance sheet, regulatory capital requirements, derivatives exposure, "
+                "or opaque revenue streams). Buffett's rule: *'Never invest in a business you "
+                "cannot understand.'* Consider starting with a simpler, more transparent business "
+                "model before committing capital here.",
+            )
+        else:
+            st.info(
+                "🔴 **Specialist Company** — This business has a complex balance sheet or "
+                "multi-layered revenue model (e.g. banking derivatives, insurance float, "
+                "conglomerate subsidiaries). Screener scores are directional. Cross-check "
+                "against primary filings before sizing a position.",
+            )
+    elif _coc_tier == "straightforward" and _investor_profile == "Beginner":
+        st.success(
+            "🟢 **Circle of Competence — Straightforward Business** "
+            "Simple, predictable model with a clear moat. A solid starting point for building "
+            "an investment thesis.",
         )
 
     # ── Price chart ───────────────────────────────────────────────────────────

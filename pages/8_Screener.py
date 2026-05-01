@@ -29,6 +29,7 @@ from components.user_profile import feature_visible
 
 from components.stock_score_utils import (
     DISCLAIMER,
+    _COMPLEXITY,
     _FALLBACK_SCORES,
     _MACRO_ADJ,
     _REGIME_FOCUS,
@@ -292,8 +293,24 @@ if st.session_state.get("screener_results"):
         is_stale    = row.get("_stale", False)
         cached_at   = row.get("_cached_at") or ""
         stale_tip   = f"Stale data — as of {cached_at}" if cached_at else "Stale data"
+
+        # Circle of Competence badge — inline in ticker cell
+        _tier = _COMPLEXITY.get(str(row["Ticker"]), "moderate")
+        _tier_color = {"straightforward": "#2ecc71", "moderate": "#f39c12",
+                       "specialist": "#e74c3c"}[_tier]
+        _tier_tip = {
+            "straightforward": "Straightforward — clear moat, simple business model; suitable for all investors",
+            "moderate":        "Moderate complexity — understandable with research and sector knowledge",
+            "specialist":      "Specialist company — complex balance sheet or opaque revenue streams; extra due diligence required",
+        }[_tier]
+        _circle_badge = (
+            f' <span style="color:{_tier_color};font-size:0.6rem;cursor:help;"'
+            f' title="{_tier_tip}">●</span>'
+        )
+
         ticker_cell = (
             row["Ticker"]
+            + _circle_badge
             + (f' <span style="color:#f39c12;font-size:0.65rem;"'
                f' title="{stale_tip}">📦</span>' if is_stale else "")
         )
@@ -360,44 +377,42 @@ if st.session_state.get("screener_results"):
         f' title="Macro Beta: score range across all 5 regimes — higher = more regime-sensitive">Macro &#946;</th>'
         if feature_visible("screener_macro_beta_col") else ""
     )
-    st.markdown(
-        f"""
-        <div style="overflow-x:auto;margin:10px 0;">
-        <table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:{row_font};">
-          <thead>
-            <tr style="border-bottom:2px solid #333;color:#555;font-size:0.65rem;
-                       text-transform:uppercase;letter-spacing:.05em;">
-              <th style="padding:{row_pad};text-align:center;">#</th>
-              <th style="padding:{row_pad};text-align:left;">Ticker</th>
-              <th style="padding:{row_pad};text-align:left;">Company</th>
-              <th style="padding:{row_pad};text-align:left;">Sector</th>
-              <th style="padding:{row_pad};text-align:center;"
-                  title="Score (macro-adjusted if regime selected)">Score</th>
-              <th style="padding:{row_pad};text-align:center;"
-                  title="Sector sensitivity to selected regime (pts adjustment, ±15 max)">Macro Sens.</th>
-              {_beta_th}
-              <th style="padding:{row_pad};text-align:center;"
-                  title="Price vs 200-day MA: ↑ uptrend · ↓ downtrend · → consolidating">Price Trend</th>
-              <th style="padding:{row_pad};text-align:center;">Moat</th>
-              <th style="padding:{row_pad};text-align:center;">Fortress</th>
-              <th style="padding:{row_pad};text-align:center;">Val.</th>
-              <th style="padding:{row_pad};text-align:center;">Mom.</th>
-              <th style="padding:{row_pad};text-align:center;"
-                  title="YoY share count change">Shares YoY</th>
-              <th style="padding:{row_pad};text-align:center;"
-                  title="FCF / Market Cap">FCF Yld</th>
-              <th style="padding:{row_pad};text-align:center;"
-                  title="Forward P/E">Fwd P/E</th>
-              <th style="padding:{row_pad};text-align:right;">Price</th>
-              <th style="padding:{row_pad};text-align:left;">Verdict</th>
-            </tr>
-          </thead>
-          <tbody>{rows_html}</tbody>
-        </table>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    # NOTE: Build table_html via concatenation (not a single f-string) so that:
+    #   1. No leading whitespace — CommonMark treats 4+ spaces as a code block even
+    #      with unsafe_allow_html=True; the <div> must start at column 0 of the string.
+    #   2. rows_html stays outside any f-string so stray { } in HTML don't misfire.
+    _thead = (
+        f'<div style="overflow-x:auto;margin:10px 0;">'
+        f'<table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:{row_font};">'
+        f'<thead><tr style="border-bottom:2px solid #333;color:#555;font-size:0.65rem;'
+        f'text-transform:uppercase;letter-spacing:.05em;">'
+        f'<th style="padding:{row_pad};text-align:center;">#</th>'
+        f'<th style="padding:{row_pad};text-align:left;">Ticker</th>'
+        f'<th style="padding:{row_pad};text-align:left;">Company</th>'
+        f'<th style="padding:{row_pad};text-align:left;">Sector</th>'
+        f'<th style="padding:{row_pad};text-align:center;"'
+        f' title="Score (macro-adjusted if regime selected)">Score</th>'
+        f'<th style="padding:{row_pad};text-align:center;"'
+        f' title="Sector sensitivity to selected regime (pts adjustment, ±15 max)">Macro Sens.</th>'
+        + _beta_th +
+        f'<th style="padding:{row_pad};text-align:center;"'
+        f' title="Price vs 200-day MA: ↑ uptrend · ↓ downtrend · → consolidating">Price Trend</th>'
+        f'<th style="padding:{row_pad};text-align:center;">Moat</th>'
+        f'<th style="padding:{row_pad};text-align:center;">Fortress</th>'
+        f'<th style="padding:{row_pad};text-align:center;">Val.</th>'
+        f'<th style="padding:{row_pad};text-align:center;">Mom.</th>'
+        f'<th style="padding:{row_pad};text-align:center;"'
+        f' title="YoY share count change">Shares YoY</th>'
+        f'<th style="padding:{row_pad};text-align:center;"'
+        f' title="FCF / Market Cap">FCF Yld</th>'
+        f'<th style="padding:{row_pad};text-align:center;"'
+        f' title="Forward P/E">Fwd P/E</th>'
+        f'<th style="padding:{row_pad};text-align:right;">Price</th>'
+        f'<th style="padding:{row_pad};text-align:left;">Verdict</th>'
+        f'</tr></thead><tbody>'
     )
+    table_html = _thead + rows_html + '</tbody></table></div>'
+    st.markdown(table_html, unsafe_allow_html=True)
 
     errs = st.session_state.get("screener_errors", [])
     if errs:
@@ -431,7 +446,9 @@ if st.session_state.get("screener_results"):
     )
     st.caption(
         _beta_legend
-        + "**Price Trend** = price vs 200MA. **Macro Sens.** = pts adjustment in current regime. "
+        + "**Price Trend** = price vs 200MA. **Macro Sens.** = pts adjustment in current regime "
+        "(hover for rationale). "
+        "**● Circle of Competence**: 🟢 straightforward · 🟡 moderate · 🔴 specialist (hover for detail). "
         "FCF Yield = FCF / Mkt Cap. Scores cached 1 hr."
     )
 

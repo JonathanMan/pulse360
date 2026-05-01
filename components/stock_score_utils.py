@@ -15,6 +15,7 @@ Import pattern:
         _sector_percentile, _percentile_badge, _is_special_sector,
         _SECTOR_GM_STD, _SECTOR_NM_STD, _SECTOR_ROE_MEDIAN, _SECTOR_ROE_STD,
         _MACRO_ADJ, _MACRO_DESCRIPTIONS, _REGIME_FOCUS,
+        _REGIME_RATIONALE, _COMPLEXITY,
         _FALLBACK_SCORES, _SCREENER_UNIVERSE,
         DISCLAIMER, _sf,
     )
@@ -153,6 +154,55 @@ _MACRO_DESCRIPTIONS: dict[str, str] = {
     "Recovery / Expansion": "PMI > 55, credit expanding: Cyclicals & Industrials outperform",
 }
 
+# ── Macro Score Transparency — per-sector rationale strings ──────────────────
+# Surfaced as tooltip text on the Macro Sens. cell in the Screener so investors
+# understand *why* a sector score is adjusted, not just by how much.
+_REGIME_RATIONALE: dict[str, dict[str, str]] = {
+    "High Inflation": {
+        "Energy":                "Commodity producers pass through price increases → revenue surge & margin expansion",
+        "Basic Materials":       "Raw-material producers benefit directly from commodity price inflation",
+        "Materials":             "Hard-asset businesses preserve margins via cost pass-through to customers",
+        "Consumer Defensive":    "Essential-goods franchises with pricing power offset input cost inflation",
+        "Consumer Staples":      "Essential-goods franchises with pricing power offset input cost inflation",
+        "Real Estate":           "Rising cap rates compress REIT valuations; floating-rate debt squeezes margins",
+        "Technology":            "Long-duration earnings repriced lower as real discount rates rise",
+        "Consumer Cyclical":     "Discretionary spending contracts as consumers feel purchasing-power erosion",
+        "Communication Services":"Ad budgets cut in inflationary slowdowns; subscription growth moderates",
+        "Utilities":             "Regulated utilities cannot raise prices fast enough to match input cost inflation",
+    },
+    "Rising Rates": {
+        "Financial Services":    "Widening net interest margins flow directly to fee income and EPS",
+        "Banks":                 "Loan repricing boosts NIM; deposit funding remains sticky at lower rates",
+        "Insurance":             "Fixed-income float income resets higher → significant investment yield uplift",
+        "Utilities":             "Bond-proxy de-rates as sovereign yields offer risk-free competition for yield",
+        "Real Estate":           "Financing costs rise and cap rates expand → property valuations compress",
+        "Technology":            "Growth multiples contract as DCF discount rates rise across the board",
+        "Consumer Defensive":    "Defensive premium narrows as higher yields offer safer yield alternatives",
+        "Consumer Cyclical":     "Mortgage and consumer credit costs rise → discretionary spending cools",
+    },
+    "Recession Risk": {
+        "Consumer Defensive":    "Inelastic demand for essentials → stable revenues and cash flows through downturns",
+        "Consumer Staples":      "Strong brands sustain revenues when consumers cut discretionary spending",
+        "Healthcare":            "Medical spending is non-discretionary → revenues hold even in contractions",
+        "Utilities":             "Regulated, monopoly-like revenues provide recession-proof cash flow visibility",
+        "Consumer Cyclical":     "Discretionary spending is the first casualty in recessions — volumes fall sharply",
+        "Industrials":           "Capex cycles dry up; industrial order books crater quickly in downturns",
+        "Energy":                "Demand destruction and commodity price collapse compound earnings pressure",
+        "Financial Services":    "Credit losses surge; loan-loss provisions hammer net income",
+        "Technology":            "Enterprise IT budgets cut and consumer hardware upgrades deferred in recessions",
+    },
+    "Recovery / Expansion": {
+        "Consumer Cyclical":     "Pent-up demand releases and rising consumer confidence lifts discretionary spending",
+        "Industrials":           "Capex restarts, supply chains rebuild — industrial order books fill fast",
+        "Energy":                "Rising demand with restrained supply pushes commodity prices and margins higher",
+        "Technology":            "Enterprise spending restarts and consumer upgrades accelerate in expansions",
+        "Financial Services":    "Loan growth accelerates and credit quality improves as economy expands",
+        "Consumer Defensive":    "Defensive premium erodes as capital rotates into higher-beta cyclicals",
+        "Utilities":             "Low-beta utilities underperform as investors reach for higher-growth sectors",
+        "Healthcare":            "Defensive premium compresses as risk appetite shifts to cyclical growth",
+    },
+}
+
 # ── Fallback fundamental scores for key blue chips ───────────────────────────
 # Used when yfinance is rate-limited so the screener stays complete.
 _FALLBACK_SCORES: dict[str, dict] = {
@@ -199,6 +249,97 @@ _SCREENER_UNIVERSE: list[str] = [
     # Berkshire holdings / Buffett favourites
     "OXY", "ALLY", "USB",
 ]
+
+# ── Circle of Competence — complexity tiers ───────────────────────────────────
+# Rates each screener ticker by how much domain knowledge is needed to analyse
+# it reliably.  Three tiers:
+#   "straightforward" — simple, predictable business model; ideal for all profiles
+#   "moderate"        — understandable with research; suits most investors
+#   "specialist"      — complex balance sheet, leverage, derivatives, or opaque
+#                       revenue mix; warrants extra caution for beginners
+#
+# Shown as a pill badge in the Screener ticker cell and as a banner on the
+# Buffett Score page (warning-level callout for Beginner profiles on specialist
+# companies; informational for Analyst/Pro).
+_COMPLEXITY: dict[str, str] = {
+    # ── Straightforward ──────────────────────────────────────────────────────
+    "KO":    "straightforward",   # Sell branded beverages, collect royalties
+    "PEP":   "straightforward",   # Beverages + snacks; predictable cash flows
+    "PG":    "straightforward",   # Consumer staples brand portfolio
+    "CL":    "straightforward",   # Toothpaste + household products
+    "KMB":   "straightforward",   # Tissue & personal care essentials
+    "MKC":   "straightforward",   # Spices & seasoning; niche pricing-power moat
+    "GIS":   "straightforward",   # Packaged food brands
+    "HSY":   "straightforward",   # Chocolate brand with durable pricing power
+    "SJM":   "straightforward",   # Jams, pet food — simple branded goods
+    "CHD":   "straightforward",   # Arm & Hammer; steady CPG franchise
+    "MCD":   "straightforward",   # Franchise model; real estate + royalties
+    "SBUX":  "straightforward",   # Retail coffee with global brand loyalty
+    "NKE":   "straightforward",   # Branded athletic wear; asset-light model
+    "YUM":   "straightforward",   # Franchise operator (KFC, Taco Bell, Pizza Hut)
+    "DPZ":   "straightforward",   # Pizza franchise with digital ordering moat
+    "V":     "straightforward",   # Pure payment rail; zero credit risk on its own books
+    "MA":    "straightforward",   # Same payment-rail model as Visa
+    "ECL":   "straightforward",   # Water treatment & hygiene chemicals
+    "SHW":   "straightforward",   # Paint & coatings; simple pricing model
+    "APD":   "straightforward",   # Industrial gas with long-term supply contracts
+    "OXY":   "straightforward",   # E&P with clear asset base (simpler than integrated)
+    # ── Moderate ────────────────────────────────────────────────────────────
+    "AAPL":  "moderate",          # Hardware + services ecosystem; supply chain complexity
+    "MSFT":  "moderate",          # Cloud + enterprise software; multi-segment P&L
+    "GOOGL": "moderate",          # Ad + cloud + moonshots; conglomerate risk
+    "META":  "moderate",          # Ad platform + heavy metaverse capex overhang
+    "NVDA":  "moderate",          # Semiconductor cycles + AI platform transition
+    "AVGO":  "moderate",          # Chip + software (VMware); M&A integration risk
+    "TXN":   "moderate",          # Analog chips; cyclical but asset-heavy fab model
+    "QCOM":  "moderate",          # Chipmaker + licensing; royalty-dispute history
+    "ORCL":  "moderate",          # Legacy DB + cloud transition; complex licensing tiers
+    "IBM":   "moderate",          # IT services + consulting; multi-decade transformation
+    "CRM":   "moderate",          # SaaS with aggressive M&A (Slack, Tableau)
+    "ADBE":  "moderate",          # Creative cloud with AI disruption risk to model
+    "NOW":   "moderate",          # Enterprise workflow SaaS; high growth but rich valuation
+    "INTU":  "moderate",          # Tax + SMB finance software ecosystem
+    "ANSS":  "moderate",          # Simulation software; niche but deep technical moat
+    "JNJ":   "moderate",          # Pharma + MedTech (post-Kenvue spin)
+    "ABT":   "moderate",          # Diagnostics + devices + nutrition segments
+    "MDT":   "moderate",          # Large-cap medical devices; reimbursement complexity
+    "TMO":   "moderate",          # Life science tools + CRO services mix
+    "DHR":   "moderate",          # Industrial sciences conglomerate via M&A rollup
+    "EW":    "moderate",          # Heart valve specialist; regulatory + clinical risk
+    "SYK":   "moderate",          # Orthopaedic & surgical devices
+    "BDX":   "moderate",          # Medical supplies + diagnostics
+    "ISRG":  "moderate",          # Robotic surgery; capital equipment + consumables model
+    "ZBH":   "moderate",          # Orthopaedic implants; hospital budget sensitivity
+    "TJX":   "moderate",          # Off-price retail; opportunistic inventory model
+    "ROST":  "moderate",          # Similar to TJX; off-price buying model
+    "HON":   "moderate",          # Diversified industrial + aerospace conglomerate
+    "MMM":   "moderate",          # Science conglomerate + significant legal liability overhang
+    "CAT":   "moderate",          # Heavy equipment; mining + construction cycle exposure
+    "DE":    "moderate",          # Agricultural & construction equipment cycles
+    "EMR":   "moderate",          # Process automation; B2B industrial
+    "ITW":   "moderate",          # 80/20 simplification model; diversified industrial
+    "GWW":   "moderate",          # Industrial distribution; thin-margin but reliable
+    "FAST":  "moderate",          # Industrial fasteners distribution
+    "XOM":   "moderate",          # Integrated oil; refining + chemicals + E&P
+    "CVX":   "moderate",          # Integrated oil; complex asset base
+    "PSX":   "moderate",          # Refining + chemicals + midstream
+    "DIS":   "moderate",          # Media + parks + streaming; high capex + restructuring
+    "NFLX":  "moderate",          # Streaming with significant content cost complexity
+    "CMCSA": "moderate",          # Cable + NBCUniversal + streaming
+    "PLD":   "moderate",          # Industrial REIT; real estate valuation model needed
+    "AMT":   "moderate",          # Cell tower REIT; long-term lease structure analysis
+    "USB":   "moderate",          # Regional bank; simpler than money-center SIFIs
+    # ── Specialist ──────────────────────────────────────────────────────────
+    "BRK-B": "specialist",        # Conglomerate of 60+ businesses + insurance float; requires deep reading
+    "JPM":   "specialist",        # SIFI bank; trading book, derivatives, Basel III capital
+    "BAC":   "specialist",        # Complex SIFI with legacy mortgage exposure + derivatives desk
+    "WFC":   "specialist",        # SIFI bank post-scandal; regulatory asset cap adds complexity
+    "AXP":   "specialist",        # Credit card issuer that takes credit risk — unlike V/MA
+    "BLK":   "specialist",        # Asset management; AUM sensitivity + fee compression + product mix
+    "MS":    "specialist",        # Investment bank + wealth management; trading VAR exposure
+    "GS":    "specialist",        # Bulge-bracket investment bank; principal trading + complex revenue streams
+    "ALLY":  "specialist",        # Auto finance bank; consumer credit + asset-liability management
+}
 
 
 # ── Percentile ranking ────────────────────────────────────────────────────────
@@ -310,15 +451,27 @@ def _macro_beta_cell(macro_range: int) -> str:
 
 
 def _macro_sens_cell(sector: str, regime: str) -> str:
-    """Return coloured HTML showing this sector's macro sensitivity."""
+    """Return coloured HTML showing this sector's macro sensitivity.
+
+    The tooltip (title attribute) explains *why* the adjustment is applied,
+    pulled from _REGIME_RATIONALE.  Investors can hover to understand the
+    economic logic behind any score change.
+    """
     if regime == "Normal":
         return '<span style="color:#444;">—</span>'
     adj = _MACRO_ADJ.get(regime, {}).get(sector, 0)
+    # Look up rationale; fall back gracefully if sector isn't mapped
+    rationale = _REGIME_RATIONALE.get(regime, {}).get(sector, "")
+    title_attr = f' title="{rationale}"' if rationale else ""
     if adj == 0:
-        return '<span style="color:#555;">0</span>'
+        neutral = "No adjustment for this sector in the current regime"
+        return f'<span style="color:#555;" title="{neutral}">0</span>'
     color = "#2ecc71" if adj > 0 else "#e74c3c"
     sign  = "+" if adj > 0 else ""
-    return f'<span style="color:{color};font-weight:700;">{sign}{adj}</span>'
+    return (
+        f'<span style="color:{color};font-weight:700;cursor:help;"{title_attr}>'
+        f'{sign}{adj}</span>'
+    )
 
 
 # ── Score colour helpers ───────────────────────────────────────────────────────
