@@ -17,6 +17,7 @@ Import pattern:
         _MACRO_ADJ, _MACRO_DESCRIPTIONS, _REGIME_FOCUS,
         _REGIME_RATIONALE, _COMPLEXITY,
         _FALLBACK_SCORES, _SCREENER_UNIVERSE,
+        _earnings_date_cached,
         DISCLAIMER, _sf,
     )
 """
@@ -1381,3 +1382,48 @@ def score_ticker_cached(ticker: str) -> dict:
 
     # ── 4. Total failure ──────────────────────────────────────────────────────
     return {}
+
+
+# ── Earnings Calendar ─────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=21_600)   # cache 6 hours — dates rarely change intraday
+def _earnings_date_cached(ticker: str) -> str | None:
+    """Return the next earnings date as 'YYYY-MM-DD', or None if unavailable.
+
+    Tries yfinance .calendar dict first (yfinance >= 0.2.x), then falls back
+    to .info['earningsDate'] (UNIX timestamp list).
+    """
+    from datetime import datetime, timezone
+
+    t = yf.Ticker(ticker.upper().strip())
+
+    # ── Strategy 1: .calendar dict (yfinance >= 0.2.x) ───────────────────────
+    try:
+        cal = t.calendar
+        if isinstance(cal, dict):
+            dates = cal.get("Earnings Date") or cal.get("earningsDate") or []
+            if dates:
+                d = dates[0]
+                if hasattr(d, "date"):           # pandas Timestamp / datetime
+                    return d.date().isoformat()
+                return str(d)[:10]
+        elif hasattr(cal, "columns"):            # old DataFrame-style response
+            cols = list(cal.columns)
+            if cols:
+                return str(cols[0])[:10]
+    except Exception:
+        pass
+
+    # ── Strategy 2: .info earningsDate / earningsTimestamp ────────────────────
+    try:
+        info = t.info
+        raw = info.get("earningsDate") or info.get("earningsTimestamp")
+        if raw:
+            ts = raw[0] if isinstance(raw, list) else raw
+            if isinstance(ts, (int, float)):
+                return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+            return str(ts)[:10]
+    except Exception:
+        pass
+
+    return None

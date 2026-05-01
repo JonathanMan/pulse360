@@ -10,14 +10,17 @@ Features
 • Macro regime overlay — see how each stock is adjusted in any regime
 • Action alert badge — flags quality gaps, macro mismatches
 • Price trend indicator (vs 200-day MA)
+• Circle of Competence dot badge per ticker
+• 📅 Earnings Radar — upcoming earnings cards for the next 45 days
+• Earnings date column in watchlist table with day-countdown
 • Remove individual tickers or clear all
 • CSV export of the scored watchlist
-• Scores persist via @st.cache_data; watchlist order persists via localStorage
 """
 
 from __future__ import annotations
 
 import io
+from datetime import date
 
 import pandas as pd
 import streamlit as st
@@ -25,13 +28,14 @@ import streamlit as st
 from components.watchlist_store import (
     add_to_watchlist,
     clear_watchlist,
-    in_watchlist,
     load_watchlist,
     remove_from_watchlist,
 )
 from components.stock_score_utils import (
     DISCLAIMER,
+    _COMPLEXITY,
     _MACRO_ADJ,
+    _earnings_date_cached,
     _macro_adj_score,
     _macro_sens_cell,
     _score_color,
@@ -41,7 +45,7 @@ from components.stock_score_utils import (
 
 
 def _badge(score: int) -> str:
-    """Coloured verdict badge — mirrors the one in 8_Screener.py."""
+    """Coloured verdict badge."""
     if score >= 75:
         return '<span style="color:#2ecc71;font-weight:700;">⭐ Elite</span>'
     if score >= 60:
@@ -51,17 +55,6 @@ def _badge(score: int) -> str:
     if score >= 30:
         return '<span style="color:#e67e22;font-weight:700;">⚠️ Weak</span>'
     return '<span style="color:#e74c3c;font-weight:700;">🔴 Avoid</span>'
-
-# ── Page styles ───────────────────────────────────────────────────────────────
-st.markdown("""
-<style>
-    .main .block-container { max-width: 1200px; padding-top: 1rem; }
-    .stApp { background-color: #0e1117; }
-</style>
-""", unsafe_allow_html=True)
-
-# score_ticker_cached imported from stock_score_utils — handles live fetch,
-# disk cache fallback, and static fallback automatically.
 
 
 def _quick_action(score: int, sector: str, regime: str) -> tuple[str, str]:
@@ -76,6 +69,46 @@ def _quick_action(score: int, sector: str, regime: str) -> tuple[str, str]:
         return "✅", f"Tailwind in {regime} regime (+{delta} pts)"
     return "🟢", "Holding well in current regime"
 
+
+def _earnings_cell(ed_str: str | None, today: date) -> str:
+    """Return an HTML table cell value for the earnings date column."""
+    if not ed_str:
+        return '<span style="color:#444;">—</span>'
+    try:
+        ed = date.fromisoformat(ed_str[:10])
+        days = (ed - today).days
+        if days < 0:
+            return '<span style="color:#444;">—</span>'
+        label = ed.strftime("%b %-d")
+        if days == 0:
+            color, tip = "#e74c3c", "Earnings today!"
+        elif days <= 6:
+            color, tip = "#e74c3c", f"In {days}d — imminent!"
+        elif days <= 14:
+            color, tip = "#f39c12", f"In {days} days"
+        elif days <= 30:
+            color, tip = "#2ecc71", f"In {days} days"
+        else:
+            color, tip = "#666", f"In {days} days"
+        return (
+            f'<span style="color:{color};font-size:0.72rem;font-weight:600;" '
+            f'title="{tip}">{label}</span>'
+        )
+    except Exception:
+        return '<span style="color:#444;">—</span>'
+
+
+# ── Page styles ───────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+    .main .block-container { max-width: 1200px; padding-top: 1rem; }
+    .stApp { background-color: #0e1117; }
+    .earnings-card {
+        background: #12151f; border-radius: 8px; padding: 10px 14px;
+        border-left: 3px solid; text-align: center;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## ⭐ Watchlist")
@@ -99,7 +132,6 @@ with st.form("add_ticker_form", clear_on_submit=True):
         )
 
 if submitted and new_ticker:
-    # Support comma-separated batch adds
     for raw in new_ticker.split(","):
         t = raw.strip().upper()
         if t:
@@ -114,16 +146,16 @@ watchlist = load_watchlist()
 
 if not watchlist:
     st.markdown("---")
-    st.markdown("""
-<div style="text-align:center;padding:3rem 0;">
-  <div style="font-size:2.5rem;margin-bottom:0.5rem;">⭐</div>
-  <div style="color:#aaa;font-size:1rem;">Your watchlist is empty.</div>
-  <div style="color:#666;font-size:0.85rem;margin-top:0.4rem;">
-    Add tickers above, or use the <strong>⭐ Add to Watchlist</strong> button
-    on the Buffett Score page after analysing a stock.
-  </div>
-</div>
-""", unsafe_allow_html=True)
+    st.markdown(
+        '<div style="text-align:center;padding:3rem 0;">'
+        '<div style="font-size:2.5rem;margin-bottom:0.5rem;">⭐</div>'
+        '<div style="color:#aaa;font-size:1rem;">Your watchlist is empty.</div>'
+        '<div style="color:#666;font-size:0.85rem;margin-top:0.4rem;">'
+        'Add tickers above, or use the <strong>⭐ Add to Watchlist</strong> button '
+        'on the Buffett Score page after analysing a stock.'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
     st.stop()
 
 # ── Controls row ──────────────────────────────────────────────────────────────
@@ -142,7 +174,7 @@ with ctrl_left:
 with ctrl_mid:
     sort_col = st.selectbox(
         "Sort by",
-        ["Score (macro adj.)", "Buffett Score", "Ticker A–Z", "Sector"],
+        ["Score (macro adj.)", "Buffett Score", "Ticker A–Z", "Sector", "Earnings Date"],
     )
 
 with ctrl_right:
@@ -152,13 +184,17 @@ with ctrl_right:
                             help="Clears the score cache and re-fetches live data.")
     if refresh_btn:
         score_ticker_cached.clear()
+        _earnings_date_cached.clear()
         st.rerun()
 
 st.markdown("---")
 
-# ── Score all watchlist tickers ───────────────────────────────────────────────
+# ── Score all tickers + fetch earnings dates ──────────────────────────────────
 scored: list[dict] = []
 failed: list[str]  = []
+earnings_map: dict[str, str | None] = {}
+
+today = date.today()
 
 with st.spinner(f"Scoring {len(watchlist)} ticker(s)…"):
     for ticker in watchlist:
@@ -167,6 +203,7 @@ with st.spinner(f"Scoring {len(watchlist)} ticker(s)…"):
             scored.append(result)
         else:
             failed.append(ticker)
+        earnings_map[ticker] = _earnings_date_cached(ticker)
 
 if failed:
     st.warning(
@@ -179,20 +216,27 @@ if not scored:
     st.error("No scores available. Try refreshing or check your tickers.")
     st.stop()
 
-# ── Apply macro adjustment & sort ─────────────────────────────────────────────
+# ── Apply macro adjustment ────────────────────────────────────────────────────
 for s in scored:
     base = int(s.get("Score", 0))
     sec  = s.get("Sector", "Unknown")
-    s["MacroAdj"] = _macro_adj_score(base, sec, macro_regime)
-    emoji, tip    = _quick_action(base, sec, macro_regime)
+    s["MacroAdj"]   = _macro_adj_score(base, sec, macro_regime)
+    emoji, tip      = _quick_action(base, sec, macro_regime)
     s["AlertEmoji"] = emoji
     s["AlertTip"]   = tip
+    ed_str = earnings_map.get(s.get("Ticker", ""))
+    try:
+        s["_earnings_days"] = (date.fromisoformat(ed_str[:10]) - today).days if ed_str else 9999
+    except Exception:
+        s["_earnings_days"] = 9999
 
+# ── Sort ──────────────────────────────────────────────────────────────────────
 sort_key = {
     "Score (macro adj.)": lambda x: -x["MacroAdj"],
     "Buffett Score":       lambda x: -int(x.get("Score", 0)),
     "Ticker A–Z":          lambda x: x.get("Ticker", ""),
     "Sector":              lambda x: x.get("Sector", ""),
+    "Earnings Date":       lambda x: x.get("_earnings_days", 9999),
 }[sort_col]
 scored.sort(key=sort_key)
 
@@ -201,16 +245,69 @@ avg_score  = sum(s.get("MacroAdj", 0) for s in scored) / len(scored)
 top_ticker = max(scored, key=lambda x: x.get("MacroAdj", 0))
 bot_ticker = min(scored, key=lambda x: x.get("MacroAdj", 0))
 alerts     = sum(1 for s in scored if s["AlertEmoji"] in ("🔴", "⚠️"))
+upcoming_count = sum(
+    1 for s in scored if 0 <= s.get("_earnings_days", 9999) <= 30
+)
 
-m1, m2, m3, m4 = st.columns(4)
+m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("Tickers tracked",  len(scored))
 m2.metric("Avg score",        f"{avg_score:.0f} / 100")
 m3.metric("Top pick",         f"{top_ticker['Ticker']} ({top_ticker['MacroAdj']})")
 m4.metric("Needs attention",  f"{alerts} ticker{'s' if alerts != 1 else ''}",
-          delta=f"in {macro_regime}" if alerts else None,
-          delta_color="inverse")
+          delta=f"in {macro_regime}" if alerts else None, delta_color="inverse")
+m5.metric("Earnings ≤30d",    f"{upcoming_count} ticker{'s' if upcoming_count != 1 else ''}")
 
 st.markdown("")
+
+# ── 📅 Earnings Radar ─────────────────────────────────────────────────────────
+upcoming: list[tuple[str, date, int]] = []
+for s in scored:
+    ticker = s.get("Ticker", "")
+    ed_str = earnings_map.get(ticker)
+    if not ed_str:
+        continue
+    try:
+        ed    = date.fromisoformat(ed_str[:10])
+        days  = (ed - today).days
+        if 0 <= days <= 45:
+            upcoming.append((ticker, ed, days))
+    except Exception:
+        pass
+upcoming.sort(key=lambda x: x[1])
+
+if upcoming:
+    st.markdown("#### 📅 Earnings Radar")
+    n_cards  = min(len(upcoming), 6)
+    card_cols = st.columns(n_cards)
+    for idx, (tkr, ed, days) in enumerate(upcoming[:n_cards]):
+        s_match   = next((s for s in scored if s.get("Ticker") == tkr), {})
+        company   = s_match.get("Company", tkr)[:22]
+        score_val = s_match.get("MacroAdj", s_match.get("Score", 0))
+        sc_color  = _score_color(int(score_val))
+        if days == 0:
+            border, bg, countdown = "#e74c3c", "#1a0505", "🔴 Today"
+        elif days <= 6:
+            border, bg, countdown = "#e74c3c", "#1a0808", f"🔴 in {days}d"
+        elif days <= 14:
+            border, bg, countdown = "#f39c12", "#1a1205", f"🟡 in {days}d"
+        else:
+            border, bg, countdown = "#2ecc71", "#051a08", f"🟢 in {days}d"
+        date_str = ed.strftime("%b %-d")
+        with card_cols[idx]:
+            st.markdown(
+                f'<div style="background:{bg};border-radius:8px;padding:10px 12px;'
+                f'border-left:3px solid {border};text-align:center;margin-bottom:4px;">'
+                f'<div style="color:{sc_color};font-weight:800;font-size:0.9rem;">{tkr}</div>'
+                f'<div style="color:#888;font-size:0.65rem;margin:2px 0;">{company}</div>'
+                f'<div style="color:#ccc;font-size:0.8rem;font-weight:600;">{date_str}</div>'
+                f'<div style="font-size:0.7rem;margin-top:3px;">{countdown}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+    if len(upcoming) > 6:
+        extras = ", ".join(f"{t} ({d}d)" for t, _, d in upcoming[6:])
+        st.caption(f"Also upcoming: {extras}")
+    st.markdown("")
 
 # ── Watchlist table ───────────────────────────────────────────────────────────
 row_pad  = "5px 8px"
@@ -218,15 +315,28 @@ row_font = "0.82rem"
 
 rows_html = ""
 for s in scored:
-    ticker   = s.get("Ticker", "—")
-    company  = s.get("Company", ticker)
-    sector   = s.get("Sector",  "—")
-    base_sc  = int(s.get("Score", 0))
-    mac_sc   = int(s.get("MacroAdj", base_sc))
-    col      = _score_color(base_sc)
-    mac_col  = _score_color(mac_sc)
+    ticker    = s.get("Ticker", "—")
+    company   = s.get("Company", ticker)
+    sector    = s.get("Sector",  "—")
+    base_sc   = int(s.get("Score", 0))
+    mac_sc    = int(s.get("MacroAdj", base_sc))
+    col       = _score_color(base_sc)
+    mac_col   = _score_color(mac_sc)
     is_stale  = s.get("_stale", False)
     cached_at = s.get("_cached_at") or ""
+
+    # Circle of Competence dot
+    _tier      = _COMPLEXITY.get(ticker, "moderate")
+    _tier_color = {"straightforward": "#2ecc71", "moderate": "#f39c12", "specialist": "#e74c3c"}[_tier]
+    _tier_tip   = {
+        "straightforward": "Straightforward — clear moat, simple model; suitable for all investors",
+        "moderate":        "Moderate complexity — understandable with research",
+        "specialist":      "Specialist — complex balance sheet; extra due diligence required",
+    }[_tier]
+    _coc_dot = (
+        f' <span style="color:{_tier_color};font-size:0.6rem;cursor:help;"'
+        f' title="{_tier_tip}">●</span>'
+    )
 
     # Score cell with delta
     delta = mac_sc - base_sc
@@ -248,21 +358,21 @@ for s in scored:
         if is_stale else ""
     )
 
-    price_str = f"${s['Price']:.2f}" if s.get("Price") else "—"
-    fcf_str   = f"{s['FCF_Yield']:.1f}%" if s.get("FCF_Yield") is not None else "—"
-    fpe_str   = f"{s['Fwd_PE']:.1f}x"    if s.get("Fwd_PE") is not None else "—"
-    t_arrow   = s.get("Trend", "→")
-    t_color   = s.get("TrendColor", "#888")
-    t_tip     = s.get("TrendTip", "")
+    # Earnings cell
+    earn_cell = _earnings_cell(earnings_map.get(ticker), today)
+
+    price_str  = f"${s['Price']:.2f}" if s.get("Price") else "—"
+    fcf_str    = f"{s['FCF_Yield']:.1f}%" if s.get("FCF_Yield") is not None else "—"
+    fpe_str    = f"{s['Fwd_PE']:.1f}x"    if s.get("Fwd_PE") is not None else "—"
+    t_arrow    = s.get("Trend", "→")
+    t_color    = s.get("TrendColor", "#888")
+    t_tip      = s.get("TrendTip", "")
     macro_sens = _macro_sens_cell(sector, macro_regime)
-    alert_html = (
-        f'<span title="{s["AlertTip"]}" style="font-size:1rem;">{s["AlertEmoji"]}</span>'
-    )
 
     rows_html += (
         f'<tr style="border-bottom:1px solid #1a1a2a;">'
         f'<td style="color:#3498db;font-weight:700;padding:{row_pad};font-size:{row_font};">'
-        f'{ticker}{cache_tag}</td>'
+        f'{ticker}{_coc_dot}{cache_tag}</td>'
         f'<td style="color:#ccc;padding:{row_pad};font-size:{row_font};">{company[:28]}</td>'
         f'<td style="color:#999;padding:{row_pad};font-size:0.72rem;">{sector}</td>'
         f'<td style="text-align:center;padding:{row_pad};">{score_cell}</td>'
@@ -270,6 +380,7 @@ for s in scored:
         f'<td style="text-align:center;padding:{row_pad};font-size:1rem;" '
         f'title="{s["AlertTip"]}">{s["AlertEmoji"]}</td>'
         f'<td style="color:{t_color};font-size:1.1rem;text-align:center;" title="{t_tip}">{t_arrow}</td>'
+        f'<td style="text-align:center;padding:{row_pad};">{earn_cell}</td>'
         f'<td style="color:{_score_color_sub(int(s.get("Moat",0)),40)};font-size:0.75rem;'
         f'text-align:center;font-weight:600;">{int(s.get("Moat",0))}/40</td>'
         f'<td style="color:{_score_color_sub(int(s.get("Fortress",0)),25)};font-size:0.75rem;'
@@ -285,42 +396,36 @@ for s in scored:
         f'</tr>'
     )
 
-st.markdown(
-    f"""
-    <div style="overflow-x:auto;margin:10px 0;">
-    <table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:{row_font};">
-      <thead>
-        <tr style="border-bottom:2px solid #333;color:#555;font-size:0.65rem;
-                   text-transform:uppercase;letter-spacing:.05em;">
-          <th style="padding:{row_pad};text-align:left;">Ticker</th>
-          <th style="padding:{row_pad};text-align:left;">Company</th>
-          <th style="padding:{row_pad};text-align:left;">Sector</th>
-          <th style="padding:{row_pad};text-align:center;"
-              title="Buffett score, macro-adjusted if regime selected">Score</th>
-          <th style="padding:{row_pad};text-align:center;"
-              title="Sector sensitivity to selected regime">Macro Sens.</th>
-          <th style="padding:{row_pad};text-align:center;"
-              title="Quick action signal in current regime">Signal</th>
-          <th style="padding:{row_pad};text-align:center;"
-              title="Price vs 200-day MA">Trend</th>
-          <th style="padding:{row_pad};text-align:center;">Moat</th>
-          <th style="padding:{row_pad};text-align:center;">Fortress</th>
-          <th style="padding:{row_pad};text-align:center;">Val.</th>
-          <th style="padding:{row_pad};text-align:center;">Mom.</th>
-          <th style="padding:{row_pad};text-align:center;"
-              title="FCF / Market Cap">FCF Yld</th>
-          <th style="padding:{row_pad};text-align:center;"
-              title="Forward P/E">Fwd P/E</th>
-          <th style="padding:{row_pad};text-align:right;">Price</th>
-          <th style="padding:{row_pad};text-align:left;">Verdict</th>
-        </tr>
-      </thead>
-      <tbody>{rows_html}</tbody>
-    </table>
-    </div>
-    """,
-    unsafe_allow_html=True,
+# ── Render table (HTML starts at column 0 — avoids CommonMark code-fence) ────
+_thead = (
+    f'<div style="overflow-x:auto;margin:10px 0;">'
+    f'<table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:{row_font};">'
+    f'<thead><tr style="border-bottom:2px solid #333;color:#555;font-size:0.65rem;'
+    f'text-transform:uppercase;letter-spacing:.05em;">'
+    f'<th style="padding:{row_pad};text-align:left;">Ticker</th>'
+    f'<th style="padding:{row_pad};text-align:left;">Company</th>'
+    f'<th style="padding:{row_pad};text-align:left;">Sector</th>'
+    f'<th style="padding:{row_pad};text-align:center;" '
+    f'title="Buffett score, macro-adjusted if regime selected">Score</th>'
+    f'<th style="padding:{row_pad};text-align:center;" '
+    f'title="Sector sensitivity to selected regime">Macro Sens.</th>'
+    f'<th style="padding:{row_pad};text-align:center;" '
+    f'title="Quick action signal in current regime">Signal</th>'
+    f'<th style="padding:{row_pad};text-align:center;" '
+    f'title="Price vs 200-day MA">Trend</th>'
+    f'<th style="padding:{row_pad};text-align:center;" '
+    f'title="Next earnings date — red &lt;7d · yellow 7-14d · green 15-30d">Earnings</th>'
+    f'<th style="padding:{row_pad};text-align:center;">Moat</th>'
+    f'<th style="padding:{row_pad};text-align:center;">Fortress</th>'
+    f'<th style="padding:{row_pad};text-align:center;">Val.</th>'
+    f'<th style="padding:{row_pad};text-align:center;">Mom.</th>'
+    f'<th style="padding:{row_pad};text-align:center;" title="FCF / Market Cap">FCF Yld</th>'
+    f'<th style="padding:{row_pad};text-align:center;" title="Forward P/E">Fwd P/E</th>'
+    f'<th style="padding:{row_pad};text-align:right;">Price</th>'
+    f'<th style="padding:{row_pad};text-align:left;">Verdict</th>'
+    f'</tr></thead><tbody>'
 )
+st.markdown(_thead + rows_html + "</tbody></table></div>", unsafe_allow_html=True)
 
 # ── Per-ticker remove buttons ──────────────────────────────────────────────────
 st.markdown("#### Manage tickers")
@@ -352,19 +457,20 @@ with clr_col:
 st.markdown("---")
 export_data = [
     {
-        "Ticker":    s.get("Ticker"),
-        "Company":   s.get("Company"),
-        "Sector":    s.get("Sector"),
-        "Score":     s.get("Score"),
-        "MacroAdj":  s.get("MacroAdj"),
-        "Signal":    s.get("AlertEmoji"),
-        "Moat":      s.get("Moat"),
-        "Fortress":  s.get("Fortress"),
-        "Valuation": s.get("Valuation"),
-        "Momentum":  s.get("Momentum"),
-        "FCF_Yield": s.get("FCF_Yield"),
-        "Fwd_PE":    s.get("Fwd_PE"),
-        "Price":     s.get("Price"),
+        "Ticker":        s.get("Ticker"),
+        "Company":       s.get("Company"),
+        "Sector":        s.get("Sector"),
+        "Score":         s.get("Score"),
+        "MacroAdj":      s.get("MacroAdj"),
+        "Signal":        s.get("AlertEmoji"),
+        "Earnings_Date": earnings_map.get(s.get("Ticker", ""), ""),
+        "Moat":          s.get("Moat"),
+        "Fortress":      s.get("Fortress"),
+        "Valuation":     s.get("Valuation"),
+        "Momentum":      s.get("Momentum"),
+        "FCF_Yield":     s.get("FCF_Yield"),
+        "Fwd_PE":        s.get("Fwd_PE"),
+        "Price":         s.get("Price"),
     }
     for s in scored
 ]
@@ -382,6 +488,8 @@ with csv_col:
 
 st.caption(
     "💡 **Signal**: 🔴 low quality · ⚠️ regime headwind · ✅ regime tailwind · 🟢 neutral. "
-    "Scores cached 1 hr · Price trend = vs 200-day MA. "
+    "**Earnings**: 🔴 &lt;7d · 🟡 7-14d · 🟢 15-30d. "
+    "● = Circle of Competence tier. "
+    "Scores & earnings cached 1–6 hr. "
     + DISCLAIMER
 )
