@@ -25,6 +25,7 @@ import streamlit as st
 
 from components.chart_utils import dark_layout
 from components.user_profile import feature_visible
+from components.watchlist_store import add_to_watchlist, in_watchlist, remove_from_watchlist
 from components.stock_score_utils import (
     DISCLAIMER,
     _SECTOR_GM_STD,
@@ -165,7 +166,7 @@ if ticker_input:
 
     # ── Company header ────────────────────────────────────────────────────────
     st.markdown("---")
-    hc1, hc2, hc3, hc4 = st.columns([3, 1, 1, 1])
+    hc1, hc2, hc3, hc4, hc5 = st.columns([3, 1, 1, 1, 1])
     with hc1:
         st.markdown(f"## {long_name}")
         st.caption(f"{ticker_input} · {sector} · {industry}")
@@ -181,6 +182,28 @@ if ticker_input:
             pct = (cur_price - ma200) / ma200 * 100
             st.metric("vs 200-day MA", f"{pct:+.1f}%",
                       delta_color="normal" if pct > 0 else "inverse")
+    with hc5:
+        st.markdown("")  # vertical alignment nudge
+        _in_wl = in_watchlist(ticker_input)
+        if _in_wl:
+            if st.button(
+                "✓ In Watchlist",
+                key="wl_remove_btn",
+                use_container_width=True,
+                help=f"Remove {ticker_input} from your watchlist",
+            ):
+                remove_from_watchlist(ticker_input)
+                st.rerun()
+        else:
+            if st.button(
+                "⭐ Add to Watchlist",
+                key="wl_add_btn",
+                type="primary",
+                use_container_width=True,
+                help=f"Save {ticker_input} to your watchlist",
+            ):
+                add_to_watchlist(ticker_input)
+                st.rerun()
 
     if _is_special_sector(sector, industry):
         st.warning(

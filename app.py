@@ -307,5 +307,41 @@ with st.sidebar:
 {locked_html}
 """, unsafe_allow_html=True)
 
+    # ── Watchlist mini-preview ─────────────────────────────────────────────────
+    st.markdown("---")
+    try:
+        from components.watchlist_store import load_watchlist as _load_wl
+        _wl = _load_wl()
+        _wl_count = len(_wl) if _wl and _wl != 0 else 0
+    except Exception:
+        _wl_count = 0
+        _wl = []
+
+    if _wl_count > 0:
+        st.markdown(
+            f'<div style="font-size:0.7rem;font-weight:700;color:#555;'
+            f'text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">'
+            f'⭐ Watchlist ({_wl_count})</div>',
+            unsafe_allow_html=True,
+        )
+        # Show up to 5 tickers as compact pills
+        preview_tickers = _wl[:5]
+        pills_html = "".join(
+            f'<span style="display:inline-block;background:#13132a;border:1px solid #2a2a4a;'
+            f'border-radius:6px;padding:2px 8px;font-size:0.72rem;color:#3498db;'
+            f'font-weight:600;margin:2px 3px 2px 0;">{t}</span>'
+            for t in preview_tickers
+        )
+        if _wl_count > 5:
+            pills_html += (
+                f'<span style="font-size:0.7rem;color:#555;"> +{_wl_count - 5} more</span>'
+            )
+        st.markdown(pills_html, unsafe_allow_html=True)
+    else:
+        st.markdown(
+            '<div style="font-size:0.75rem;color:#444;">⭐ Watchlist empty</div>',
+            unsafe_allow_html=True,
+        )
+
 
 pg.run()

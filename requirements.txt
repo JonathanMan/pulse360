@@ -10,3 +10,4 @@ requests>=2.31.0
 openpyxl>=3.1.0
 matplotlib>=3.7.0
 markdown>=3.5.0
+streamlit-javascript>=0.1.5

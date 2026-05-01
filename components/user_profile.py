@@ -153,6 +153,7 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
         st.Page("pages/4_Portfolio.py",   title="Investment Analyser",  icon="🗂️"),
         st.Page("pages/5_Briefing.py",    title="AI Research Desk",     icon="🔬"),
         st.Page("pages/7_Stock_Score.py", title="Buffett Score",         icon="🔍"),
+        st.Page("pages/11_Watchlist.py",  title="Watchlist",             icon="⭐"),
     ]
     if level >= 1:
         main_pages.append(st.Page("pages/8_Screener.py", title="Stock Screener",   icon="🏆"))
