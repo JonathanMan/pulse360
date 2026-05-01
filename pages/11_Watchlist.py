@@ -102,9 +102,9 @@ def _earnings_cell(ed_str: str | None, today: date) -> str:
 st.markdown("""
 <style>
     .main .block-container { max-width: 1200px; padding-top: 1rem; }
-    .stApp { background-color: #0e1117; }
+    .stApp { background-color: #f5f7fb; }
     .earnings-card {
-        background: #12151f; border-radius: 8px; padding: 10px 14px;
+        background: #f8f9fa; border-radius: 8px; padding: 10px 14px;
         border-left: 3px solid; text-align: center;
     }
 </style>
@@ -149,8 +149,8 @@ if not watchlist:
     st.markdown(
         '<div style="text-align:center;padding:3rem 0;">'
         '<div style="font-size:2.5rem;margin-bottom:0.5rem;">⭐</div>'
-        '<div style="color:#aaa;font-size:1rem;">Your watchlist is empty.</div>'
-        '<div style="color:#666;font-size:0.85rem;margin-top:0.4rem;">'
+        '<div style="color:#6c757d;font-size:1rem;">Your watchlist is empty.</div>'
+        '<div style="color:#9aa0ac;font-size:0.85rem;margin-top:0.4rem;">'
         'Add tickers above, or use the <strong>⭐ Add to Watchlist</strong> button '
         'on the Buffett Score page after analysing a stock.'
         '</div></div>',
@@ -285,13 +285,13 @@ if upcoming:
         score_val = s_match.get("MacroAdj", s_match.get("Score", 0))
         sc_color  = _score_color(int(score_val))
         if days == 0:
-            border, bg, countdown = "#e74c3c", "#1a0505", "🔴 Today"
+            border, bg, countdown = "#e74c3c", "#fff5f5", "🔴 Today"
         elif days <= 6:
-            border, bg, countdown = "#e74c3c", "#1a0808", f"🔴 in {days}d"
+            border, bg, countdown = "#e74c3c", "#fff0f0", f"🔴 in {days}d"
         elif days <= 14:
-            border, bg, countdown = "#f39c12", "#1a1205", f"🟡 in {days}d"
+            border, bg, countdown = "#f39c12", "#fffbf0", f"🟡 in {days}d"
         else:
-            border, bg, countdown = "#2ecc71", "#051a08", f"🟢 in {days}d"
+            border, bg, countdown = "#2ecc71", "#f0fff4", f"🟢 in {days}d"
         date_str = ed.strftime("%b %-d")
         with card_cols[idx]:
             st.markdown(
@@ -370,11 +370,11 @@ for s in scored:
     macro_sens = _macro_sens_cell(sector, macro_regime)
 
     rows_html += (
-        f'<tr style="border-bottom:1px solid #1a1a2a;">'
+        f'<tr style="border-bottom:1px solid #e9ecef;">'
         f'<td style="color:#3498db;font-weight:700;padding:{row_pad};font-size:{row_font};">'
         f'{ticker}{_coc_dot}{cache_tag}</td>'
-        f'<td style="color:#ccc;padding:{row_pad};font-size:{row_font};">{company[:28]}</td>'
-        f'<td style="color:#999;padding:{row_pad};font-size:0.72rem;">{sector}</td>'
+        f'<td style="color:#495057;padding:{row_pad};font-size:{row_font};">{company[:28]}</td>'
+        f'<td style="color:#6c757d;padding:{row_pad};font-size:0.72rem;">{sector}</td>'
         f'<td style="text-align:center;padding:{row_pad};">{score_cell}</td>'
         f'<td style="text-align:center;padding:{row_pad};">{macro_sens}</td>'
         f'<td style="text-align:center;padding:{row_pad};font-size:1rem;" '
@@ -389,9 +389,9 @@ for s in scored:
         f'text-align:center;font-weight:600;">{int(s.get("Valuation",0))}/20</td>'
         f'<td style="color:{_score_color_sub(int(s.get("Momentum",0)),10)};font-size:0.75rem;'
         f'text-align:center;font-weight:600;">{int(s.get("Momentum",0))}/10</td>'
-        f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
-        f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
-        f'<td style="color:#ccc;font-size:0.75rem;text-align:right;">{price_str}</td>'
+        f'<td style="color:#3b7ddd;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
+        f'<td style="color:#3b7ddd;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
+        f'<td style="color:#495057;font-size:0.75rem;text-align:right;">{price_str}</td>'
         f'<td style="font-size:0.75rem;padding:{row_pad};">{_badge(mac_sc)}</td>'
         f'</tr>'
     )
@@ -399,8 +399,8 @@ for s in scored:
 # ── Render table (HTML starts at column 0 — avoids CommonMark code-fence) ────
 _thead = (
     f'<div style="overflow-x:auto;margin:10px 0;">'
-    f'<table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:{row_font};">'
-    f'<thead><tr style="border-bottom:2px solid #333;color:#555;font-size:0.65rem;'
+    f'<table style="width:100%;border-collapse:collapse;background:#ffffff;font-size:{row_font};">'
+    f'<thead><tr style="border-bottom:2px solid #dee2e6;color:#6c757d;font-size:0.65rem;'
     f'text-transform:uppercase;letter-spacing:.05em;">'
     f'<th style="padding:{row_pad};text-align:left;">Ticker</th>'
     f'<th style="padding:{row_pad};text-align:left;">Company</th>'

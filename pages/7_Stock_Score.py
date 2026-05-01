@@ -50,7 +50,7 @@ from components.stock_score_utils import (
 # ── Styles ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .stApp { background-color: #0e1117; }
+    .stApp { background-color: #f5f7fb; }
     .main .block-container { padding-top: 1rem; max-width: 1200px; }
     div[data-testid="metric-container"] {
         background: #1a1a2e; border-radius: 8px;

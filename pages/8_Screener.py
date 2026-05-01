@@ -47,7 +47,7 @@ from components.stock_score_utils import (
 # ── Page styles ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .stApp { background-color: #0e1117; }
+    .stApp { background-color: #f5f7fb; }
     .main .block-container { padding-top: 1rem; max-width: 1350px; }
     .preset-btn button { font-size: 0.78rem !important; padding: 4px 10px !important; }
 </style>
@@ -139,12 +139,12 @@ with ov_right:
     icon, accent, summary = _REGIME_META[macro_regime]
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:10px;'
-        f'background:#161b27;border:1px solid {accent}44;border-left:3px solid {accent};'
+        f'background:#eef2ff;border:1px solid {accent}44;border-left:3px solid {accent};'
         f'border-radius:6px;padding:9px 14px;height:38px;box-sizing:border-box;">'
         f'<span style="font-size:1rem;">{icon}</span>'
-        f'<span style="color:#ccc;font-size:0.82rem;font-weight:500;">'
+        f'<span style="color:#495057;font-size:0.82rem;font-weight:500;">'
         f'<strong style="color:{accent};">{macro_regime}</strong>'
-        f'&nbsp;&nbsp;<span style="color:#666;">|</span>&nbsp;&nbsp;{summary}'
+        f'&nbsp;&nbsp;<span style="color:#adb5bd;">|</span>&nbsp;&nbsp;{summary}'
         f'</span></div>',
         unsafe_allow_html=True,
     )
@@ -155,17 +155,17 @@ if focus:
     focus_sectors, focus_section, focus_rationale = focus
     icon2, accent2, _ = _REGIME_META[macro_regime]
     st.markdown(
-        f'<div style="background:#0e1220;border:1px solid {accent2}33;'
+        f'<div style="background:#f0f4ff;border:1px solid {accent2}33;'
         f'border-left:3px solid {accent2};border-radius:6px;'
         f'padding:8px 14px;margin:6px 0 10px;display:flex;gap:14px;align-items:flex-start;">'
         f'<div style="margin-top:1px;font-size:0.9rem;">{icon2}</div>'
         f'<div>'
         f'<span style="color:{accent2};font-size:0.75rem;font-weight:700;'
         f'text-transform:uppercase;letter-spacing:.04em;">Regime Focus</span>'
-        f'&nbsp;&nbsp;<span style="color:#ccc;font-size:0.78rem;">'
-        f'Prioritise <strong style="color:#fff;">{focus_section}</strong>'
-        f' · Favoured: <em style="color:#aaa;">{focus_sectors}</em></span>'
-        f'<div style="color:#666;font-size:0.73rem;margin-top:3px;">{focus_rationale}</div>'
+        f'&nbsp;&nbsp;<span style="color:#495057;font-size:0.78rem;">'
+        f'Prioritise <strong style="color:#293241;">{focus_section}</strong>'
+        f' · Favoured: <em style="color:#6c757d;">{focus_sectors}</em></span>'
+        f'<div style="color:#6c757d;font-size:0.73rem;margin-top:3px;">{focus_rationale}</div>'
         f'</div></div>',
         unsafe_allow_html=True,
     )
@@ -255,16 +255,16 @@ if st.session_state.get("screener_results"):
         else f" · <span style='color:#f39c12;'>{macro_regime} overlay</span>"
     )
     st.markdown(
-        f'<div style="font-size:0.75rem;color:#666;margin-bottom:8px;">'
+        f'<div style="font-size:0.75rem;color:#6c757d;margin-bottom:8px;">'
         f'Data: &nbsp;' + ' &nbsp;·&nbsp; '.join(parts) +
         f'{sort_label}{regime_label}'
-        f'&nbsp;&nbsp;<span style="color:#444;font-style:italic;">· cached 1 hr</span></div>',
+        f'&nbsp;&nbsp;<span style="color:#9aa0ac;font-style:italic;">· cached 1 hr</span></div>',
         unsafe_allow_html=True,
     )
 
     st.markdown(
         f"#### Top 20 Results &nbsp; "
-        f"<span style='color:#888;font-size:0.8rem;'>({len(scr_df)} stocks scored)</span>",
+        f"<span style='color:#9aa0ac;font-size:0.8rem;'>({len(scr_df)} stocks scored)</span>",
         unsafe_allow_html=True,
     )
 
@@ -332,7 +332,7 @@ if st.session_state.get("screener_results"):
             sh_cell  = (f'<span style="color:{sh_color};font-weight:600;"'
                         f' title="{sh_tip}">{sh_chg_val:+.1f}%</span>')
         else:
-            sh_cell = '<span style="color:#444;">—</span>'
+            sh_cell = '<span style="color:#6c757d;">—</span>'
 
         delta = mac_sc - sc_val
         if macro_regime == "Normal" or delta == 0:
@@ -351,11 +351,11 @@ if st.session_state.get("screener_results"):
             if _show_beta else ""
         )
         rows_html += (
-            f'<tr style="border-bottom:1px solid #1a1a2a;">'
-            f'<td style="color:#666;text-align:center;padding:{row_pad};font-size:0.73rem;">{rank}</td>'
+            f'<tr style="border-bottom:1px solid #e9ecef;">'
+            f'<td style="color:#9aa0ac;text-align:center;padding:{row_pad};font-size:0.73rem;">{rank}</td>'
             f'<td style="color:#3498db;font-weight:700;padding:{row_pad};font-size:{row_font};">{ticker_cell}</td>'
-            f'<td style="color:#ccc;padding:{row_pad};font-size:{row_font};">{row["Company"]}</td>'
-            f'<td style="color:#999;padding:{row_pad};font-size:0.72rem;">{row["Sector"]}</td>'
+            f'<td style="color:#495057;padding:{row_pad};font-size:{row_font};">{row["Company"]}</td>'
+            f'<td style="color:#6c757d;padding:{row_pad};font-size:0.72rem;">{row["Sector"]}</td>'
             f'<td style="text-align:center;padding:{row_pad};">{mac_cell}</td>'
             f'<td style="text-align:center;padding:{row_pad};">{macro_sens}</td>'
             + _beta_td +
@@ -365,9 +365,9 @@ if st.session_state.get("screener_results"):
             f'<td style="color:{_score_color_sub(int(row["Valuation"]),20)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Valuation"])}/20</td>'
             f'<td style="color:{_score_color_sub(int(row["Momentum"]),10)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Momentum"])}/10</td>'
             f'<td style="text-align:center;padding:{row_pad};font-size:0.75rem;">{sh_cell}</td>'
-            f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
-            f'<td style="color:#aef;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
-            f'<td style="color:#ccc;font-size:0.75rem;text-align:right;">{price_str}</td>'
+            f'<td style="color:#3b7ddd;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
+            f'<td style="color:#3b7ddd;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
+            f'<td style="color:#495057;font-size:0.75rem;text-align:right;">{price_str}</td>'
             f'<td style="font-size:0.75rem;padding:{row_pad};">{_badge(mac_sc)}</td>'
             f'</tr>'
         )
@@ -383,8 +383,8 @@ if st.session_state.get("screener_results"):
     #   2. rows_html stays outside any f-string so stray { } in HTML don't misfire.
     _thead = (
         f'<div style="overflow-x:auto;margin:10px 0;">'
-        f'<table style="width:100%;border-collapse:collapse;background:#0e1117;font-size:{row_font};">'
-        f'<thead><tr style="border-bottom:2px solid #333;color:#555;font-size:0.65rem;'
+        f'<table style="width:100%;border-collapse:collapse;background:#ffffff;font-size:{row_font};">'
+        f'<thead><tr style="border-bottom:2px solid #dee2e6;color:#6c757d;font-size:0.65rem;'
         f'text-transform:uppercase;letter-spacing:.05em;">'
         f'<th style="padding:{row_pad};text-align:center;">#</th>'
         f'<th style="padding:{row_pad};text-align:left;">Ticker</th>'
@@ -455,9 +455,9 @@ if st.session_state.get("screener_results"):
 else:
     # ── Empty state ────────────────────────────────────────────────────────────
     st.markdown("""
-<div style="text-align:center;padding:48px 24px;color:#444;">
+<div style="text-align:center;padding:48px 24px;color:#6c757d;">
     <div style="font-size:3rem;margin-bottom:16px;">🏆</div>
-    <div style="font-size:1.1rem;font-weight:600;color:#666;margin-bottom:8px;">
+    <div style="font-size:1.1rem;font-weight:600;color:#6c757d;margin-bottom:8px;">
         Ready to screen
     </div>
     <div style="font-size:0.85rem;color:#444;max-width:520px;margin:0 auto;">

@@ -9,6 +9,7 @@ Deploy:       push to GitHub → connect to Streamlit Cloud → add secrets
 """
 
 import streamlit as st
+from components.taplox_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
 
 st.set_page_config(
     page_title="Pulse360",
@@ -17,70 +18,37 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Global styles ─────────────────────────────────────────────────────────────
-st.markdown("""
+# ── Global Taplox theme (light mode) ─────────────────────────────────────────
+inject_theme()
+
+# ── Onboarding card styles (light variants) ───────────────────────────────────
+st.markdown(f"""
 <style>
-    .main p, .main li, .main span, .main strong, .main b,
-    .main [data-testid="stMarkdownContainer"] p,
-    .main [data-testid="stMarkdownContainer"] li,
-    .main [data-testid="stMarkdownContainer"] strong,
-    .main [data-testid="stMarkdownContainer"] b { color: #ffffff !important; }
-
-    .main h1, .main h2, .main h3,
-    .main h4, .main h5, .main h6,
-    .main [data-testid="stMarkdownContainer"] h1,
-    .main [data-testid="stMarkdownContainer"] h2,
-    .main [data-testid="stMarkdownContainer"] h3,
-    .main [data-testid="stMarkdownContainer"] h4,
-    .main [data-testid="stMarkdownContainer"] h5,
-    .main [data-testid="stMarkdownContainer"] h6,
-    .main [data-testid="stHeadingWithActionElements"] h1,
-    .main [data-testid="stHeadingWithActionElements"] h2,
-    .main [data-testid="stHeadingWithActionElements"] h3,
-    .main [data-testid="stHeadingWithActionElements"] h4,
-    .main [data-testid="stHeadingWithActionElements"],
-    [data-testid="stHeadingWithActionElements"] span { color: #ffffff !important; }
-
-    .main [data-testid="stCaptionContainer"],
-    .main small { color: #aaaaaa !important; }
-
-    div[data-testid="metric-container"] label { color: #cccccc !important; }
-    div[data-testid="metric-container"] [data-testid="stMetricValue"] { color: #ffffff !important; }
-
-    .main [data-testid="stMarkdownContainer"] td,
-    .main [data-testid="stMarkdownContainer"] th { color: #ffffff !important; }
-
-    .main label { color: #cccccc !important; }
-    .main [data-testid="stExpander"] summary { color: #ffffff !important; }
-    .stTabs [data-baseweb="tab"] { color: #cccccc !important; }
-    .stTabs [aria-selected="true"] { color: #ffffff !important; }
-
-    /* ── Onboarding card styles ── */
-    .profile-card {
-        border: 1px solid #2a2a4a;
+    .profile-card {{
+        border: 1px solid {BORDER};
         border-radius: 10px;
         padding: 16px 18px;
         margin-bottom: 8px;
-        background: #0e0e1a;
+        background: {CARD_BG};
         cursor: pointer;
         transition: border-color 0.2s;
-    }
-    .profile-card.selected {
-        border-color: #6c63ff;
-        background: #13132a;
-    }
-    .profile-card-title {
+    }}
+    .profile-card.selected {{
+        border-color: {BLUE};
+        background: #eef4ff;
+    }}
+    .profile-card-title {{
         font-size: 1rem;
         font-weight: 700;
-        color: #ffffff;
+        color: {TEXT_PRI};
         margin-bottom: 4px;
-    }
-    .profile-card-desc {
+    }}
+    .profile-card-desc {{
         font-size: 0.82rem;
-        color: #aaaaaa;
+        color: {TEXT_SEC};
         line-height: 1.4;
-    }
-    .profile-badge {
+    }}
+    .profile-badge {{
         display: inline-flex;
         align-items: center;
         gap: 5px;
@@ -88,7 +56,7 @@ st.markdown("""
         border-radius: 12px;
         font-size: 0.75rem;
         font-weight: 600;
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -123,25 +91,25 @@ def _render_onboarding() -> None:
     ]
 
     # ── Styles ─────────────────────────────────────────────────────────────────
-    st.markdown("""
+    st.markdown(f"""
 <style>
-  .ob-nav-preview {
-    background: #0d0d1a;
-    border: 1px solid #2a2a4a;
+  .ob-nav-preview {{
+    background: {PAGE_BG};
+    border: 1px solid {BORDER};
     border-radius: 12px;
     padding: 16px 18px;
     height: 100%;
-  }
-  .ob-nav-header {
+  }}
+  .ob-nav-header {{
     font-size: 0.68rem;
     font-weight: 700;
-    color: #555;
+    color: {TEXT_SEC};
     text-transform: uppercase;
     letter-spacing: .07em;
     margin: 14px 0 6px 0;
-  }
-  .ob-nav-header:first-child { margin-top: 0; }
-  .ob-nav-item {
+  }}
+  .ob-nav-header:first-child {{ margin-top: 0; }}
+  .ob-nav-item {{
     display: flex;
     align-items: center;
     gap: 9px;
@@ -150,38 +118,38 @@ def _render_onboarding() -> None:
     margin-bottom: 2px;
     font-size: 0.85rem;
     font-weight: 500;
-  }
-  .ob-nav-item.available {
-    color: #e0e0e0;
-    background: #13132a;
-  }
-  .ob-nav-item.locked {
-    color: #383850;
+  }}
+  .ob-nav-item.available {{
+    color: {TEXT_PRI};
+    background: #e8f1fb;
+  }}
+  .ob-nav-item.locked {{
+    color: {TEXT_MUT};
     background: transparent;
-  }
-  .ob-nav-item .ob-lock {
+  }}
+  .ob-nav-item .ob-lock {{
     font-size: 0.65rem;
     margin-left: auto;
-    color: #333;
-  }
-  .ob-profile-card {
-    border: 1px solid #2a2a4a;
+    color: {TEXT_MUT};
+  }}
+  .ob-profile-card {{
+    border: 1px solid {BORDER};
     border-radius: 10px;
     padding: 14px 16px;
     margin: 10px 0 18px 0;
-    background: #0e0e1a;
-  }
+    background: {CARD_BG};
+  }}
 </style>
 """, unsafe_allow_html=True)
 
     # ── Page header ────────────────────────────────────────────────────────────
-    st.markdown("""
+    st.markdown(f"""
 <div style="text-align:center; padding: 2rem 0 1.2rem 0;">
   <div style="font-size:2.8rem; margin-bottom:0.3rem;">📊</div>
-  <h1 style="font-size:2.2rem; font-weight:800; color:#ffffff; margin:0;">
+  <h1 style="font-size:2.2rem; font-weight:800; color:{TEXT_PRI}; margin:0;">
     Welcome to Pulse360
   </h1>
-  <p style="color:#aaaaaa; font-size:1rem; margin-top:0.5rem;">
+  <p style="color:{TEXT_SEC}; font-size:1rem; margin-top:0.5rem;">
     AI-Powered Economic Cycle Dashboard &nbsp;·&nbsp; Real-time Business Cycle Monitoring
   </p>
 </div>
@@ -210,17 +178,17 @@ def _render_onboarding() -> None:
                    "Analyst":  ("#9b59b6","#1a0e2a")}[chosen]
 
         features_html = "".join(
-            f'<div style="color:#cccccc;font-size:0.83rem;margin-bottom:4px;">✓ {f}</div>'
+            f'<div style="color:{TEXT_PRI};font-size:0.83rem;margin-bottom:4px;">✓ {f}</div>'
             for f in p["features"]
         )
         st.markdown(f"""
 <div class="ob-profile-card">
-  <div style="font-size:0.7rem;color:#555;text-transform:uppercase;
+  <div style="font-size:0.7rem;color:{TEXT_SEC};text-transform:uppercase;
               letter-spacing:.05em;font-weight:700;margin-bottom:8px;">
     What you'll see
   </div>
   {features_html}
-  <div style="margin-top:10px;font-size:0.75rem;color:#555;line-height:1.4;">
+  <div style="margin-top:10px;font-size:0.75rem;color:{TEXT_MUT};line-height:1.4;">
     You can change this any time — no data is lost when switching profiles.
   </div>
 </div>
@@ -264,10 +232,10 @@ def _render_onboarding() -> None:
 
         st.markdown(f"""
 <div class="ob-nav-preview">
-  <div style="font-size:0.72rem;font-weight:700;color:#555;
+  <div style="font-size:0.72rem;font-weight:700;color:{TEXT_SEC};
               text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">
     Your navigation
-    <span style="float:right;font-weight:400;color:#444;text-transform:none;
+    <span style="float:right;font-weight:400;color:{TEXT_MUT};text-transform:none;
                  letter-spacing:0;">{unlocked} of {total} pages</span>
   </div>
   {nav_html}
@@ -299,12 +267,12 @@ with st.sidebar:
     margin-bottom: 0.8rem;
     padding: 10px 12px;
     border-radius: 8px;
-    background: #0e0e1a;
-    border: 1px solid #2a2a4a;
+    background: {CARD_BG};
+    border: 1px solid {BORDER};
   }}
   .pb-label {{
     font-size: 0.68rem;
-    color: #666;
+    color: {TEXT_MUT};
     text-transform: uppercase;
     letter-spacing: .05em;
     margin-bottom: 4px;
@@ -316,7 +284,7 @@ with st.sidebar:
   }}
   .pb-desc {{
     font-size: 0.75rem;
-    color: #888;
+    color: {TEXT_SEC};
     margin-top: 3px;
     line-height: 1.3;
   }}
@@ -392,28 +360,28 @@ with st.sidebar:
     if locked:
         locked_html = f"""
 <div style="margin-top:14px; padding:8px 10px; border-radius:6px;
-            background:#0e0e1a; border:1px dashed #2a2a4a;">
-  <div style="font-size:0.7rem; color:#555; margin-bottom:4px;">
+            background:{PAGE_BG}; border:1px dashed {BORDER};">
+  <div style="font-size:0.7rem; color:{TEXT_SEC}; margin-bottom:4px;">
     Unlock more by switching profile:
   </div>
-  <div style="font-size:0.72rem; color:#444;">
+  <div style="font-size:0.72rem; color:{TEXT_MUT};">
     {'  ·  '.join(locked)}
   </div>
 </div>"""
 
     st.markdown(f"""
 <style>
-  .nav-guide {{ margin-top:1rem; padding-top:0.8rem; border-top:1px solid #2a2a4a; }}
+  .nav-guide {{ margin-top:1rem; padding-top:0.8rem; border-top:1px solid {BORDER}; }}
   .nav-guide-item {{ display:flex; gap:8px; margin-bottom:10px; align-items:flex-start; }}
   .nav-guide-text {{ line-height:1.35; }}
-  .nav-guide-title {{ font-size:0.82rem; font-weight:600; color:#cccccc; }}
+  .nav-guide-title {{ font-size:0.82rem; font-weight:600; color:{TEXT_PRI}; }}
   .nav-guide-desc {{
-    font-size:0.78rem; color:#aaaaaa;
-    border-left:2px solid #3a3a6a;
+    font-size:0.78rem; color:{TEXT_SEC};
+    border-left:2px solid {BORDER};
     padding-left:7px; margin-top:3px; font-style:italic;
   }}
   .nav-guide-section {{
-    font-size:0.72rem; font-weight:700; color:#666;
+    font-size:0.72rem; font-weight:700; color:{TEXT_SEC};
     text-transform:uppercase; letter-spacing:.05em; margin:12px 0 6px 0;
   }}
 </style>
@@ -435,7 +403,7 @@ with st.sidebar:
 
     if _wl_count > 0:
         st.markdown(
-            f'<div style="font-size:0.7rem;font-weight:700;color:#555;'
+            f'<div style="font-size:0.7rem;font-weight:700;color:{TEXT_SEC};'
             f'text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">'
             f'⭐ Watchlist ({_wl_count})</div>',
             unsafe_allow_html=True,
@@ -443,19 +411,19 @@ with st.sidebar:
         # Show up to 5 tickers as compact pills
         preview_tickers = _wl[:5]
         pills_html = "".join(
-            f'<span style="display:inline-block;background:#13132a;border:1px solid #2a2a4a;'
-            f'border-radius:6px;padding:2px 8px;font-size:0.72rem;color:#3498db;'
+            f'<span style="display:inline-block;background:#e8f1fb;border:1px solid {BORDER};'
+            f'border-radius:6px;padding:2px 8px;font-size:0.72rem;color:{BLUE};'
             f'font-weight:600;margin:2px 3px 2px 0;">{t}</span>'
             for t in preview_tickers
         )
         if _wl_count > 5:
             pills_html += (
-                f'<span style="font-size:0.7rem;color:#555;"> +{_wl_count - 5} more</span>'
+                f'<span style="font-size:0.7rem;color:{TEXT_MUT};"> +{_wl_count - 5} more</span>'
             )
         st.markdown(pills_html, unsafe_allow_html=True)
     else:
         st.markdown(
-            '<div style="font-size:0.75rem;color:#444;">⭐ Watchlist empty</div>',
+            f'<div style="font-size:0.75rem;color:{TEXT_MUT};">⭐ Watchlist empty</div>',
             unsafe_allow_html=True,
         )
 
