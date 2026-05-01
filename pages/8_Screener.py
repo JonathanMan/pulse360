@@ -25,6 +25,8 @@ import io
 import pandas as pd
 import streamlit as st
 
+from components.user_profile import feature_visible
+
 from components.stock_score_utils import (
     DISCLAIMER,
     _FALLBACK_SCORES,
@@ -343,6 +345,7 @@ if st.session_state.get("screener_results"):
         t_tip      = row.get("TrendTip", "")
         macro_sens = _macro_sens_cell(row.get("Sector", ""), macro_regime)
         beta_cell  = _macro_beta_cell(int(row.get("MacroBeta", 0)))
+        _show_beta = feature_visible("screener_macro_beta_col")
 
         sh_chg_val = row.get("ShareChg")
         if sh_chg_val is not None:
@@ -365,6 +368,10 @@ if st.session_state.get("screener_results"):
                 f'({d_sign}{delta})</span>'
             )
 
+        _beta_td = (
+            f'<td style="text-align:center;padding:{row_pad};" title="Macro Beta: score range across all 5 regimes">{beta_cell}</td>'
+            if _show_beta else ""
+        )
         rows_html += (
             f'<tr style="border-bottom:1px solid #1a1a2a;">'
             f'<td style="color:#666;text-align:center;padding:{row_pad};font-size:0.73rem;">{rank}</td>'
@@ -373,7 +380,7 @@ if st.session_state.get("screener_results"):
             f'<td style="color:#999;padding:{row_pad};font-size:0.72rem;">{row["Sector"]}</td>'
             f'<td style="text-align:center;padding:{row_pad};">{mac_cell}</td>'
             f'<td style="text-align:center;padding:{row_pad};">{macro_sens}</td>'
-            f'<td style="text-align:center;padding:{row_pad};" title="Macro Beta: score range across all 5 regimes">{beta_cell}</td>'
+            + _beta_td +
             f'<td style="color:{t_color};font-size:1.1rem;text-align:center;" title="{t_tip}">{t_arrow}</td>'
             f'<td style="color:{_score_color_sub(int(row["Moat"]),40)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Moat"])}/40</td>'
             f'<td style="color:{_score_color_sub(int(row["Fortress"]),25)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Fortress"])}/25</td>'
@@ -387,6 +394,11 @@ if st.session_state.get("screener_results"):
             f'</tr>'
         )
 
+    _beta_th = (
+        f'<th style="padding:{row_pad};text-align:center;"'
+        f' title="Macro Beta: score range across all 5 regimes — higher = more regime-sensitive">Macro &#946;</th>'
+        if feature_visible("screener_macro_beta_col") else ""
+    )
     st.markdown(
         f"""
         <div style="overflow-x:auto;margin:10px 0;">
@@ -402,8 +414,7 @@ if st.session_state.get("screener_results"):
                   title="Score (macro-adjusted if regime selected)">Score</th>
               <th style="padding:{row_pad};text-align:center;"
                   title="Sector sensitivity to selected regime (pts adjustment, ±15 max)">Macro Sens.</th>
-              <th style="padding:{row_pad};text-align:center;"
-                  title="Macro Beta: score range across all 5 regimes — higher = more regime-sensitive">Macro β</th>
+              {_beta_th}
               <th style="padding:{row_pad};text-align:center;"
                   title="Price vs 200-day MA: ↑ uptrend · ↓ downtrend · → consolidating">Price Trend</th>
               <th style="padding:{row_pad};text-align:center;">Moat</th>
@@ -453,9 +464,13 @@ if st.session_state.get("screener_results"):
             help="Download the top 20 results as a CSV file.",
         )
 
-    st.caption(
+    _beta_legend = (
         "💡 **Macro β** = score range across all 5 regimes (green ≤8 stable · orange 9–14 · red ≥15 high). "
-        "**Price Trend** = price vs 200MA. **Macro Sens.** = pts adjustment in current regime. "
+        if feature_visible("screener_macro_beta_col") else "💡 "
+    )
+    st.caption(
+        _beta_legend
+        + "**Price Trend** = price vs 200MA. **Macro Sens.** = pts adjustment in current regime. "
         "FCF Yield = FCF / Mkt Cap. Scores cached 1 hr."
     )
 

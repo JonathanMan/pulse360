@@ -29,6 +29,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from ai.claude_client import extract_tickers_from_screenshot
+from components.user_profile import feature_visible
 from components.stock_score_utils import (
     fetch_stock_data,
     _compute_score,
@@ -521,14 +522,18 @@ with st.expander(
     "Action Alerts — What the Data Suggests",
     expanded=True,
 ):
-    conviction_pct = st.slider(
-        "Alert conviction threshold (% of holdings that must trigger for a RED alert)",
-        min_value=10, max_value=50, value=25, step=5,
-        help=(
-            "Higher = fewer red alerts (requires more holdings to be vulnerable). "
-            "Lower = more sensitive — fires even when just a few holdings are exposed."
-        ),
-    )
+    if feature_visible("heatmap_conviction_slider"):
+        conviction_pct = st.slider(
+            "Alert conviction threshold (% of holdings that must trigger for a RED alert)",
+            min_value=10, max_value=50, value=25, step=5,
+            help=(
+                "Higher = fewer red alerts (requires more holdings to be vulnerable). "
+                "Lower = more sensitive — fires even when just a few holdings are exposed."
+            ),
+        )
+    else:
+        conviction_pct = 25  # sensible default for Beginner / Investor profiles
+
     alerts = _run_action_engine_with_threshold(
         scored_list, action_regime, conviction_pct / 100
     )
