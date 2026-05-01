@@ -33,7 +33,6 @@ from components.stock_score_utils import (
     DISCLAIMER,
     _FALLBACK_SCORES,
     _MACRO_ADJ,
-    _badge,
     _compute_score,
     _macro_adj_score,
     _macro_sens_cell,
@@ -42,6 +41,19 @@ from components.stock_score_utils import (
     _score_color_sub,
     fetch_stock_data,
 )
+
+
+def _badge(score: int) -> str:
+    """Coloured verdict badge — mirrors the one in 8_Screener.py."""
+    if score >= 75:
+        return '<span style="color:#2ecc71;font-weight:700;">⭐ Elite</span>'
+    if score >= 60:
+        return '<span style="color:#27ae60;font-weight:700;">✅ Strong</span>'
+    if score >= 45:
+        return '<span style="color:#f39c12;font-weight:700;">🟡 Fair</span>'
+    if score >= 30:
+        return '<span style="color:#e67e22;font-weight:700;">⚠️ Weak</span>'
+    return '<span style="color:#e74c3c;font-weight:700;">🔴 Avoid</span>'
 
 # ── Page styles ───────────────────────────────────────────────────────────────
 st.markdown("""
