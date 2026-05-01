@@ -48,23 +48,13 @@ DISCLAIMER = (
     "Pulse360 is not a Registered Investment Advisor.*"
 )
 
-# ── Dark-theme CSS ────────────────────────────────────────────────────────────
+# ── Page CSS ──────────────────────────────────────────────────────────────────
+from components.taplox_theme import inject_theme
+inject_theme()
 st.markdown("""
 <style>
-    .stApp { background-color: #f5f7fb; }
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
-    div[data-testid="metric-container"] {
-        background: #1a1a2e; border-radius: 8px;
-        padding: 12px 16px; border: 1px solid #333;
-    }
-    .stTabs [data-baseweb="tab-list"]  { gap: 4px; }
-    .stTabs [data-baseweb="tab"]       { background-color: #1a1a2e;
-                                         border-radius: 6px 6px 0 0;
-                                         padding: 8px 14px; }
-    .stTabs [aria-selected="true"]     { background-color: #2a2a4a; }
-    .stExpander { border: 1px solid #333 !important; border-radius: 8px !important; }
     section[data-testid="stSidebar"] { width: 360px !important; }
-    .stChatMessage { background: #1a1a2e; border-radius: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -188,8 +178,8 @@ with tabs[7]:
 
 with st.sidebar:
     # ── Quick Stats (compact card) ───────────────────────────────────────────
-    tl_color  = {"green": "#2ecc71", "yellow": "#f39c12", "red": "#e74c3c"}.get(
-        model_output.traffic_light, "#888"
+    tl_color  = {"green": "#28a745", "yellow": "#f39c12", "red": "#e74c3c"}.get(
+        model_output.traffic_light, "#6c757d"
     )
     delta_html = ""
     if prob_delta is not None:
@@ -201,26 +191,26 @@ with st.sidebar:
         )
     cfnai_html = ""
     if lei_growth is not None:
-        c_color = "#2ecc71" if lei_growth > 0 else "#e74c3c"
+        c_color = "#28a745" if lei_growth > 0 else "#e74c3c"
         cfnai_html = (
             f'<div style="display:flex;justify-content:space-between;'
-            f'padding:4px 0;border-top:1px solid #2a2a3a;">'
-            f'<span style="color:#888;font-size:12px;">CFNAI 3M avg</span>'
+            f'padding:4px 0;border-top:1px solid #e9ecef;">'
+            f'<span style="color:#6c757d;font-size:12px;">CFNAI 3M avg</span>'
             f'<span style="color:{c_color};font-size:12px;font-weight:600;">'
             f'{lei_growth:+.3f}</span></div>'
         )
-    conf_color = {"High": "#2ecc71", "Medium": "#f39c12", "Low": "#e74c3c"}.get(
-        phase_output.confidence, "#888"
+    conf_color = {"High": "#28a745", "Medium": "#f39c12", "Low": "#e74c3c"}.get(
+        phase_output.confidence, "#6c757d"
     )
     st.markdown(
         f"""
-        <div style="background:#1a1a2e;border:1px solid #333;border-radius:10px;
+        <div style="background:#ffffff;border:1px solid #e9ecef;border-radius:10px;
                     padding:10px 14px;margin-bottom:8px;">
-          <div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:600;
+          <div style="font-size:11px;color:#adb5bd;margin-bottom:6px;font-weight:600;
                       letter-spacing:.05em;">📊 QUICK STATS</div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;
-                      padding:4px 0;border-top:1px solid #2a2a3a;">
-            <span style="color:#888;font-size:12px;">Recession Prob.</span>
+                      padding:4px 0;border-top:1px solid #e9ecef;">
+            <span style="color:#6c757d;font-size:12px;">Recession Prob.</span>
             <span>
               <span style="color:{tl_color};font-size:18px;font-weight:700;">
                 {model_output.probability:.1f}%
@@ -228,15 +218,15 @@ with st.sidebar:
             </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;
-                      padding:4px 0;border-top:1px solid #2a2a3a;">
-            <span style="color:#888;font-size:12px;">Cycle Phase</span>
-            <span style="color:#fff;font-size:13px;font-weight:600;">
+                      padding:4px 0;border-top:1px solid #e9ecef;">
+            <span style="color:#6c757d;font-size:12px;">Cycle Phase</span>
+            <span style="color:#293241;font-size:13px;font-weight:600;">
               {phase_output.emoji} {phase_output.phase}
             </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;
-                      padding:4px 0;border-top:1px solid #2a2a3a;">
-            <span style="color:#888;font-size:12px;">Confidence</span>
+                      padding:4px 0;border-top:1px solid #e9ecef;">
+            <span style="color:#6c757d;font-size:12px;">Confidence</span>
             <span style="color:{conf_color};font-size:12px;font-weight:600;">
               {phase_output.confidence}
             </span>

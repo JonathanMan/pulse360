@@ -4,7 +4,7 @@ Pulse360 — shared chart utilities
 Shared helpers used by app.py and all tab components.
 
 Exports:
-    dark_layout(fig, ...)          → go.Figure   (dark theme + hover + rangeselector)
+    dark_layout(fig, ...)          → go.Figure   (light theme + hover + rangeselector)
     add_nber(fig, start_date)      → go.Figure   (NBER recession shading)
     add_end_labels(fig, ...)       → go.Figure   (direct line labels, no legend)
     chart_meta(result, decimals)   → None        (renders st.caption / warnings)
@@ -39,11 +39,11 @@ _RANGESELECTOR = {
         {"count": 10, "label": "10Y", "step": "year", "stepmode": "backward"},
         {"step": "all", "label": "Max"},
     ],
-    "bgcolor":     "#1a1a2e",
-    "activecolor": "#3498db",
-    "bordercolor": "#444",
+    "bgcolor":     "#f5f7fb",
+    "activecolor": "#3b7ddd",
+    "bordercolor": "#e9ecef",
     "borderwidth": 1,
-    "font":        {"color": "#888", "size": 10},
+    "font":        {"color": "#6c757d", "size": 10},
     "x":           0,
     "xanchor":     "left",
     "y":           1.0,
@@ -67,28 +67,28 @@ def dark_layout(
     - Optional rangeslider (thin scrubber bar beneath chart)
     """
     xaxis_cfg: dict = {
-        "gridcolor":     "#1e1e2e",
-        "color":         "#888",
+        "gridcolor":     "#e9ecef",
+        "color":         "#6c757d",
         "showgrid":      True,
         "rangeselector": _RANGESELECTOR,
     }
     if rangeslider:
         xaxis_cfg["rangeslider"] = {
             "visible":     True,
-            "bgcolor":     "#0e1117",
-            "bordercolor": "#333",
+            "bgcolor":     "#f5f7fb",
+            "bordercolor": "#e9ecef",
             "thickness":   0.05,
         }
 
     fig.update_layout(
-        title        = {"text": title, "font": {"size": 13, "color": "#ffffff"}},
+        title        = {"text": title, "font": {"size": 13, "color": "#293241"}},
         paper_bgcolor= "rgba(0,0,0,0)",
-        plot_bgcolor = "#0e1117",
-        font         = {"color": "#ffffff"},
+        plot_bgcolor = "rgba(0,0,0,0)",
+        font         = {"color": "#293241"},
         xaxis        = xaxis_cfg,
         yaxis        = {
-            "gridcolor": "#1e1e2e",
-            "color":     "#888",
+            "gridcolor": "#e9ecef",
+            "color":     "#6c757d",
             "showgrid":  True,
             "title":     yaxis_title,
         },
@@ -96,15 +96,15 @@ def dark_layout(
         hovermode    = "x unified",
         # ── Tableau-style tooltip card ────────────────────────────────────────
         hoverlabel   = {
-            "bgcolor":    "#1a1a2e",
-            "bordercolor":"#444",
-            "font":       {"size": 12, "color": "#ffffff"},
+            "bgcolor":    "#ffffff",
+            "bordercolor":"#e9ecef",
+            "font":       {"size": 12, "color": "#293241"},
             "align":      "left",
             "namelength": -1,   # never truncate series names
         },
         legend       = {
             "bgcolor":     "rgba(0,0,0,0)",
-            "font":        {"color": "#888"},
+            "font":        {"color": "#6c757d"},
             "orientation": "h",
             "y":           -0.15,
         },
@@ -112,8 +112,8 @@ def dark_layout(
 
     if yaxis2_title:
         fig.update_layout(yaxis2={
-            "gridcolor": "#1e1e2e",
-            "color":     "#888",
+            "gridcolor": "#e9ecef",
+            "color":     "#6c757d",
             "title":     yaxis2_title,
             "overlaying":"y",
             "side":      "right",
@@ -204,7 +204,7 @@ def add_end_labels(
             continue
 
         # Resolve trace colour
-        color = "#cccccc"
+        color = "#495057"
         if hasattr(trace, "line") and trace.line and getattr(trace.line, "color", None):
             color = trace.line.color
 
@@ -222,7 +222,7 @@ def add_end_labels(
             xshift      = 8,
             align       = "left",
             font        = {"size": 9, "color": color},
-            bgcolor     = "rgba(14,17,23,0.85)",
+            bgcolor     = "rgba(255,255,255,0.92)",
             borderpad   = 3,
             bordercolor = color,
             borderwidth = 0.5,
@@ -412,7 +412,7 @@ def render_action_item(text: str, color: str = "#f39c12") -> None:
     st.markdown(
         f"""
         <div style="
-            background: {color}1a;
+            background: {color}18;
             border-left: 4px solid {color};
             border-radius: 0 8px 8px 0;
             padding: 12px 18px;
@@ -421,7 +421,7 @@ def render_action_item(text: str, color: str = "#f39c12") -> None:
             <span style="color:{color}; font-weight:700; font-size:14px; margin-right:6px;">
                 💡 Action
             </span>
-            <span style="color:#ffffff; font-size:14px; line-height:1.6;">
+            <span style="color:#293241; font-size:14px; line-height:1.6;">
                 {clean}
             </span>
         </div>

@@ -30,88 +30,73 @@ from ai.portfolio_analyzer import (
 
 # ── Page config & styles ──────────────────────────────────────────────────────
 
-st.markdown("""
+from components.taplox_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
+inject_theme()
+st.markdown(f"""
 <style>
-    .stApp { background-color: #f5f7fb; }
-    .main .block-container { padding-top: 1rem; max-width: 1100px; }
-    div[data-testid="metric-container"] {
-        background: #1a1a2e; border-radius: 8px;
-        padding: 12px 16px; border: 1px solid #333;
-    }
+    .main .block-container {{ padding-top: 1rem; max-width: 1100px; }}
     /* Upload zone styling */
-    div[data-testid="stFileUploader"] {
-        border: 2px dashed #444 !important;
+    div[data-testid="stFileUploader"] {{
+        border: 2px dashed {BORDER} !important;
         border-radius: 12px !important;
         padding: 8px !important;
-        background: #1a1a2e !important;
-    }
-    div[data-testid="stFileUploader"]:hover {
-        border-color: #3d5a80 !important;
-        background: #1e2340 !important;
-    }
-    .upload-tip {
+        background: {PAGE_BG} !important;
+    }}
+    div[data-testid="stFileUploader"]:hover {{
+        border-color: {BLUE} !important;
+        background: #e8f1fb !important;
+    }}
+    .upload-tip {{
         font-size: 0.85rem;
-        color: #888;
+        color: {TEXT_SEC};
         margin-top: 6px;
         line-height: 1.5;
-    }
-    .macro-badge {
+    }}
+    .macro-badge {{
         display: inline-block;
         padding: 3px 10px;
         border-radius: 6px;
         font-size: 0.8rem;
         font-weight: 600;
         margin-right: 8px;
-    }
-    .macro-green  { background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid #2ecc71; }
-    .macro-yellow { background: rgba(243,156,18,0.15); color: #f39c12; border: 1px solid #f39c12; }
-    .macro-red    { background: rgba(231,76,60,0.15);  color: #e74c3c; border: 1px solid #e74c3c; }
-    .analysis-box {
-        background: #1a1a2e;
-        border: 1px solid #2a2a4a;
+    }}
+    .macro-green  {{ background: #e8f8ee; color: #1a5c30; border: 1px solid #28a745; }}
+    .macro-yellow {{ background: #fff8e5; color: #7a5000; border: 1px solid #f39c12; }}
+    .macro-red    {{ background: #fde8e8; color: #8b1a1a; border: 1px solid #e74c3c; }}
+    .analysis-box {{
+        background: {CARD_BG};
+        border: 1px solid {BORDER};
         border-radius: 10px;
         padding: 20px 24px;
         margin-top: 16px;
         line-height: 1.7;
-    }
-    /* ── Analysis output: white text throughout ── */
-    .stMarkdown p, .stMarkdown li, .stMarkdown span,
-    .stMarkdown td, .stMarkdown th { color: #e8e8e8 !important; }
-    .stMarkdown h1, .stMarkdown h2 {
-        color: #ffffff !important;
-        border-bottom: 1px solid #2a2a4a;
-        padding-bottom: 6px;
-        margin-top: 1.4rem !important;
-    }
-    .stMarkdown h3  { color: #cccccc !important; }
-    .stMarkdown strong { color: #ffffff !important; }
-    .stMarkdown em  { color: #aaaaaa !important; }
+    }}
     /* ── Portfolio chat panel ── */
-    .portfolio-chat {
-        background: #12122a;
-        border: 1px solid #2a2a4a;
+    .portfolio-chat {{
+        background: {PAGE_BG};
+        border: 1px solid {BORDER};
         border-radius: 10px;
         padding: 16px 20px;
         margin-top: 24px;
-    }
-    .chat-msg-user {
-        background: #1e2340;
+    }}
+    .chat-msg-user {{
+        background: #e8f1fb;
         border-radius: 8px;
         padding: 10px 14px;
         margin: 8px 0;
-        color: #e8e8e8 !important;
+        color: {TEXT_PRI};
         font-size: 0.9rem;
-    }
-    .chat-msg-ai {
-        background: #0e1a2e;
-        border-left: 3px solid #3d5a80;
+    }}
+    .chat-msg-ai {{
+        background: {CARD_BG};
+        border-left: 3px solid {BLUE};
         border-radius: 0 8px 8px 0;
         padding: 10px 14px;
         margin: 8px 0;
-        color: #e8e8e8 !important;
+        color: {TEXT_PRI};
         font-size: 0.9rem;
         line-height: 1.6;
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -305,7 +290,7 @@ st.markdown(
 
 st.markdown(
     f'<span class="macro-badge {tl_class}">{tl_label}</span>'
-    f'<span style="color:#888; font-size:0.85rem;">Cycle phase: <b style="color:#ccc">{cycle_phase}</b> '
+    f'<span style="color:#6c757d; font-size:0.85rem;">Cycle phase: <b style="color:#293241">{cycle_phase}</b> '
     f'· Analysis is contextualised to current Pulse360 model state</span>',
     unsafe_allow_html=True,
 )
@@ -434,7 +419,7 @@ For funds: drop a brochure or factsheet page — Claude will extract holdings, s
     if not uploaded_images:
         st.markdown("""
 ---
-<div style="text-align:center; color:#555; padding: 24px 0; font-size:0.9rem;">
+<div style="text-align:center; color:#6c757d; padding: 24px 0; font-size:0.9rem;">
     Upload one or more screenshots above to get started
 </div>
 """, unsafe_allow_html=True)
@@ -594,7 +579,7 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
         st.session_state.pop("csv_analysis_result", None)
         st.markdown("""
 ---
-<div style="text-align:center; color:#555; padding: 24px 0; font-size:0.9rem;">
+<div style="text-align:center; color:#6c757d; padding: 24px 0; font-size:0.9rem;">
     Upload a CSV export above to get started
 </div>
 """, unsafe_allow_html=True)

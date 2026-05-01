@@ -36,23 +36,23 @@ def _recession_gauge(probability: float, traffic_light: str) -> go.Figure:
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=probability,
-        number={"suffix": "%", "font": {"size": 30, "color": "#ffffff"}},
+        number={"suffix": "%", "font": {"size": 30, "color": "#293241"}},
         gauge={
             "axis": {
                 "range": [0, 100],
                 "tickvals": [0, 25, 50, 75, 100],
                 "ticktext": ["0", "25", "50", "75", "100"],
-                "tickfont": {"size": 10, "color": "#cccccc"},
+                "tickfont": {"size": 10, "color": "#6c757d"},
                 "tickwidth": 1,
-                "tickcolor": "#888",
+                "tickcolor": "#adb5bd",
             },
             "bar":       {"color": bar_color, "thickness": 0.65},
-            "bgcolor":   "#1a1a2e",
+            "bgcolor":   "#f0f2f5",
             "borderwidth": 0,
             "steps": [
-                {"range": [0,  25], "color": "#0d2218"},
-                {"range": [25, 50], "color": "#221a0d"},
-                {"range": [50, 100],"color": "#220d0d"},
+                {"range": [0,  25], "color": "#e8f8ee"},
+                {"range": [25, 50], "color": "#fff8e5"},
+                {"range": [50, 100],"color": "#fde8e8"},
             ],
         },
         domain={"x": [0, 1], "y": [0, 1]},
@@ -61,7 +61,7 @@ def _recession_gauge(probability: float, traffic_light: str) -> go.Figure:
         height=190,
         margin={"t": 10, "b": 5, "l": 20, "r": 20},
         paper_bgcolor="rgba(0,0,0,0)",
-        font={"color": "#ffffff"},
+        font={"color": "#293241"},
     )
     return fig
 
@@ -87,7 +87,7 @@ def _contributions_chart(model_output: RecessionModelOutput) -> go.Figure:
         marker_color=bar_colors,
         text=[f"{f.contribution:.1f}pp" for f in features],
         textposition="outside",
-        textfont={"size": 11, "color": "#ffffff"},
+        textfont={"size": 11, "color": "#293241"},
         hovertemplate=(
             "<b>%{y}</b><br>"
             "Contribution: %{x:.2f} pp<br>"
@@ -101,12 +101,12 @@ def _contributions_chart(model_output: RecessionModelOutput) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis={
             "title": "Contribution to Probability (percentage points)",
-            "color": "#cccccc",
-            "gridcolor": "#333",
+            "color": "#6c757d",
+            "gridcolor": "#e9ecef",
             "range": [0, max(f.contribution for f in features) * 1.35],
         },
-        yaxis={"color": "#ffffff", "gridcolor": "rgba(0,0,0,0)"},
-        font={"color": "#ffffff"},
+        yaxis={"color": "#293241", "gridcolor": "rgba(0,0,0,0)"},
+        font={"color": "#293241"},
         showlegend=False,
     )
     return fig
@@ -136,22 +136,22 @@ def _risk_scorecard(model_output: RecessionModelOutput) -> None:
             continue
 
         if feat.stress_score > 0.66:
-            icon, status, bg = "🔴", "Stressed",  "#3a1a1a"
+            icon, status, bg = "🔴", "Stressed",  "#fde8e8"
         elif feat.stress_score > 0.33:
-            icon, status, bg = "🟡", "Elevated",  "#3a2e1a"
+            icon, status, bg = "🟡", "Elevated",  "#fff8e5"
         else:
-            icon, status, bg = "🟢", "Normal",    "#1a3a2a"
+            icon, status, bg = "🟢", "Normal",    "#e8f8ee"
 
         with cols[i]:
             st.markdown(
                 f"""
                 <div style="text-align:center; padding:10px 6px;
                             background:{bg}; border-radius:10px;
-                            border:1px solid #444; min-height:80px;">
+                            border:1px solid #e9ecef; min-height:80px;">
                     <div style="font-size:22px; line-height:1;">{icon}</div>
-                    <div style="font-size:11px; color:#ffffff; margin-top:5px;
+                    <div style="font-size:11px; color:#293241; margin-top:5px;
                                 font-weight:600;">{_SCORECARD_LABELS[sid]}</div>
-                    <div style="font-size:10px; color:#cccccc; margin-top:2px;">
+                    <div style="font-size:10px; color:#6c757d; margin-top:2px;">
                         {status}
                     </div>
                 </div>
@@ -245,16 +245,16 @@ def render_overview_row(
         st.markdown("**Cycle Phase**")
         st.markdown(
             f"""
-            <div style="background:{phase_output.color}1a;
+            <div style="background:{phase_output.color}15;
                         border:2px solid {phase_output.color};
                         border-radius:12px; padding:14px 10px;
                         text-align:center; margin-bottom:8px;">
                 <div style="font-size:34px; line-height:1;">{phase_output.emoji}</div>
                 <div style="font-size:17px; font-weight:700;
-                            color:{phase_output.color}; margin-top:6px;">
+                            color:#293241; margin-top:6px;">
                     {phase_output.phase}
                 </div>
-                <div style="font-size:11px; color:{phase_output.confidence_color};
+                <div style="font-size:11px; color:#6c757d;
                             margin-top:4px; font-weight:500;">
                     {phase_output.confidence} confidence
                 </div>
@@ -265,7 +265,7 @@ def render_overview_row(
         st.caption(phase_output.notes)
         for ind in phase_output.confirming_indicators[:3]:
             st.markdown(
-                f"<div style='font-size:11px; color:#dddddd; margin-top:2px;'>✓ {ind}</div>",
+                f"<div style='font-size:11px; color:#6c757d; margin-top:2px;'>✓ {ind}</div>",
                 unsafe_allow_html=True,
             )
         _pa_text = _phase_action(phase_output.phase)
@@ -304,10 +304,10 @@ def render_overview_row(
         st.markdown("**LEI Momentum**")
         if lei_growth is not None:
             arrow = "↑" if lei_growth > 0 else "↓"
-            color = "#2ecc71" if lei_growth > 0 else "#e74c3c"
+            color = "#28a745" if lei_growth > 0 else "#e74c3c"
             st.markdown(
                 f"""
-                <div style="background:#1a1a2e; border:1px solid #444;
+                <div style="background:#ffffff; border:1px solid #e9ecef;
                             border-radius:12px; padding:16px; text-align:center;
                             margin-top:4px;">
                     <div style="font-size:30px; color:{color}; line-height:1;">
@@ -317,7 +317,7 @@ def render_overview_row(
                                 margin-top:4px;">
                         {lei_growth:+.1f}%
                     </div>
-                    <div style="font-size:11px; color:#dddddd; margin-top:4px;">
+                    <div style="font-size:11px; color:#6c757d; margin-top:4px;">
                         6-mo annualised
                     </div>
                 </div>
