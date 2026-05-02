@@ -7,7 +7,8 @@ never raises, never returns None silently.
 """
 
 import logging
-from datetime import date
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date, timedelta
 from typing import Optional
 
 import pandas as pd
@@ -231,6 +232,92 @@ def compute_icsa_yoy(icsa_data: pd.Series) -> Optional[float]:
         return None
 
     return round((current_avg / year_ago_avg - 1) * 100, 2)
+
+
+# ---------------------------------------------------------------------------
+# Cold-start parallel prefetch
+# ---------------------------------------------------------------------------
+
+# Series needed with full history for the recession model and NBER shading
+_PREFETCH_LONG: list[str] = [
+    "T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA",
+    "BAMLH0A0HYM2", "UNRATE", "USREC",
+]
+
+# All series rendered by the 8 dashboard tabs (deduped)
+_PREFETCH_TABS: list[str] = [
+    # Tab 1 – Macro
+    "A191RL1Q225SBEA", "GDPC1",
+    # Tab 2 – Growth
+    "INDPRO", "TCU", "ADXTNO",
+    # Tab 3 – Labor
+    "UNRATE", "U6RATE", "PAYEMS", "IC4WSA", "CCSA", "JTSJOL", "CES0500000003",
+    # Tab 4 – Inflation
+    "CPIAUCSL", "CPILFESL", "PCEPI", "PCEPILFE",
+    "T5YIE", "T10YIE", "DCOILWTICO", "PPIFIS",
+    # Tab 5 – Monetary
+    "T10Y3M", "T10Y2Y", "FEDFUNDS", "DGS10", "DGS2",
+    "NFCI", "BAMLC0A0CM", "BAMLH0A0HYM2", "MORTGAGE30US",
+    # Tab 6 – Markets
+    "SP500", "NASDAQCOM", "VIXCLS", "BAMLC0A0CM", "BAMLH0A0HYM2", "WILL5000INDFC",
+    # Tab 7 – Housing & Consumer
+    "HOUST", "PERMIT", "CSUSHPISA", "RSXFS", "RSFSXMV", "UMCSENT", "PSAVERT",
+    # Tab 8 – Global
+    "DTWEXBGS", "DEXUSEU", "DEXJPUS", "DCOILBRENTEU", "PALLFNFINDEXQ",
+    # Overview row — phase total-return indices
+    "BAMLUT0008TRIV", "BAMLHYH0A0HYM2TRIV", "GOLDAMGBD228NLBM",
+    # NBER shading used by every tab
+    "USREC",
+]
+
+# Yield-curve snapshot in Tab 5 fetches with its own fixed start date
+_PREFETCH_YIELD_CURVE: list[str] = [
+    "DGS1MO", "DGS3MO", "DGS6MO", "DGS1",
+    "DGS2", "DGS5", "DGS10", "DGS30",
+]
+
+
+def prefetch_all_series(
+    tab_start: Optional[str] = None,
+    max_workers: int = 12,
+) -> None:
+    """
+    Pre-warm the fetch_series() cache by firing all known FRED requests in
+    parallel via a thread pool.  Call once at cold start — subsequent calls
+    are no-ops because every fetch hits the in-memory cache immediately.
+
+    Args:
+        tab_start:   ISO start date for tab-level series (default: 10 years ago).
+        max_workers: Thread pool size — FRED handles ~12 concurrent requests fine.
+    """
+    if tab_start is None:
+        tab_start = (date.today() - timedelta(days=10 * 365)).strftime("%Y-%m-%d")
+
+    # Build deduplicated set of (series_id, start_date) pairs
+    calls: set[tuple[str, str]] = set()
+
+    for sid in _PREFETCH_LONG:
+        calls.add((sid, "1990-01-01"))
+
+    for sid in set(_PREFETCH_TABS):
+        calls.add((sid, tab_start))
+
+    for sid in _PREFETCH_YIELD_CURVE:
+        calls.add((sid, "2023-01-01"))
+
+    def _safe_fetch(sid: str, start: str) -> None:
+        try:
+            fetch_series(sid, start_date=start)
+        except Exception:
+            pass  # fetch_series never raises, but guard defensively
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            pool.submit(_safe_fetch, sid, start): (sid, start)
+            for sid, start in calls
+        }
+        for fut in as_completed(futures):
+            fut.result()
 
 
 # ---------------------------------------------------------------------------

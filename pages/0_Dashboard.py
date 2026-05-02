@@ -28,6 +28,7 @@ from data.fred_client import (
     compute_lei_growth,
     fetch_model_inputs,
     fetch_series,
+    prefetch_all_series,
 )
 from models.cycle_classifier import classify_cycle_phase
 from models.recession_model import run_recession_model
@@ -68,6 +69,14 @@ with col_r:
     if st.button("🔄 Refresh", help="Clear cache and reload all data"):
         st.cache_data.clear()
         st.rerun()
+
+# ── Cold-start cache warm-up (runs once per server process) ───────────────────
+@st.cache_resource(show_spinner=False)
+def _warm_fred_cache() -> None:
+    """Fire all FRED fetches in parallel so the first render is fast."""
+    prefetch_all_series()   # uses 10Y default; populates @st.cache_data
+
+_warm_fred_cache()
 
 # ── Load model data ────────────────────────────────────────────────────────────
 with st.spinner("Loading economic data…"):
