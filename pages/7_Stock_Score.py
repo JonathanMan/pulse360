@@ -71,13 +71,13 @@ def _render_section_items(items: list[dict]) -> None:
         pts    = item["pts"]
         pct    = earned / pts if pts > 0 else 0
         if pct >= 0.8:
-            icon, color = "✅", "#2ecc71"
+            icon, color = "✅", "#00a35a"
         elif pct >= 0.4:
-            icon, color = "🟡", "#f39c12"
+            icon, color = "🟡", "#c98800"
         elif item.get("pass") is None:
             icon, color = "⬜", "#555"
         else:
-            icon, color = "❌", "#e74c3c"
+            icon, color = "❌", "#d92626"
 
         tip_html = (
             f'<span style="font-size:0.72rem;color:#888;margin-left:8px;">ℹ {item["tip"]}</span>'
@@ -288,8 +288,8 @@ if ticker_input:
                 open=hist["Open"], high=hist["High"],
                 low=hist["Low"],   close=hist["Close"],
                 name="Price",
-                increasing_line_color="#2ecc71", decreasing_line_color="#e74c3c",
-                increasing_fillcolor="#2ecc71",  decreasing_fillcolor="#e74c3c",
+                increasing_line_color="#00a35a", decreasing_line_color="#d92626",
+                increasing_fillcolor="#00a35a",  decreasing_fillcolor="#d92626",
                 line={"width": 1}, showlegend=False,
             ))
         else:
@@ -301,13 +301,13 @@ if ticker_input:
         # 200-day MA: solid weight-2 (primary trend reference)
         fig_price.add_trace(go.Scatter(
             x=ma200_series.index, y=ma200_series.values,
-            name="200-day MA", line={"color": "#e74c3c", "width": 2},
+            name="200-day MA", line={"color": "#d92626", "width": 2},
             hovertemplate="200MA: $%{y:.2f}<extra></extra>",
         ))
         # 50-day MA: dotted (short-term momentum)
         fig_price.add_trace(go.Scatter(
             x=ma50_series.index, y=ma50_series.values,
-            name="50-day MA", line={"color": "#f39c12", "width": 1.5, "dash": "dot"},
+            name="50-day MA", line={"color": "#c98800", "width": 1.5, "dash": "dot"},
             hovertemplate="50MA: $%{y:.2f}<extra></extra>",
         ))
 
@@ -317,11 +317,11 @@ if ticker_input:
         last_ma50  = float(ma50_series.dropna().iloc[-1])  if not ma50_series.dropna().empty  else None
         if last_ma200:
             if last_close < last_ma200 * 0.97:
-                tech_label, tech_color = "⚠ Technical Downtrend", "#e74c3c"
+                tech_label, tech_color = "⚠ Technical Downtrend", "#d92626"
             elif last_close > last_ma200 * 1.03 and last_ma50 and last_ma50 > last_ma200:
-                tech_label, tech_color = "✓ Technical Uptrend", "#2ecc71"
+                tech_label, tech_color = "✓ Technical Uptrend", "#00a35a"
             else:
-                tech_label, tech_color = "→ Near 200-day MA", "#f39c12"
+                tech_label, tech_color = "→ Near 200-day MA", "#c98800"
         else:
             tech_label, tech_color = "", "#888"
 
@@ -341,7 +341,7 @@ if ticker_input:
                 y0=last_close * 0.85, y1=last_ma200,
                 fillcolor="rgba(231,76,60,0.05)", line_width=0,
                 annotation_text="Below 200MA", annotation_position="top left",
-                annotation_font={"size": 10, "color": "#e74c3c"},
+                annotation_font={"size": 10, "color": "#d92626"},
             )
         st.plotly_chart(fig_price, use_container_width=True, key="header_price_chart")
 
@@ -425,7 +425,7 @@ if ticker_input:
             f"High-quality moat ({moat['score']}/{moat['max']}) with weak momentum "
             f"({momentum['score']}/{momentum['max']}). "
             "Fundamentals lead price — Buffett's preferred setup.",
-            "#2ecc71", "#0d2b1d",
+            "#00a35a", "#0d2b1d",
         ))
     if mom_pct >= 0.70 and val_pct <= 0.40:
         _alerts.append((
@@ -457,7 +457,7 @@ if ticker_input:
             f"Weak moat ({moat['score']}/{moat['max']}), deteriorating momentum, "
             "and poor valuation context. "
             "Cheap can always get cheaper.",
-            "#e74c3c", "#2b0d0d",
+            "#d92626", "#2b0d0d",
         ))
 
     for _title, _body, _accent, _bg in _alerts:
@@ -539,7 +539,7 @@ if ticker_input:
 
         with col_f:
             f_score = fortress.get("piotroski_score", 0)
-            f_color = "#2ecc71" if f_score >= 7 else "#f39c12" if f_score >= 4 else "#e74c3c"
+            f_color = "#00a35a" if f_score >= 7 else "#c98800" if f_score >= 4 else "#d92626"
             st.markdown(
                 f'<div style="background:#1a1a2e;border:1px solid {_hex_rgba(f_color,0.4)};'
                 f'border-radius:8px;padding:14px;text-align:center;margin-bottom:12px;">'
@@ -567,7 +567,7 @@ if ticker_input:
         with col_z:
             z_val  = fortress.get("altman_z")
             z_zone = fortress.get("altman_zone", "N/A")
-            z_color = "#2ecc71" if (z_val and z_val > 2.99) else "#f39c12" if (z_val and z_val > 1.81) else "#e74c3c"
+            z_color = "#00a35a" if (z_val and z_val > 2.99) else "#c98800" if (z_val and z_val > 1.81) else "#d92626"
             st.markdown(
                 f'<div style="background:#1a1a2e;border:1px solid {_hex_rgba(z_color,0.4)};'
                 f'border-radius:8px;padding:14px;text-align:center;margin-bottom:12px;">'
@@ -762,12 +762,12 @@ if ticker_input:
             ))
             fig_p.add_trace(go.Scatter(
                 x=ma200_series.index, y=ma200_series.values,
-                name="200-day MA", line={"color": "#e74c3c", "width": 2},
+                name="200-day MA", line={"color": "#d92626", "width": 2},
                 hovertemplate="200MA: $%{y:.2f}<extra></extra>",
             ))
             fig_p.add_trace(go.Scatter(
                 x=ma50_series.index, y=ma50_series.values,
-                name="50-day MA", line={"color": "#f39c12", "width": 1.5, "dash": "dot"},
+                name="50-day MA", line={"color": "#c98800", "width": 1.5, "dash": "dot"},
                 hovertemplate="50MA: $%{y:.2f}<extra></extra>",
             ))
             fig_p = dark_layout(fig_p, yaxis_title="Price (USD)")
@@ -814,8 +814,8 @@ if ticker_input:
                 fig_sh.add_trace(go.Bar(
                     x=sh_df["Year"], y=sh_df["Shares (B)"],
                     marker_color=[
-                        "#2ecc71" if i == 0 or sh_df["Shares (B)"].iloc[i] <= sh_df["Shares (B)"].iloc[i - 1]
-                        else "#e74c3c"
+                        "#00a35a" if i == 0 or sh_df["Shares (B)"].iloc[i] <= sh_df["Shares (B)"].iloc[i - 1]
+                        else "#d92626"
                         for i in range(len(sh_df))
                     ],
                     hovertemplate="<b>%{x}</b>: %{y:.3f}B shares<extra></extra>",
@@ -837,7 +837,7 @@ if ticker_input:
 
     if total >= 75:
         verdict_title = "STRONG BUY CANDIDATE"
-        verdict_color = "#2ecc71"
+        verdict_color = "#00a35a"
         verdict_body  = (
             f"{long_name} scores {total}/100 — clearing the bar for exceptional quality. "
             "Wide moat fundamentals, strong financial health, and reasonable valuation all align. "
@@ -866,7 +866,7 @@ if ticker_input:
         )
     else:
         verdict_title = "DOES NOT PASS SCREEN"
-        verdict_color = "#e74c3c"
+        verdict_color = "#d92626"
         verdict_body  = (
             f"{long_name} scores {total}/100 — failing across most Buffett criteria. "
             "Buffett: 'It's far better to buy a wonderful company at a fair price "

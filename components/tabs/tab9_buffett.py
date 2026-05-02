@@ -35,11 +35,11 @@ DISCLAIMER = (
 
 # ── Valuation zones ───────────────────────────────────────────────────────────
 _ZONES = [
-    (0,    75,  "Significantly Undervalued", "#2ecc71"),
+    (0,    75,  "Significantly Undervalued", "#00a35a"),
     (75,  100,  "Modestly Undervalued",      "#27ae60"),
     (100, 115,  "Fair Value",                "#f1c40f"),
     (115, 135,  "Modestly Overvalued",       "#e67e22"),
-    (135, 165,  "Overvalued",                "#e74c3c"),
+    (135, 165,  "Overvalued",                "#d92626"),
     (165, 999,  "Significantly Overvalued",  "#c0392b"),
 ]
 
@@ -451,12 +451,12 @@ def render_tab9(model_output, phase_output) -> None:
             ">
                 <div style="font-size:2.4rem; line-height:1;">🕐</div>
                 <div>
-                    <div style="color:#e74c3c; font-size:0.75rem; font-weight:700;
+                    <div style="color:#d92626; font-size:0.75rem; font-weight:700;
                                 letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px;">
                         Currently Above 165% Threshold
                     </div>
                     <div style="color:#ffffff; font-size:1.05rem; line-height:1.5;">
-                        The Buffett Indicator has been in <strong style="color:#e74c3c;">
+                        The Buffett Indicator has been in <strong style="color:#d92626;">
                         Significantly Overvalued</strong> territory for
                         <strong style="color:#ffffff; font-size:1.35rem;">
                         &nbsp;{breach_months}&nbsp;months</strong>
@@ -478,37 +478,37 @@ def render_tab9(model_output, phase_output) -> None:
             f"Buffett Indicator at {current_ratio:.1f}% — significantly overvalued; "
             f"Buffett historically accumulates cash and avoids crowded markets at these levels; "
             f"consider reducing equity allocation and raising quality bar.",
-            "#e74c3c",
+            "#d92626",
         )
     elif current_ratio > 135:
         render_action_item(
             f"Buffett Indicator at {current_ratio:.1f}% — overvalued; "
             f"favour quality and value over growth; avoid leverage; hold above-average cash.",
-            "#e74c3c",
+            "#d92626",
         )
     elif current_ratio > 115:
         render_action_item(
             f"Buffett Indicator at {current_ratio:.1f}% — modestly overvalued; "
             f"maintain strategic allocation but avoid aggressive new equity purchases at elevated prices.",
-            "#f39c12",
+            "#c98800",
         )
     elif current_ratio > 100:
         render_action_item(
             f"Buffett Indicator at {current_ratio:.1f}% — near fair value; "
             f"standard strategic allocation supported; no major over/underweight warranted.",
-            "#f39c12",
+            "#c98800",
         )
     elif current_ratio > 75:
         render_action_item(
             f"Buffett Indicator at {current_ratio:.1f}% — modestly undervalued; "
             f"equities offer reasonable long-term value; incremental equity overweight supported.",
-            "#2ecc71",
+            "#00a35a",
         )
     else:
         render_action_item(
             f"Buffett Indicator at {current_ratio:.1f}% — significantly undervalued; "
             f"Buffett would be buying aggressively; strong long-term entry opportunity.",
-            "#2ecc71",
+            "#00a35a",
         )
 
     st.markdown("---")
@@ -528,7 +528,7 @@ def render_tab9(model_output, phase_output) -> None:
 
     # ── Component 1 — Buffett Indicator (40 pts max) ──────────────────────────
     if current_ratio < 75:
-        bi_pts, bi_signal, bi_color = 40, "Significantly Undervalued", "#2ecc71"
+        bi_pts, bi_signal, bi_color = 40, "Significantly Undervalued", "#00a35a"
     elif current_ratio < 100:
         bi_pts, bi_signal, bi_color = 32, "Modestly Undervalued",      "#27ae60"
     elif current_ratio < 115:
@@ -536,22 +536,22 @@ def render_tab9(model_output, phase_output) -> None:
     elif current_ratio < 135:
         bi_pts, bi_signal, bi_color = 14, "Neutral / Modestly OV",     "#e67e22"
     elif current_ratio < 165:
-        bi_pts, bi_signal, bi_color =  6, "Overvalued",                "#e74c3c"
+        bi_pts, bi_signal, bi_color =  6, "Overvalued",                "#d92626"
     else:
         bi_pts, bi_signal, bi_color =  0, "Significantly Overvalued",  "#c0392b"
 
     # ── Component 2 — Recession Probability (35 pts max) ─────────────────────
     rec_prob = model_output.probability
     if rec_prob < 5:
-        rp_pts, rp_signal, rp_color = 35, "Very Low",  "#2ecc71"
+        rp_pts, rp_signal, rp_color = 35, "Very Low",  "#00a35a"
     elif rec_prob < 15:
         rp_pts, rp_signal, rp_color = 25, "Low",       "#27ae60"
     elif rec_prob < 30:
-        rp_pts, rp_signal, rp_color = 15, "Moderate",  "#f39c12"
+        rp_pts, rp_signal, rp_color = 15, "Moderate",  "#c98800"
     elif rec_prob < 50:
         rp_pts, rp_signal, rp_color =  7, "Elevated",  "#e67e22"
     else:
-        rp_pts, rp_signal, rp_color =  0, "High",      "#e74c3c"
+        rp_pts, rp_signal, rp_color =  0, "High",      "#d92626"
 
     # ── Component 3 — Yield Curve / Financial Conditions (25 pts max) ────────
     yc_val: float | None = None
@@ -578,26 +578,26 @@ def render_tab9(model_output, phase_output) -> None:
 
     if yc_val is not None:
         if yc_val > 1.0:
-            yc_pts, yc_sig, yc_color = 25, f"+{yc_val:.2f}pp Steep",      "#2ecc71"
+            yc_pts, yc_sig, yc_color = 25, f"+{yc_val:.2f}pp Steep",      "#00a35a"
         elif yc_val > 0.0:
             yc_pts, yc_sig, yc_color = 17, f"+{yc_val:.2f}pp Flat",       "#f1c40f"
         elif yc_val > -0.5:
             yc_pts, yc_sig, yc_color =  8, f"{yc_val:.2f}pp Inverted",    "#e67e22"
         else:
-            yc_pts, yc_sig, yc_color =  0, f"{yc_val:.2f}pp Deep Inv.",   "#e74c3c"
+            yc_pts, yc_sig, yc_color =  0, f"{yc_val:.2f}pp Deep Inv.",   "#d92626"
     else:
         tl = model_output.traffic_light
         if tl == "green":
-            yc_pts, yc_sig, yc_color = 25, "Green",  "#2ecc71"
+            yc_pts, yc_sig, yc_color = 25, "Green",  "#00a35a"
         elif tl == "yellow":
-            yc_pts, yc_sig, yc_color = 12, "Yellow", "#f39c12"
+            yc_pts, yc_sig, yc_color = 12, "Yellow", "#c98800"
         else:
-            yc_pts, yc_sig, yc_color =  0, "Red",    "#e74c3c"
+            yc_pts, yc_sig, yc_color =  0, "Red",    "#d92626"
 
     composite_score = bi_pts + rp_pts + yc_pts  # 0–100
 
     if composite_score >= 70:
-        cs_label, cs_color = "Strong Buy Environment", "#2ecc71"
+        cs_label, cs_color = "Strong Buy Environment", "#00a35a"
         cs_action = "Macro backdrop supports equity overweight. Long-term entry conditions favourable."
     elif composite_score >= 55:
         cs_label, cs_color = "Broadly Favourable",     "#27ae60"
@@ -609,7 +609,7 @@ def render_tab9(model_output, phase_output) -> None:
         cs_label, cs_color = "Elevated Risk",          "#e67e22"
         cs_action = "Reduce equity exposure; raise cash; increase quality and defensive tilt."
     else:
-        cs_label, cs_color = "Strong Caution",         "#e74c3c"
+        cs_label, cs_color = "Strong Caution",         "#d92626"
         cs_action = "Defensive posture warranted. Buffett-style cash accumulation historically optimal."
 
     # ── Composite score card ───────────────────────────────────────────────────
@@ -653,8 +653,8 @@ def render_tab9(model_output, phase_output) -> None:
           </div>
           <div style="position:relative;margin-bottom:5px;">
             <div style="background:#0e1117;border-radius:6px;height:10px;overflow:hidden;">
-              <div style="background:linear-gradient(90deg,#c0392b 0%,#e74c3c 15%,
-                          #e67e22 28%,#f39c12 42%,#f1c40f 55%,#27ae60 70%,#2ecc71 100%);
+              <div style="background:linear-gradient(90deg,#c0392b 0%,#d92626 15%,
+                          #e67e22 28%,#c98800 42%,#f1c40f 55%,#27ae60 70%,#00a35a 100%);
                           width:100%;height:100%;border-radius:6px;"></div>
             </div>
             <div style="position:absolute;top:-3px;left:{composite_score}%;
@@ -690,21 +690,21 @@ def render_tab9(model_output, phase_output) -> None:
                 if v is None:
                     return "#555", "—"
                 txt = f"{v:+.1f}%"
-                if v >= 20:   return "#2ecc71", txt
+                if v >= 20:   return "#00a35a", txt
                 if v >= 10:   return "#27ae60", txt
                 if v >=  0:   return "#f1c40f", txt
                 if v >= -10:  return "#e67e22", txt
-                return "#e74c3c", txt
+                return "#d92626", txt
 
             def _prob_color(v: float | None) -> tuple[str, str]:
                 if v is None:
                     return "#555", "—"
                 txt = f"{v:.0f}%"
-                if v >= 75:  return "#2ecc71", txt
+                if v >= 75:  return "#00a35a", txt
                 if v >= 60:  return "#27ae60", txt
                 if v >= 50:  return "#f1c40f", txt
                 if v >= 35:  return "#e67e22", txt
-                return "#e74c3c", txt
+                return "#d92626", txt
 
             th = ("background:#1a1a2e;color:#aaa;font-size:0.72rem;font-weight:700;"
                   "letter-spacing:.04em;text-transform:uppercase;padding:7px 10px;"
@@ -877,7 +877,7 @@ def render_tab9(model_output, phase_output) -> None:
                         x=zone_stats.index.tolist(),
                         y=zone_stats[col].tolist(),
                         marker_color=[
-                            _hex_rgba("#2ecc71", 0.85) if v >= 0 else _hex_rgba("#e74c3c", 0.85)
+                            _hex_rgba("#00a35a", 0.85) if v >= 0 else _hex_rgba("#d92626", 0.85)
                             for v in zone_stats[col].tolist()
                         ],
                         marker_line_color=line_color,
@@ -944,9 +944,9 @@ def render_tab9(model_output, phase_output) -> None:
 
     # Key thresholds
     for thresh, label, color in [
-        (75,  "75% Undervalued",  "#2ecc71"),
+        (75,  "75% Undervalued",  "#00a35a"),
         (100, "100% Fair Value",  "#f1c40f"),
-        (135, "135% Overvalued",  "#e74c3c"),
+        (135, "135% Overvalued",  "#d92626"),
     ]:
         fig.add_hline(
             y=thresh, line_dash="dash", line_color=color, line_width=1,
@@ -983,7 +983,7 @@ def render_tab9(model_output, phase_output) -> None:
     ))
     fig2.add_trace(go.Scatter(
         x=g_norm.index, y=g_norm.values,
-        mode="lines", line={"color": "#2ecc71", "width": 2, "dash": "dot"},
+        mode="lines", line={"color": "#00a35a", "width": 2, "dash": "dot"},
         name="Nominal GDP (rebased to 100)",
         hovertemplate="%{x|%b %Y}: <b>%{y:.0f}</b><extra></extra>",
     ))
@@ -1037,7 +1037,7 @@ def render_tab9(model_output, phase_output) -> None:
                     x=c["trough_date"], y=float(ratio.max()) * 1.04,
                     text=f"-{depth:.0%}",
                     showarrow=False,
-                    font={"color": "#e74c3c", "size": 8},
+                    font={"color": "#d92626", "size": 8},
                     xanchor="center",
                     yref="y",
                 )
@@ -1073,7 +1073,7 @@ def render_tab9(model_output, phase_output) -> None:
         # Overvaluation threshold lines
         for thresh, label, color in [
             (115, "115% Modestly OV",      "#e67e22"),
-            (135, "135% Overvalued",        "#e74c3c"),
+            (135, "135% Overvalued",        "#d92626"),
             (165, "165% Significantly OV",  "#c0392b"),
         ]:
             fig_c.add_hline(
@@ -1161,7 +1161,7 @@ def render_tab9(model_output, phase_output) -> None:
             st.dataframe(df, use_container_width=True, hide_index=True)
 
             # Callout
-            color = "#e74c3c" if avg_lag < 6 else "#f39c12" if avg_lag < 18 else "#2ecc71"
+            color = "#d92626" if avg_lag < 6 else "#c98800" if avg_lag < 18 else "#00a35a"
             render_action_item(
                 f"Since 1950, when the Buffett Indicator first crossed {thresh_val:.0f}%, "
                 f"a market correction (≥10%) followed on average {avg_lag:.1f} months later "
@@ -1217,7 +1217,7 @@ def render_tab9(model_output, phase_output) -> None:
     # Derive action from composite score + current valuation
     if composite_score >= 70:
         action_verb  = "BUY / OVERWEIGHT"
-        action_color = "#2ecc71"
+        action_color = "#00a35a"
         action_body  = (
             f"The Buffett Indicator ({current_ratio:.1f}% of GDP) sits in favourable territory "
             f"and macro conditions support it. Add equity exposure — Buffett would be deploying capital."
@@ -1248,7 +1248,7 @@ def render_tab9(model_output, phase_output) -> None:
         )
     else:
         action_verb  = "DEFENSIVE — ACCUMULATE CASH"
-        action_color = "#e74c3c"
+        action_color = "#d92626"
         action_body  = (
             f"At {current_ratio:.1f}% of GDP ({hist_pct:.0f}th historical percentile), "
             f"this is among the most overvalued readings on record. "
@@ -1328,7 +1328,7 @@ def render_tab9(model_output, phase_output) -> None:
                 verdict_body  = "Not enough historical observations at this valuation level."
             elif p_dca_pos >= 85 and current_ratio < 135:
                 verdict       = "YES — CONTINUE OR INCREASE DCA"
-                verdict_color = "#2ecc71"
+                verdict_color = "#00a35a"
                 verdict_body  = (
                     f"At {current_ratio:.1f}% of GDP, historical data shows a {p_dca_pos:.0f}% "
                     f"probability of a positive 5-year DCA return. "
@@ -1344,7 +1344,7 @@ def render_tab9(model_output, phase_output) -> None:
                 )
             elif p_dca_pos >= 55:
                 verdict       = "YES — BUT REDUCE SIZE OR EXTEND HORIZON"
-                verdict_color = "#f39c12"
+                verdict_color = "#c98800"
                 verdict_body  = (
                     f"At {current_ratio:.1f}% of GDP, the probability of positive 5Y DCA returns "
                     f"is {p_dca_pos:.0f}% historically. DCA is still rational but expected returns "
@@ -1353,7 +1353,7 @@ def render_tab9(model_output, phase_output) -> None:
                 )
             else:
                 verdict       = "CONTINUE — BUT EXPECT MUTED RETURNS"
-                verdict_color = "#e74c3c"
+                verdict_color = "#d92626"
                 verdict_body  = (
                     f"At {current_ratio:.1f}% of GDP ({hist_pct:.0f}th percentile), "
                     f"only {p_dca_pos:.0f}% of historical DCA starting points at this zone "
@@ -1435,19 +1435,19 @@ def render_tab9(model_output, phase_output) -> None:
                 if v is None:
                     return "#555", "—"
                 t = f"{v:+.1f}%"
-                if v >= 30:   return "#2ecc71", t
+                if v >= 30:   return "#00a35a", t
                 if v >= 10:   return "#27ae60", t
                 if v >=  0:   return "#f1c40f", t
-                return "#e74c3c", t
+                return "#d92626", t
 
             def _pct_color(v: float | None) -> tuple[str, str]:
                 if v is None:
                     return "#555", "—"
                 t = f"{v:.0f}%"
-                if v >= 80:  return "#2ecc71", t
+                if v >= 80:  return "#00a35a", t
                 if v >= 65:  return "#27ae60", t
                 if v >= 50:  return "#f1c40f", t
-                return "#e74c3c", t
+                return "#d92626", t
 
             zone_rows_html = ""
             for zone in _ZONE_ORDER:
@@ -1558,7 +1558,7 @@ def render_tab9(model_output, phase_output) -> None:
                     x=zone_labels_chart,
                     y=dca_med_5y,
                     marker_color=[
-                        _hex_rgba("#2ecc71", 0.85) if v >= 0 else _hex_rgba("#e74c3c", 0.85)
+                        _hex_rgba("#00a35a", 0.85) if v >= 0 else _hex_rgba("#d92626", 0.85)
                         for v in dca_med_5y
                     ],
                     marker_line_color="#3498db",
@@ -1570,7 +1570,7 @@ def render_tab9(model_output, phase_output) -> None:
                     x=zone_labels_chart,
                     y=lump_med_5y,
                     marker_color=[
-                        _hex_rgba("#9b59b6", 0.55) if v >= 0 else _hex_rgba("#e74c3c", 0.55)
+                        _hex_rgba("#9b59b6", 0.55) if v >= 0 else _hex_rgba("#d92626", 0.55)
                         for v in lump_med_5y
                     ],
                     marker_line_color="#9b59b6",
@@ -1583,17 +1583,17 @@ def render_tab9(model_output, phase_output) -> None:
                     y=p_dca_pos_5y,
                     mode="lines+markers",
                     yaxis="y2",
-                    line={"color": "#f39c12", "width": 2, "dash": "dot"},
-                    marker={"size": 8, "color": "#f39c12"},
+                    line={"color": "#c98800", "width": 2, "dash": "dot"},
+                    marker={"size": 8, "color": "#c98800"},
                     hovertemplate="<b>%{x}</b><br>P(DCA>0): <b>%{y:.1f}%</b><extra></extra>",
                 ))
 
                 fig_dca.add_hline(y=0,  line_dash="dash", line_color="#555", line_width=1)
                 fig_dca.add_hline(
-                    y=50, line_dash="dot", line_color="#f39c12", line_width=1,
+                    y=50, line_dash="dot", line_color="#c98800", line_width=1,
                     yref="y2",
                     annotation_text="50% breakeven",
-                    annotation_font_color="#f39c12",
+                    annotation_font_color="#c98800",
                     annotation_position="top right",
                     annotation_font_size=9,
                 )
@@ -1604,12 +1604,12 @@ def render_tab9(model_output, phase_output) -> None:
                     barmode="group",
                     xaxis={"tickangle": -20},
                     yaxis2={
-                        "title":      {"text": "P(DCA > 0) %", "font": {"color": "#f39c12"}},
+                        "title":      {"text": "P(DCA > 0) %", "font": {"color": "#c98800"}},
                         "overlaying": "y",
                         "side":       "right",
                         "range":      [0, 110],
                         "showgrid":   False,
-                        "tickfont":   {"color": "#f39c12"},
+                        "tickfont":   {"color": "#c98800"},
                     },
                     legend={"orientation": "h", "y": -0.28},
                 )

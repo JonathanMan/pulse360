@@ -109,10 +109,10 @@ with ctrl_right:
 # ── Macro Overlay ─────────────────────────────────────────────────────────────
 _REGIME_META = {
     "Normal":               ("⚪", "#888888", "No adjustment — pure Buffett score"),
-    "High Inflation":       ("🔴", "#e74c3c", "Energy & Materials ↑  ·  Tech & Real Estate ↓"),
+    "High Inflation":       ("🔴", "#d92626", "Energy & Materials ↑  ·  Tech & Real Estate ↓"),
     "Rising Rates":         ("🟠", "#e67e22", "Banks & Insurance ↑  ·  Utilities & REITs ↓"),
     "Recession Risk":       ("🟡", "#f1c40f", "Staples & Healthcare ↑  ·  Cyclicals & Industrials ↓"),
-    "Recovery / Expansion": ("🟢", "#2ecc71", "Cyclicals & Industrials ↑  ·  Defensives ↓"),
+    "Recovery / Expansion": ("🟢", "#00a35a", "Cyclicals & Industrials ↑  ·  Defensives ↓"),
 }
 
 st.markdown(
@@ -144,7 +144,7 @@ with ov_right:
         f'<span style="font-size:1rem;">{icon}</span>'
         f'<span style="color:#495057;font-size:0.82rem;font-weight:500;">'
         f'<strong style="color:{accent};">{macro_regime}</strong>'
-        f'&nbsp;&nbsp;<span style="color:#adb5bd;">|</span>&nbsp;&nbsp;{summary}'
+        f'&nbsp;&nbsp;<span style="color:#a0a0a0;">|</span>&nbsp;&nbsp;{summary}'
         f'</span></div>',
         unsafe_allow_html=True,
     )
@@ -163,9 +163,9 @@ if focus:
         f'<span style="color:{accent2};font-size:0.75rem;font-weight:700;'
         f'text-transform:uppercase;letter-spacing:.04em;">Regime Focus</span>'
         f'&nbsp;&nbsp;<span style="color:#495057;font-size:0.78rem;">'
-        f'Prioritise <strong style="color:#293241;">{focus_section}</strong>'
-        f' · Favoured: <em style="color:#6c757d;">{focus_sectors}</em></span>'
-        f'<div style="color:#6c757d;font-size:0.73rem;margin-top:3px;">{focus_rationale}</div>'
+        f'Prioritise <strong style="color:#0a0a0a;">{focus_section}</strong>'
+        f' · Favoured: <em style="color:#6a6a6a;">{focus_sectors}</em></span>'
+        f'<div style="color:#6a6a6a;font-size:0.73rem;margin-top:3px;">{focus_rationale}</div>'
         f'</div></div>',
         unsafe_allow_html=True,
     )
@@ -245,17 +245,17 @@ if st.session_state.get("screener_results"):
     _cach = sum(1 for r in _all if r.get("_stale"))
     _fail = len(st.session_state.get("screener_errors", []))
     parts = []
-    if _live: parts.append(f'<span style="color:#2ecc71;">🟢 {_live} live</span>')
-    if _cach: parts.append(f'<span style="color:#f39c12;">📦 {_cach} stale</span>')
-    if _fail: parts.append(f'<span style="color:#e74c3c;">⚠️ {_fail} failed</span>')
+    if _live: parts.append(f'<span style="color:#00a35a;">🟢 {_live} live</span>')
+    if _cach: parts.append(f'<span style="color:#c98800;">📦 {_cach} stale</span>')
+    if _fail: parts.append(f'<span style="color:#d92626;">⚠️ {_fail} failed</span>')
     sort_label = (f' · sorted by <strong style="color:#3498db;">{sort_col}</strong>'
                   if sort_col != "Score" else "")
     regime_label = (
         "" if macro_regime == "Normal"
-        else f" · <span style='color:#f39c12;'>{macro_regime} overlay</span>"
+        else f" · <span style='color:#c98800;'>{macro_regime} overlay</span>"
     )
     st.markdown(
-        f'<div style="font-size:0.75rem;color:#6c757d;margin-bottom:8px;">'
+        f'<div style="font-size:0.75rem;color:#6a6a6a;margin-bottom:8px;">'
         f'Data: &nbsp;' + ' &nbsp;·&nbsp; '.join(parts) +
         f'{sort_label}{regime_label}'
         f'&nbsp;&nbsp;<span style="color:#9aa0ac;font-style:italic;">· cached 1 hr</span></div>',
@@ -296,8 +296,8 @@ if st.session_state.get("screener_results"):
 
         # Circle of Competence badge — inline in ticker cell
         _tier = _COMPLEXITY.get(str(row["Ticker"]), "moderate")
-        _tier_color = {"straightforward": "#2ecc71", "moderate": "#f39c12",
-                       "specialist": "#e74c3c"}[_tier]
+        _tier_color = {"straightforward": "#00a35a", "moderate": "#c98800",
+                       "specialist": "#d92626"}[_tier]
         _tier_tip = {
             "straightforward": "Straightforward — clear moat, simple business model; suitable for all investors",
             "moderate":        "Moderate complexity — understandable with research and sector knowledge",
@@ -311,7 +311,7 @@ if st.session_state.get("screener_results"):
         ticker_cell = (
             row["Ticker"]
             + _circle_badge
-            + (f' <span style="color:#f39c12;font-size:0.65rem;"'
+            + (f' <span style="color:#c98800;font-size:0.65rem;"'
                f' title="{stale_tip}">📦</span>' if is_stale else "")
         )
 
@@ -327,18 +327,18 @@ if st.session_state.get("screener_results"):
 
         sh_chg_val = row.get("ShareChg")
         if sh_chg_val is not None:
-            sh_color = "#2ecc71" if sh_chg_val <= -1 else ("#e74c3c" if sh_chg_val > 1 else "#f39c12")
+            sh_color = "#00a35a" if sh_chg_val <= -1 else ("#d92626" if sh_chg_val > 1 else "#c98800")
             sh_tip   = "Buybacks ✓" if sh_chg_val <= -1 else ("Dilution ⚠" if sh_chg_val > 1 else "Stable")
             sh_cell  = (f'<span style="color:{sh_color};font-weight:600;"'
                         f' title="{sh_tip}">{sh_chg_val:+.1f}%</span>')
         else:
-            sh_cell = '<span style="color:#6c757d;">—</span>'
+            sh_cell = '<span style="color:#6a6a6a;">—</span>'
 
         delta = mac_sc - sc_val
         if macro_regime == "Normal" or delta == 0:
             mac_cell = f'<span style="color:{col};font-weight:700;">{sc_val}</span>'
         else:
-            d_color = "#2ecc71" if delta > 0 else "#e74c3c"
+            d_color = "#00a35a" if delta > 0 else "#d92626"
             d_sign  = "+" if delta > 0 else ""
             mac_cell = (
                 f'<span style="color:{mac_col};font-weight:800;">{mac_sc}</span>'
@@ -351,11 +351,11 @@ if st.session_state.get("screener_results"):
             if _show_beta else ""
         )
         rows_html += (
-            f'<tr style="border-bottom:1px solid #e9ecef;">'
+            f'<tr style="border-bottom:1px solid #ececec;">'
             f'<td style="color:#9aa0ac;text-align:center;padding:{row_pad};font-size:0.73rem;">{rank}</td>'
             f'<td style="color:#3498db;font-weight:700;padding:{row_pad};font-size:{row_font};">{ticker_cell}</td>'
             f'<td style="color:#495057;padding:{row_pad};font-size:{row_font};">{row["Company"]}</td>'
-            f'<td style="color:#6c757d;padding:{row_pad};font-size:0.72rem;">{row["Sector"]}</td>'
+            f'<td style="color:#6a6a6a;padding:{row_pad};font-size:0.72rem;">{row["Sector"]}</td>'
             f'<td style="text-align:center;padding:{row_pad};">{mac_cell}</td>'
             f'<td style="text-align:center;padding:{row_pad};">{macro_sens}</td>'
             + _beta_td +
@@ -365,8 +365,8 @@ if st.session_state.get("screener_results"):
             f'<td style="color:{_score_color_sub(int(row["Valuation"]),20)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Valuation"])}/20</td>'
             f'<td style="color:{_score_color_sub(int(row["Momentum"]),10)};font-size:0.75rem;text-align:center;font-weight:600;">{int(row["Momentum"])}/10</td>'
             f'<td style="text-align:center;padding:{row_pad};font-size:0.75rem;">{sh_cell}</td>'
-            f'<td style="color:#3b7ddd;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
-            f'<td style="color:#3b7ddd;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
+            f'<td style="color:#0a0a0a;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
+            f'<td style="color:#0a0a0a;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
             f'<td style="color:#495057;font-size:0.75rem;text-align:right;">{price_str}</td>'
             f'<td style="font-size:0.75rem;padding:{row_pad};">{_badge(mac_sc)}</td>'
             f'</tr>'
@@ -384,7 +384,7 @@ if st.session_state.get("screener_results"):
     _thead = (
         f'<div style="overflow-x:auto;margin:10px 0;">'
         f'<table style="width:100%;border-collapse:collapse;background:#ffffff;font-size:{row_font};">'
-        f'<thead><tr style="border-bottom:2px solid #dee2e6;color:#6c757d;font-size:0.65rem;'
+        f'<thead><tr style="border-bottom:2px solid #dee2e6;color:#6a6a6a;font-size:0.65rem;'
         f'text-transform:uppercase;letter-spacing:.05em;">'
         f'<th style="padding:{row_pad};text-align:center;">#</th>'
         f'<th style="padding:{row_pad};text-align:left;">Ticker</th>'
@@ -455,9 +455,9 @@ if st.session_state.get("screener_results"):
 else:
     # ── Empty state ────────────────────────────────────────────────────────────
     st.markdown("""
-<div style="text-align:center;padding:48px 24px;color:#6c757d;">
+<div style="text-align:center;padding:48px 24px;color:#6a6a6a;">
     <div style="font-size:3rem;margin-bottom:16px;">🏆</div>
-    <div style="font-size:1.1rem;font-weight:600;color:#6c757d;margin-bottom:8px;">
+    <div style="font-size:1.1rem;font-weight:600;color:#6a6a6a;margin-bottom:8px;">
         Ready to screen
     </div>
     <div style="font-size:0.85rem;color:#444;max-width:520px;margin:0 auto;">

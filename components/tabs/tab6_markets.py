@@ -86,19 +86,19 @@ def render_tab6(model_output, phase_output) -> None:
         if not sp500["data"].empty and len(sp500["data"]) >= 22:
             _sp_mom = (sp500["data"].iloc[-1] / sp500["data"].iloc[-22] - 1) * 100
             if _sp_mom >= 5:
-                render_action_item(f"S&P 500 up {_sp_mom:.1f}% over past month — momentum positive; maintain equity overweight and favour momentum sectors.", "#2ecc71")
+                render_action_item(f"S&P 500 up {_sp_mom:.1f}% over past month — momentum positive; maintain equity overweight and favour momentum sectors.", "#00a35a")
             elif _sp_mom >= 0:
-                render_action_item(f"S&P 500 up {_sp_mom:.1f}% over past month — modest gains; hold positions and watch for breakout or reversal.", "#f39c12")
+                render_action_item(f"S&P 500 up {_sp_mom:.1f}% over past month — modest gains; hold positions and watch for breakout or reversal.", "#c98800")
             elif _sp_mom >= -5:
-                render_action_item(f"S&P 500 down {abs(_sp_mom):.1f}% over past month — equities under pressure; review support levels before adding.", "#f39c12")
+                render_action_item(f"S&P 500 down {abs(_sp_mom):.1f}% over past month — equities under pressure; review support levels before adding.", "#c98800")
             else:
-                render_action_item(f"S&P 500 down {abs(_sp_mom):.1f}% over past month — risk-off selloff; increase cash and defensives.", "#e74c3c")
+                render_action_item(f"S&P 500 down {abs(_sp_mom):.1f}% over past month — risk-off selloff; increase cash and defensives.", "#d92626")
 
     with col2:
         st.markdown("##### VIX — Volatility Index")
         if not vix["data"].empty:
             vix_val = vix["last_value"] or 0
-            line_color = "#e74c3c" if vix_val > 30 else "#f39c12" if vix_val > 20 else "#2ecc71"
+            line_color = "#d92626" if vix_val > 30 else "#c98800" if vix_val > 20 else "#00a35a"
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=vix["data"].index, y=vix["data"].values,
@@ -106,8 +106,8 @@ def render_tab6(model_output, phase_output) -> None:
                 name="VIX",
                 fill="tozeroy", fillcolor="rgba(231,76,60,0.06)",
             ))
-            fig = threshold_line(fig, 20, "20 — elevated volatility", "#f39c12", "dot")
-            fig = threshold_line(fig, 30, "30 — high fear", "#e74c3c", "dash")
+            fig = threshold_line(fig, 20, "20 — elevated volatility", "#c98800", "dot")
+            fig = threshold_line(fig, 30, "30 — high fear", "#d92626", "dash")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="VIX Level")
             st.plotly_chart(fig, use_container_width=True, key="tab6_vix")
@@ -116,11 +116,11 @@ def render_tab6(model_output, phase_output) -> None:
         if vix["last_value"] is not None:
             _vv = vix["last_value"]
             if _vv > 30:
-                render_action_item(f"VIX at {_vv:.1f} — high fear; historically a contrarian buying opportunity in expansions; defensive in confirmed recessions.", "#e74c3c")
+                render_action_item(f"VIX at {_vv:.1f} — high fear; historically a contrarian buying opportunity in expansions; defensive in confirmed recessions.", "#d92626")
             elif _vv > 20:
-                render_action_item(f"VIX at {_vv:.1f} — elevated; market uncertainty rising; reduce position sizing and review hedges.", "#f39c12")
+                render_action_item(f"VIX at {_vv:.1f} — elevated; market uncertainty rising; reduce position sizing and review hedges.", "#c98800")
             else:
-                render_action_item(f"VIX at {_vv:.1f} — calm; low-volatility environment favours carry strategies and risk-on positioning.", "#2ecc71")
+                render_action_item(f"VIX at {_vv:.1f} — calm; low-volatility environment favours carry strategies and risk-on positioning.", "#00a35a")
 
     # ── Row 2: Credit Spreads ─────────────────────────────────────────────────
     st.markdown("##### Credit Spreads — HY & IG Option-Adjusted Spread")
@@ -129,7 +129,7 @@ def render_tab6(model_output, phase_output) -> None:
         if not hy_oas["data"].empty:
             fig.add_trace(go.Scatter(
                 x=hy_oas["data"].index, y=hy_oas["data"].values,
-                mode="lines", line={"color": "#e74c3c", "width": 2},
+                mode="lines", line={"color": "#d92626", "width": 2},
                 name="HY OAS",
                 hovertemplate=hover_tmpl(
                     "High-Yield OAS", y_fmt=",.0f", unit=" bps",
@@ -146,7 +146,7 @@ def render_tab6(model_output, phase_output) -> None:
                     context="Tighter = risk-on",
                 ),
             ))
-        fig = threshold_line(fig, 500, "500 bps HY — stress signal", "#e74c3c", "dot")
+        fig = threshold_line(fig, 500, "500 bps HY — stress signal", "#d92626", "dot")
         fig = add_nber(fig, start_date=start)
         fig = dark_layout(fig, yaxis_title="OAS (bps)")
         fig = add_end_labels(fig, fmt=",.0f", unit=" bps")
@@ -162,11 +162,11 @@ def render_tab6(model_output, phase_output) -> None:
     if hy_oas["last_value"] is not None:
         _hv = hy_oas["last_value"]
         if _hv > 500:
-            render_action_item(f"HY spreads at {_hv:.0f} bps — stress-level; credit market pricing recession; avoid high-yield.", "#e74c3c")
+            render_action_item(f"HY spreads at {_hv:.0f} bps — stress-level; credit market pricing recession; avoid high-yield.", "#d92626")
         elif _hv > 350:
-            render_action_item(f"HY spreads at {_hv:.0f} bps — elevated; reduce HY allocation and extend investment-grade duration.", "#f39c12")
+            render_action_item(f"HY spreads at {_hv:.0f} bps — elevated; reduce HY allocation and extend investment-grade duration.", "#c98800")
         else:
-            render_action_item(f"HY spreads at {_hv:.0f} bps — benign; selective high-yield positioning supported.", "#2ecc71")
+            render_action_item(f"HY spreads at {_hv:.0f} bps — benign; selective high-yield positioning supported.", "#00a35a")
 
     # ── Row 3: Sector ETF Returns ─────────────────────────────────────────────
     st.markdown("##### Sector ETF Performance — 1-Month Returns")
@@ -175,7 +175,7 @@ def render_tab6(model_output, phase_output) -> None:
     if not sector_data.empty:
         labels  = sector_data["Sector"].str[:20].tolist()
         returns = sector_data["Return (%)"].tolist()
-        colors  = ["#2ecc71" if r >= 0 else "#e74c3c" for r in returns]
+        colors  = ["#00a35a" if r >= 0 else "#d92626" for r in returns]
 
         fig = go.Figure(go.Bar(
             x=returns, y=labels,
@@ -195,9 +195,9 @@ def render_tab6(model_output, phase_output) -> None:
             _best_ret = _best["Return (%)"]
             _worst_ret = _worst["Return (%)"]
             if _best_ret > 0:
-                render_action_item(f"Leading sector: {_best['Sector']} ({_best_ret:+.1f}%) — rotation into {_best['Sector']} consistent with current cycle phase; laggard: {_worst['Sector']} ({_worst_ret:+.1f}%).", "#2ecc71")
+                render_action_item(f"Leading sector: {_best['Sector']} ({_best_ret:+.1f}%) — rotation into {_best['Sector']} consistent with current cycle phase; laggard: {_worst['Sector']} ({_worst_ret:+.1f}%).", "#00a35a")
             else:
-                render_action_item(f"All sectors negative in past month — broad risk-off; defensive positioning across the board warranted.", "#e74c3c")
+                render_action_item(f"All sectors negative in past month — broad risk-off; defensive positioning across the board warranted.", "#d92626")
     else:
         st.info("Sector return data unavailable.")
 
@@ -212,12 +212,12 @@ def render_tab6(model_output, phase_output) -> None:
             cape_filtered = cape_series
         fig.add_trace(go.Scatter(
             x=cape_filtered.index, y=cape_filtered.values,
-            mode="lines", line={"color": "#f39c12", "width": 2},
+            mode="lines", line={"color": "#c98800", "width": 2},
             name="CAPE",
         ))
         long_run_avg = float(cape_series.mean())
         fig = threshold_line(fig, long_run_avg, f"Long-run avg: {long_run_avg:.1f}", "#888", "dot")
-        fig = threshold_line(fig, 25, "25 — historically elevated", "#e74c3c", "dot")
+        fig = threshold_line(fig, 25, "25 — historically elevated", "#d92626", "dot")
         fig = dark_layout(fig, yaxis_title="CAPE Ratio")
         st.plotly_chart(fig, use_container_width=True, key="tab6_cape")
         st.caption(
@@ -228,11 +228,11 @@ def render_tab6(model_output, phase_output) -> None:
         if cape["last_value"] is not None:
             _cv = cape["last_value"]
             if _cv > 35:
-                render_action_item(f"CAPE at {_cv:.1f} — extremely elevated; long-run return expectations historically poor at these levels; reduce equity overweight.", "#e74c3c")
+                render_action_item(f"CAPE at {_cv:.1f} — extremely elevated; long-run return expectations historically poor at these levels; reduce equity overweight.", "#d92626")
             elif _cv > 25:
-                render_action_item(f"CAPE at {_cv:.1f} — above long-run average; equities richly valued; favour value over growth and tighten stop-losses.", "#f39c12")
+                render_action_item(f"CAPE at {_cv:.1f} — above long-run average; equities richly valued; favour value over growth and tighten stop-losses.", "#c98800")
             else:
-                render_action_item(f"CAPE at {_cv:.1f} — near/below long-run average; valuation not a headwind; supports maintaining equity allocation.", "#2ecc71")
+                render_action_item(f"CAPE at {_cv:.1f} — near/below long-run average; valuation not a headwind; supports maintaining equity allocation.", "#00a35a")
     else:
         st.info(f"Shiller CAPE data unavailable. {cape.get('error', '')}")
 

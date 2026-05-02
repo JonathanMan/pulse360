@@ -29,7 +29,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from ai.claude_client import extract_tickers_from_screenshot
-from components.taplox_theme import inject_theme
+from components.pulse360_theme import inject_theme
 from components.user_profile import feature_visible
 from components.stock_score_utils import (
     fetch_stock_data,
@@ -298,12 +298,12 @@ def _score_color_css(score: int) -> str:
     if score >= 75:
         return "#27ae60"
     if score >= 60:
-        return "#2ecc71"
+        return "#00a35a"
     if score >= 45:
         return "#f1c40f"
     if score >= 30:
         return "#e67e22"
-    return "#e74c3c"
+    return "#d92626"
 
 
 def _score_text_css(score: int) -> str:
@@ -560,10 +560,10 @@ fig = go.Figure(
         texttemplate="%{text}" if show_annotations else "",
         textfont={"size": 11, "color": "white"},
         colorscale=[
-            [0.00, "#e74c3c"],
+            [0.00, "#d92626"],
             [0.30, "#e67e22"],
             [0.50, "#f1c40f"],
-            [0.70, "#2ecc71"],
+            [0.70, "#00a35a"],
             [1.00, "#27ae60"],
         ],
         zmin=0,
@@ -594,20 +594,20 @@ fig.update_layout(
     plot_bgcolor="rgba(0,0,0,0)",
     title=dict(
         text="Portfolio Buffett Score by Macro Regime",
-        font=dict(size=15, color="#293241"),
+        font=dict(size=15, color="#0a0a0a"),
         x=0.01,
     ),
     xaxis=dict(
         side="top",
-        tickfont=dict(size=11, color="#293241"),
+        tickfont=dict(size=11, color="#0a0a0a"),
         showgrid=False,
     ),
     yaxis=dict(
         autorange="reversed",
-        tickfont=dict(size=11, color="#293241"),
+        tickfont=dict(size=11, color="#0a0a0a"),
         showgrid=False,
     ),
-    font=dict(color="#293241"),
+    font=dict(color="#0a0a0a"),
 )
 
 st.plotly_chart(fig, use_container_width=True)

@@ -54,7 +54,7 @@ def render_tab4(model_output, phase_output) -> None:
                 cpi_yoy = yoy_pct(cpi["data"]).dropna()
                 fig.add_trace(go.Scatter(
                     x=cpi_yoy.index, y=cpi_yoy.values,
-                    mode="lines", line={"color": "#e74c3c", "width": 2},
+                    mode="lines", line={"color": "#d92626", "width": 2},
                     name="CPI All Items",
                     hovertemplate=hover_tmpl(
                         "CPI All Items", y_fmt=".1f", unit="%",
@@ -72,7 +72,7 @@ def render_tab4(model_output, phase_output) -> None:
                         context="Fed preferred measure of underlying inflation",
                     ),
                 ))
-            fig = threshold_line(fig, 2.0, "2% Fed target", "#2ecc71", "dash")
+            fig = threshold_line(fig, 2.0, "2% Fed target", "#00a35a", "dash")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="YoY %")
             fig = add_end_labels(fig, fmt=".1f", unit="%")
@@ -89,11 +89,11 @@ def render_tab4(model_output, phase_output) -> None:
             if not _cpi_yoy_val.empty:
                 _cv = _cpi_yoy_val.iloc[-1]
                 if _cv > 4:
-                    render_action_item(f"CPI at {_cv:.1f}% YoY — well above target; maintain short duration; TIPS and real assets offer inflation protection.", "#e74c3c")
+                    render_action_item(f"CPI at {_cv:.1f}% YoY — well above target; maintain short duration; TIPS and real assets offer inflation protection.", "#d92626")
                 elif _cv > 2:
-                    render_action_item(f"CPI at {_cv:.1f}% YoY — moderating but above target; Fed likely cautious; watch for rate cut timeline signals.", "#f39c12")
+                    render_action_item(f"CPI at {_cv:.1f}% YoY — moderating but above target; Fed likely cautious; watch for rate cut timeline signals.", "#c98800")
                 else:
-                    render_action_item(f"CPI at {_cv:.1f}% YoY — at/below Fed target; opens door to rate cuts; duration extension and growth assets supported.", "#2ecc71")
+                    render_action_item(f"CPI at {_cv:.1f}% YoY — at/below Fed target; opens door to rate cuts; duration extension and growth assets supported.", "#00a35a")
 
     with col2:
         st.markdown("##### PCE Year-over-Year")
@@ -121,7 +121,7 @@ def render_tab4(model_output, phase_output) -> None:
                         context="Primary Fed inflation gauge",
                     ),
                 ))
-            fig = threshold_line(fig, 2.0, "2% Fed target", "#2ecc71", "dash")
+            fig = threshold_line(fig, 2.0, "2% Fed target", "#00a35a", "dash")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="YoY %")
             fig = add_end_labels(fig, fmt=".1f", unit="%")
@@ -138,11 +138,11 @@ def render_tab4(model_output, phase_output) -> None:
             if not _cpce_yoy.empty:
                 _pv = _cpce_yoy.iloc[-1]
                 if _pv > 3:
-                    render_action_item(f"Core PCE at {_pv:.1f}% — Fed's preferred gauge well above target; avoid long duration; favour value over growth.", "#e74c3c")
+                    render_action_item(f"Core PCE at {_pv:.1f}% — Fed's preferred gauge well above target; avoid long duration; favour value over growth.", "#d92626")
                 elif _pv > 2:
-                    render_action_item(f"Core PCE at {_pv:.1f}% — last-mile disinflation underway; Fed on hold; selective duration extension OK.", "#f39c12")
+                    render_action_item(f"Core PCE at {_pv:.1f}% — last-mile disinflation underway; Fed on hold; selective duration extension OK.", "#c98800")
                 else:
-                    render_action_item(f"Core PCE at {_pv:.1f}% — at/below target; rate cuts likely on the table; extend duration and consider growth rotation.", "#2ecc71")
+                    render_action_item(f"Core PCE at {_pv:.1f}% — at/below target; rate cuts likely on the table; extend duration and consider growth rotation.", "#00a35a")
 
     # ── Row 2: Breakeven Inflation ────────────────────────────────────────────
     st.markdown("##### Breakeven Inflation (Market-Implied)")
@@ -168,8 +168,8 @@ def render_tab4(model_output, phase_output) -> None:
                     context="Market-implied avg inflation over next 10 years",
                 ),
             ))
-        fig = threshold_line(fig, 2.0, "2% Fed target", "#2ecc71", "dash")
-        fig = threshold_line(fig, 2.5, "2.5% — elevated", "#f39c12", "dot")
+        fig = threshold_line(fig, 2.0, "2% Fed target", "#00a35a", "dash")
+        fig = threshold_line(fig, 2.5, "2.5% — elevated", "#c98800", "dot")
         fig = dark_layout(fig, yaxis_title="Implied Inflation (%)")
         fig = add_end_labels(fig, fmt=".2f", unit="%")
         st.plotly_chart(fig, use_container_width=True, key="tab4_breakeven")
@@ -184,11 +184,11 @@ def render_tab4(model_output, phase_output) -> None:
     if be5y["last_value"] is not None:
         _bev = be5y["last_value"]
         if _bev > 2.5:
-            render_action_item(f"5Y breakeven at {_bev:.2f}% — elevated inflation expectations; TIPS and commodities as hedge.", "#e74c3c")
+            render_action_item(f"5Y breakeven at {_bev:.2f}% — elevated inflation expectations; TIPS and commodities as hedge.", "#d92626")
         elif _bev >= 2.0:
-            render_action_item(f"5Y breakeven at {_bev:.2f}% — inflation expectations anchored near target; no special inflation hedge needed.", "#2ecc71")
+            render_action_item(f"5Y breakeven at {_bev:.2f}% — inflation expectations anchored near target; no special inflation hedge needed.", "#00a35a")
         else:
-            render_action_item(f"5Y breakeven at {_bev:.2f}% — below target; deflation risk; favour nominal bonds over TIPS.", "#f39c12")
+            render_action_item(f"5Y breakeven at {_bev:.2f}% — below target; deflation risk; favour nominal bonds over TIPS.", "#c98800")
 
     # ── Row 3: WTI Crude | PPI ────────────────────────────────────────────────
     col7, col8 = st.columns(2)
@@ -210,24 +210,24 @@ def render_tab4(model_output, phase_output) -> None:
         if wti["last_value"] is not None:
             _wv = wti["last_value"]
             if _wv > 90:
-                render_action_item(f"WTI at ${_wv:.0f}/bbl — cost-push inflation risk; energy sector outperforms; watch for consumer spending drag.", "#e74c3c")
+                render_action_item(f"WTI at ${_wv:.0f}/bbl — cost-push inflation risk; energy sector outperforms; watch for consumer spending drag.", "#d92626")
             elif _wv > 60:
-                render_action_item(f"WTI at ${_wv:.0f}/bbl — moderate range; inflation tail risk contained; balanced positioning appropriate.", "#f39c12")
+                render_action_item(f"WTI at ${_wv:.0f}/bbl — moderate range; inflation tail risk contained; balanced positioning appropriate.", "#c98800")
             else:
-                render_action_item(f"WTI at ${_wv:.0f}/bbl — below $60; deflationary energy signal; supportive for consumers but watch for demand-side weakness.", "#e74c3c")
+                render_action_item(f"WTI at ${_wv:.0f}/bbl — below $60; deflationary energy signal; supportive for consumers but watch for demand-side weakness.", "#d92626")
 
     with col8:
         st.markdown("##### PPI Final Demand YoY")
         if not ppi["data"].empty:
             ppi_yoy = yoy_pct(ppi["data"]).dropna()
-            colors = ["#e74c3c" if v >= 2 else "#2ecc71" for v in ppi_yoy.values]
+            colors = ["#d92626" if v >= 2 else "#00a35a" for v in ppi_yoy.values]
             fig = go.Figure(go.Bar(
                 x=ppi_yoy.index, y=ppi_yoy.values,
                 marker_color=colors,
                 name="PPI YoY %",
             ))
             fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
-            fig = threshold_line(fig, 2.0, "2%", "#f39c12", "dot")
+            fig = threshold_line(fig, 2.0, "2%", "#c98800", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="YoY %")
             st.plotly_chart(fig, use_container_width=True, key="tab4_ppi")
@@ -237,11 +237,11 @@ def render_tab4(model_output, phase_output) -> None:
             if not _ppi_yoy.empty:
                 _ppv = _ppi_yoy.iloc[-1]
                 if _ppv > 3:
-                    render_action_item(f"PPI at {_ppv:.1f}% YoY — input cost pressure building; margin compression risk; favour pricing-power companies.", "#e74c3c")
+                    render_action_item(f"PPI at {_ppv:.1f}% YoY — input cost pressure building; margin compression risk; favour pricing-power companies.", "#d92626")
                 elif _ppv >= 0:
-                    render_action_item(f"PPI at {_ppv:.1f}% YoY — cost pressures easing; margin recovery supportive for equities.", "#2ecc71")
+                    render_action_item(f"PPI at {_ppv:.1f}% YoY — cost pressures easing; margin recovery supportive for equities.", "#00a35a")
                 else:
-                    render_action_item(f"PPI at {_ppv:.1f}% YoY — deflationary territory; demand-side weakness or commodity collapse; monitor earnings impact.", "#f39c12")
+                    render_action_item(f"PPI at {_ppv:.1f}% YoY — deflationary territory; demand-side weakness or commodity collapse; monitor earnings impact.", "#c98800")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

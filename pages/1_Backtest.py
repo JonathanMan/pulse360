@@ -20,7 +20,7 @@ from models.backtest import (
 from components.chart_utils import dark_layout, add_nber
 
 # ── Dark-theme CSS ───────────────────────────────────────────────────────────
-from components.taplox_theme import inject_theme
+from components.pulse360_theme import inject_theme
 inject_theme()
 
 st.markdown("""
@@ -144,11 +144,11 @@ fig.add_trace(go.Scatter(
 ))
 
 # Threshold lines
-fig.add_hline(y=25, line_dash="dot", line_color="#f39c12", line_width=1,
-              annotation_text="25% — Yellow", annotation_font_color="#f39c12",
+fig.add_hline(y=25, line_dash="dot", line_color="#c98800", line_width=1,
+              annotation_text="25% — Yellow", annotation_font_color="#c98800",
               annotation_position="top right")
-fig.add_hline(y=50, line_dash="dash", line_color="#e74c3c", line_width=1,
-              annotation_text="50% — Red", annotation_font_color="#e74c3c",
+fig.add_hline(y=50, line_dash="dash", line_color="#d92626", line_width=1,
+              annotation_text="50% — Red", annotation_font_color="#d92626",
               annotation_position="top right")
 
 # NBER recession shading
@@ -217,10 +217,10 @@ stress_cols = [c for c in bt_df.columns if c.startswith("stress_")]
 
 feature_colors = {
     "stress_10y3m_treasury_spread": "#3498db",
-    "stress_sahm_rule":             "#e74c3c",
+    "stress_sahm_rule":             "#d92626",
     "stress_cfnai_(activity_index)":"#9b59b6",
-    "stress_chicago_fed_nfci":      "#f39c12",
-    "stress_initial_claims_yoy":    "#2ecc71",
+    "stress_chicago_fed_nfci":      "#c98800",
+    "stress_initial_claims_yoy":    "#00a35a",
     "stress_high-yield_oas":        "#e67e22",
     "stress_ism_manufacturing_pmi": "#1abc9c",
 }

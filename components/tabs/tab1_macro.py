@@ -57,14 +57,14 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
         if not gdp_lvl["data"].empty and len(gdp_lvl["data"]) >= 2:
             _lvl_trend = gdp_lvl["data"].iloc[-1] - gdp_lvl["data"].iloc[-2]
             if _lvl_trend > 0:
-                render_action_item("Output base expanding — confirms growth phase; no defensive rotation required on GDP alone.", "#2ecc71")
+                render_action_item("Output base expanding — confirms growth phase; no defensive rotation required on GDP alone.", "#00a35a")
             else:
-                render_action_item("GDP level declining — two consecutive quarterly drops would confirm a technical recession; monitor closely.", "#e74c3c")
+                render_action_item("GDP level declining — two consecutive quarterly drops would confirm a technical recession; monitor closely.", "#d92626")
 
     with col2:
         st.markdown("##### Real GDP Growth (QoQ Ann.)")
         if not gdp_gr["data"].empty:
-            colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in gdp_gr["data"].values]
+            colors = ["#00a35a" if v >= 0 else "#d92626" for v in gdp_gr["data"].values]
             fig = go.Figure(go.Bar(
                 x=gdp_gr["data"].index, y=gdp_gr["data"].values,
                 marker_color=colors, name="GDP Growth",
@@ -78,11 +78,11 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
         _gr_val = gdp_gr["last_value"]
         if _gr_val is not None:
             if _gr_val >= 2.5:
-                render_action_item(f"{_gr_val:+.1f}% — strong growth: cyclicals, industrials & consumer discretionary typically outperform here.", "#2ecc71")
+                render_action_item(f"{_gr_val:+.1f}% — strong growth: cyclicals, industrials & consumer discretionary typically outperform here.", "#00a35a")
             elif _gr_val >= 0:
-                render_action_item(f"{_gr_val:+.1f}% — moderate growth: favour quality and investment-grade credit over high-yield.", "#f39c12")
+                render_action_item(f"{_gr_val:+.1f}% — moderate growth: favour quality and investment-grade credit over high-yield.", "#c98800")
             else:
-                render_action_item(f"{_gr_val:+.1f}% — negative growth: reduce equity exposure, rotate to defensives and treasuries.", "#e74c3c")
+                render_action_item(f"{_gr_val:+.1f}% — negative growth: reduce equity exposure, rotate to defensives and treasuries.", "#d92626")
 
     # ── Row 2: CFNAI ──────────────────────────────────────────────────────────
     st.markdown("##### Chicago Fed National Activity Index (CFNAI)")
@@ -106,11 +106,11 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
     _cfnai_val = lei_res["last_value"]
     if _cfnai_val is not None:
         if _cfnai_val > 0:
-            render_action_item(f"CFNAI {_cfnai_val:+.2f}: above-trend activity — supports risk-on positioning; cyclical tilt rewarded.", "#2ecc71")
+            render_action_item(f"CFNAI {_cfnai_val:+.2f}: above-trend activity — supports risk-on positioning; cyclical tilt rewarded.", "#00a35a")
         elif _cfnai_val > -0.7:
-            render_action_item(f"CFNAI {_cfnai_val:+.2f}: below-trend but not recessionary — neutral posture; watch for sustained move below −0.70.", "#f39c12")
+            render_action_item(f"CFNAI {_cfnai_val:+.2f}: below-trend but not recessionary — neutral posture; watch for sustained move below −0.70.", "#c98800")
         else:
-            render_action_item(f"CFNAI {_cfnai_val:+.2f}: well below trend — historically signals elevated recession risk; consider defensive rotation.", "#e74c3c")
+            render_action_item(f"CFNAI {_cfnai_val:+.2f}: well below trend — historically signals elevated recession risk; consider defensive rotation.", "#d92626")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

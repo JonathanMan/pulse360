@@ -24,7 +24,7 @@ from components.alert_engine import (
     load_rules,
     toggle_rule,
 )
-from components.taplox_theme import inject_theme
+from components.pulse360_theme import inject_theme
 
 inject_theme()
 
@@ -143,21 +143,21 @@ else:
         else:
             status_html = (
                 '<span style="display:inline-block;padding:1px 8px;border-radius:10px;'
-                'font-size:0.7rem;font-weight:700;background:#f0f2f5;color:#6c757d;">'
+                'font-size:0.7rem;font-weight:700;background:#f0f2f5;color:#6a6a6a;">'
                 '○ PAUSED</span>'
             )
 
         email_html = (
-            '<span style="font-size:0.72rem;color:#3b7ddd;">📧 email</span>'
+            '<span style="font-size:0.72rem;color:#0a0a0a;">📧 email</span>'
             if email_set else ""
         )
         last_trig_html = (
-            f'<span style="font-size:0.72rem;color:#6c757d;">Last fired: {last_trig}</span>'
+            f'<span style="font-size:0.72rem;color:#6a6a6a;">Last fired: {last_trig}</span>'
             if last_trig
-            else '<span style="font-size:0.72rem;color:#adb5bd;">Never fired</span>'
+            else '<span style="font-size:0.72rem;color:#a0a0a0;">Never fired</span>'
         )
         last_val_html = (
-            f'<span style="font-size:0.72rem;color:#6c757d;">'
+            f'<span style="font-size:0.72rem;color:#6a6a6a;">'
             f'Last value: <strong>{last_val:.2f}</strong></span>'
             if last_val is not None
             else ""
@@ -170,10 +170,10 @@ else:
             with left:
                 st.markdown(
                     f'<div style="margin-bottom:2px;">'
-                    f'<span style="font-size:1rem;font-weight:700;color:#293241;">'
+                    f'<span style="font-size:1rem;font-weight:700;color:#0a0a0a;">'
                     f'{rule.get("name", "Unnamed")}</span>&nbsp;{status_html}&nbsp;{email_html}'
                     f'</div>'
-                    f'<div style="font-size:0.82rem;color:#6c757d;margin-bottom:4px;">'
+                    f'<div style="font-size:0.82rem;color:#6a6a6a;margin-bottom:4px;">'
                     f'{series_label} <strong>{op_label}</strong> {rule.get("threshold")}'
                     f'</div>'
                     f'<div style="display:flex;gap:14px;flex-wrap:wrap;">'

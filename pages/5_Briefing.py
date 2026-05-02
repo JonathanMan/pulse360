@@ -20,7 +20,7 @@ from __future__ import annotations
 import streamlit as st
 
 from ai.claude_client import stream_briefing_section
-from components.taplox_theme import inject_theme
+from components.pulse360_theme import inject_theme
 
 inject_theme()
 
@@ -31,18 +31,18 @@ st.markdown("""
     /* ── Result box wrapper (light theme) ── */
     .result-box {
         background: #ffffff;
-        border: 1px solid #e9ecef;
-        border-left: 3px solid #3b7ddd;
+        border: 1px solid #ececec;
+        border-left: 3px solid #0a0a0a;
         border-radius: 8px;
         padding: 18px 20px;
         margin-top: 10px;
         line-height: 1.7;
-        color: #293241;
+        color: #0a0a0a;
     }
     .result-box p, .result-box li, .result-box td, .result-box th,
-    .result-box span { color: #293241 !important; }
+    .result-box span { color: #0a0a0a !important; }
     .result-box h1, .result-box h2, .result-box h3,
-    .result-box h4 { color: #293241 !important; font-weight: 600; }
+    .result-box h4 { color: #0a0a0a !important; font-weight: 600; }
 
     /* ── Tables inside result boxes (light theme) ── */
     .result-box table {
@@ -51,19 +51,19 @@ st.markdown("""
         margin: 8px 0;
     }
     .result-box th {
-        background: #f5f7fb !important;
-        color: #293241 !important;
+        background: #f4f4f4 !important;
+        color: #0a0a0a !important;
         padding: 8px 12px;
-        border: 1px solid #e9ecef;
+        border: 1px solid #ececec;
         font-size: 13px;
         font-weight: 600;
     }
     .result-box td {
         padding: 7px 12px;
-        border: 1px solid #e9ecef;
+        border: 1px solid #ececec;
         font-size: 13px;
         vertical-align: top;
-        color: #293241 !important;
+        color: #0a0a0a !important;
     }
     .result-box tr:nth-child(even) td {
         background: #f9fafb !important;
@@ -74,12 +74,12 @@ st.markdown("""
         display: inline-flex;
         gap: 14px;
         font-size: 12px;
-        color: #6c757d;
+        color: #6a6a6a;
         margin-bottom: 6px;
     }
     .sig-green  { color: #28a745; font-weight: 600; }
-    .sig-orange { color: #f39c12; font-weight: 600; }
-    .sig-red    { color: #e74c3c; font-weight: 600; }
+    .sig-orange { color: #c98800; font-weight: 600; }
+    .sig-red    { color: #d92626; font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
 

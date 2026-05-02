@@ -207,20 +207,20 @@ _REGIME_RATIONALE: dict[str, dict[str, str]] = {
 # ── Fallback fundamental scores for key blue chips ───────────────────────────
 # Used when yfinance is rate-limited so the screener stays complete.
 _FALLBACK_SCORES: dict[str, dict] = {
-    "KO":   {"Score":72,"Moat":30,"Fortress":18,"Valuation":12,"Momentum":7,"Shareholder":5,"Sector":"Consumer Defensive","Company":"Coca-Cola","FCF_Yield":3.8,"Fwd_PE":22.1,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":63.0,"Mkt Cap $B":272.0},
-    "PEP":  {"Score":70,"Moat":29,"Fortress":17,"Valuation":12,"Momentum":7,"Shareholder":5,"Sector":"Consumer Defensive","Company":"PepsiCo","FCF_Yield":3.5,"Fwd_PE":20.8,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":168.0,"Mkt Cap $B":232.0},
-    "JNJ":  {"Score":68,"Moat":28,"Fortress":19,"Valuation":11,"Momentum":6,"Shareholder":4,"Sector":"Healthcare","Company":"Johnson & Johnson","FCF_Yield":4.1,"Fwd_PE":15.2,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":158.0,"Mkt Cap $B":381.0},
-    "MSFT": {"Score":79,"Moat":35,"Fortress":21,"Valuation":12,"Momentum":8,"Shareholder":3,"Sector":"Technology","Company":"Microsoft","FCF_Yield":2.4,"Fwd_PE":31.5,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":415.0,"Mkt Cap $B":3090.0},
-    "AAPL": {"Score":75,"Moat":33,"Fortress":20,"Valuation":12,"Momentum":7,"Shareholder":3,"Sector":"Technology","Company":"Apple","FCF_Yield":3.8,"Fwd_PE":28.2,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":210.0,"Mkt Cap $B":3200.0},
-    "GOOGL":{"Score":76,"Moat":34,"Fortress":21,"Valuation":13,"Momentum":6,"Shareholder":2,"Sector":"Communication Services","Company":"Alphabet","FCF_Yield":4.2,"Fwd_PE":20.1,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":175.0,"Mkt Cap $B":2180.0},
-    "V":    {"Score":78,"Moat":35,"Fortress":21,"Valuation":12,"Momentum":7,"Shareholder":3,"Sector":"Financial Services","Company":"Visa","FCF_Yield":2.9,"Fwd_PE":26.8,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":280.0,"Mkt Cap $B":573.0},
-    "MA":   {"Score":77,"Moat":35,"Fortress":20,"Valuation":11,"Momentum":8,"Shareholder":3,"Sector":"Financial Services","Company":"Mastercard","FCF_Yield":2.5,"Fwd_PE":29.4,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":475.0,"Mkt Cap $B":444.0},
-    "PG":   {"Score":71,"Moat":30,"Fortress":18,"Valuation":12,"Momentum":6,"Shareholder":5,"Sector":"Consumer Defensive","Company":"Procter & Gamble","FCF_Yield":3.6,"Fwd_PE":23.0,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":170.0,"Mkt Cap $B":401.0},
-    "ANSS": {"Score":62,"Moat":28,"Fortress":17,"Valuation":10,"Momentum":5,"Shareholder":2,"Sector":"Technology","Company":"Ansys","FCF_Yield":2.1,"Fwd_PE":38.0,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":340.0,"Mkt Cap $B":29.0},
-    "MCD":  {"Score":69,"Moat":29,"Fortress":15,"Valuation":13,"Momentum":7,"Shareholder":5,"Sector":"Consumer Cyclical","Company":"McDonald's","FCF_Yield":3.9,"Fwd_PE":22.5,"Trend":"↑","TrendColor":"#2ecc71","TrendTip":"Improving","Price":297.0,"Mkt Cap $B":213.0},
-    "TMO":  {"Score":67,"Moat":28,"Fortress":18,"Valuation":11,"Momentum":6,"Shareholder":4,"Sector":"Healthcare","Company":"Thermo Fisher","FCF_Yield":3.1,"Fwd_PE":24.0,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":510.0,"Mkt Cap $B":196.0},
-    "HON":  {"Score":64,"Moat":26,"Fortress":17,"Valuation":12,"Momentum":6,"Shareholder":3,"Sector":"Industrials","Company":"Honeywell","FCF_Yield":4.2,"Fwd_PE":19.5,"Trend":"→","TrendColor":"#f39c12","TrendTip":"Mixed","Price":218.0,"Mkt Cap $B":134.0},
-    "XOM":  {"Score":60,"Moat":22,"Fortress":17,"Valuation":13,"Momentum":5,"Shareholder":3,"Sector":"Energy","Company":"ExxonMobil","FCF_Yield":5.8,"Fwd_PE":13.2,"Trend":"↓","TrendColor":"#e74c3c","TrendTip":"Deteriorating","Price":108.0,"Mkt Cap $B":462.0},
+    "KO":   {"Score":72,"Moat":30,"Fortress":18,"Valuation":12,"Momentum":7,"Shareholder":5,"Sector":"Consumer Defensive","Company":"Coca-Cola","FCF_Yield":3.8,"Fwd_PE":22.1,"Trend":"↑","TrendColor":"#00a35a","TrendTip":"Improving","Price":63.0,"Mkt Cap $B":272.0},
+    "PEP":  {"Score":70,"Moat":29,"Fortress":17,"Valuation":12,"Momentum":7,"Shareholder":5,"Sector":"Consumer Defensive","Company":"PepsiCo","FCF_Yield":3.5,"Fwd_PE":20.8,"Trend":"↑","TrendColor":"#00a35a","TrendTip":"Improving","Price":168.0,"Mkt Cap $B":232.0},
+    "JNJ":  {"Score":68,"Moat":28,"Fortress":19,"Valuation":11,"Momentum":6,"Shareholder":4,"Sector":"Healthcare","Company":"Johnson & Johnson","FCF_Yield":4.1,"Fwd_PE":15.2,"Trend":"→","TrendColor":"#c98800","TrendTip":"Mixed","Price":158.0,"Mkt Cap $B":381.0},
+    "MSFT": {"Score":79,"Moat":35,"Fortress":21,"Valuation":12,"Momentum":8,"Shareholder":3,"Sector":"Technology","Company":"Microsoft","FCF_Yield":2.4,"Fwd_PE":31.5,"Trend":"↑","TrendColor":"#00a35a","TrendTip":"Improving","Price":415.0,"Mkt Cap $B":3090.0},
+    "AAPL": {"Score":75,"Moat":33,"Fortress":20,"Valuation":12,"Momentum":7,"Shareholder":3,"Sector":"Technology","Company":"Apple","FCF_Yield":3.8,"Fwd_PE":28.2,"Trend":"↑","TrendColor":"#00a35a","TrendTip":"Improving","Price":210.0,"Mkt Cap $B":3200.0},
+    "GOOGL":{"Score":76,"Moat":34,"Fortress":21,"Valuation":13,"Momentum":6,"Shareholder":2,"Sector":"Communication Services","Company":"Alphabet","FCF_Yield":4.2,"Fwd_PE":20.1,"Trend":"↑","TrendColor":"#00a35a","TrendTip":"Improving","Price":175.0,"Mkt Cap $B":2180.0},
+    "V":    {"Score":78,"Moat":35,"Fortress":21,"Valuation":12,"Momentum":7,"Shareholder":3,"Sector":"Financial Services","Company":"Visa","FCF_Yield":2.9,"Fwd_PE":26.8,"Trend":"↑","TrendColor":"#00a35a","TrendTip":"Improving","Price":280.0,"Mkt Cap $B":573.0},
+    "MA":   {"Score":77,"Moat":35,"Fortress":20,"Valuation":11,"Momentum":8,"Shareholder":3,"Sector":"Financial Services","Company":"Mastercard","FCF_Yield":2.5,"Fwd_PE":29.4,"Trend":"↑","TrendColor":"#00a35a","TrendTip":"Improving","Price":475.0,"Mkt Cap $B":444.0},
+    "PG":   {"Score":71,"Moat":30,"Fortress":18,"Valuation":12,"Momentum":6,"Shareholder":5,"Sector":"Consumer Defensive","Company":"Procter & Gamble","FCF_Yield":3.6,"Fwd_PE":23.0,"Trend":"→","TrendColor":"#c98800","TrendTip":"Mixed","Price":170.0,"Mkt Cap $B":401.0},
+    "ANSS": {"Score":62,"Moat":28,"Fortress":17,"Valuation":10,"Momentum":5,"Shareholder":2,"Sector":"Technology","Company":"Ansys","FCF_Yield":2.1,"Fwd_PE":38.0,"Trend":"→","TrendColor":"#c98800","TrendTip":"Mixed","Price":340.0,"Mkt Cap $B":29.0},
+    "MCD":  {"Score":69,"Moat":29,"Fortress":15,"Valuation":13,"Momentum":7,"Shareholder":5,"Sector":"Consumer Cyclical","Company":"McDonald's","FCF_Yield":3.9,"Fwd_PE":22.5,"Trend":"↑","TrendColor":"#00a35a","TrendTip":"Improving","Price":297.0,"Mkt Cap $B":213.0},
+    "TMO":  {"Score":67,"Moat":28,"Fortress":18,"Valuation":11,"Momentum":6,"Shareholder":4,"Sector":"Healthcare","Company":"Thermo Fisher","FCF_Yield":3.1,"Fwd_PE":24.0,"Trend":"→","TrendColor":"#c98800","TrendTip":"Mixed","Price":510.0,"Mkt Cap $B":196.0},
+    "HON":  {"Score":64,"Moat":26,"Fortress":17,"Valuation":12,"Momentum":6,"Shareholder":3,"Sector":"Industrials","Company":"Honeywell","FCF_Yield":4.2,"Fwd_PE":19.5,"Trend":"→","TrendColor":"#c98800","TrendTip":"Mixed","Price":218.0,"Mkt Cap $B":134.0},
+    "XOM":  {"Score":60,"Moat":22,"Fortress":17,"Valuation":13,"Momentum":5,"Shareholder":3,"Sector":"Energy","Company":"ExxonMobil","FCF_Yield":5.8,"Fwd_PE":13.2,"Trend":"↓","TrendColor":"#d92626","TrendTip":"Deteriorating","Price":108.0,"Mkt Cap $B":462.0},
 }
 
 # ── Screener universe (~80 quality large-caps) ────────────────────────────────
@@ -363,13 +363,13 @@ def _sector_percentile(value: float, median: float, std: float) -> str:
 
 def _percentile_badge(label: str) -> str:
     """Return a styled HTML badge for a percentile label."""
-    if "Top 5"    in label: bg, fg = "#0d2b1d", "#2ecc71"
+    if "Top 5"    in label: bg, fg = "#0d2b1d", "#00a35a"
     elif "Top 15" in label: bg, fg = "#0d2b1d", "#27ae60"
     elif "Top 30" in label: bg, fg = "#1a2b0d", "#a8d08d"
     elif "Above"  in label: bg, fg = "#1a2000", "#c8e06e"
     elif "Median" in label: bg, fg = "#1e1e1e", "#888888"
     elif "Below"  in label: bg, fg = "#2b1a0d", "#e67e22"
-    elif "Bottom 30" in label: bg, fg = "#2b0d0d", "#e74c3c"
+    elif "Bottom 30" in label: bg, fg = "#2b0d0d", "#d92626"
     else:                   bg, fg = "#2b0d0d", "#c0392b"
     return (
         f'<span style="background:{bg};color:{fg};border:1px solid {fg}55;'
@@ -440,11 +440,11 @@ def _macro_beta_cell(macro_range: int) -> str:
     if macro_range <= 0:
         return '<span style="color:#444;">—</span>'
     if macro_range <= 8:
-        color, label = "#2ecc71", "stable"
+        color, label = "#00a35a", "stable"
     elif macro_range <= 14:
-        color, label = "#f39c12", "moderate"
+        color, label = "#c98800", "moderate"
     else:
-        color, label = "#e74c3c", "high"
+        color, label = "#d92626", "high"
     return (
         f'<span style="color:{color};font-weight:700;">{macro_range}</span>'
         f'<span style="color:#555;font-size:0.65rem;margin-left:3px;">{label}</span>'
@@ -467,7 +467,7 @@ def _macro_sens_cell(sector: str, regime: str) -> str:
     if adj == 0:
         neutral = "No adjustment for this sector in the current regime"
         return f'<span style="color:#555;" title="{neutral}">0</span>'
-    color = "#2ecc71" if adj > 0 else "#e74c3c"
+    color = "#00a35a" if adj > 0 else "#d92626"
     sign  = "+" if adj > 0 else ""
     return (
         f'<span style="color:{color};font-weight:700;cursor:help;"{title_attr}>'
@@ -485,9 +485,9 @@ def _score_color_sub(value: int, max_value: int) -> str:
     if max_value == 0:
         return "#888"
     pct = value / max_value
-    if pct >= 0.75: return "#2ecc71"
-    if pct >= 0.50: return "#f39c12"
-    return "#e74c3c"
+    if pct >= 0.75: return "#00a35a"
+    if pct >= 0.50: return "#c98800"
+    return "#d92626"
 
 
 def _score_color(score: int) -> str:
@@ -495,11 +495,11 @@ def _score_color(score: int) -> str:
     Colour for a total 0–100 Buffett score.
     Used in score cards and macro-adjusted screener totals.
     """
-    if score >= 75: return "#2ecc71"
+    if score >= 75: return "#00a35a"
     if score >= 60: return "#27ae60"
     if score >= 45: return "#f1c40f"
     if score >= 30: return "#e67e22"
-    return "#e74c3c"
+    return "#d92626"
 
 
 def _score_label(score: int) -> tuple[str, str]:
@@ -617,11 +617,11 @@ def _price_trend(info: dict) -> tuple[str, str, str]:
             tip = f"Uptrend confirmed: {pct_vs_200:+.1%} vs 200MA · 50MA above 200MA"
         else:
             tip = f"Above 200MA: {pct_vs_200:+.1%}"
-        return "↑", "#2ecc71", tip
+        return "↑", "#00a35a", tip
 
     if pct_vs_200 < -0.03:
         tip = f"Technical downtrend: {pct_vs_200:+.1%} below 200MA"
-        return "↓", "#e74c3c", tip
+        return "↓", "#d92626", tip
 
     # Within ±3% band — consolidating
     if ma50:
@@ -629,7 +629,7 @@ def _price_trend(info: dict) -> tuple[str, str, str]:
         tip = f"Consolidating: {pct_vs_200:+.1%} vs 200MA · {pct_vs_50:+.1%} vs 50MA"
     else:
         tip = f"Near 200MA: {pct_vs_200:+.1%}"
-    return "→", "#f39c12", tip
+    return "→", "#c98800", tip
 
 
 # ── Fundamentals trend ────────────────────────────────────────────────────────
@@ -662,10 +662,10 @@ def _fundamentals_trend(raw_data: dict) -> tuple[str, str, str]:
         return "—", "#444", "Trend: no data available"
     ratio = improving / total
     if ratio >= 0.67:
-        return "↑", "#2ecc71", f"Improving: {improving}/{total} metrics up YoY"
+        return "↑", "#00a35a", f"Improving: {improving}/{total} metrics up YoY"
     if ratio <= 0.33:
-        return "↓", "#e74c3c", f"Deteriorating: {improving}/{total} metrics up YoY"
-    return "→", "#f39c12", f"Mixed: {improving}/{total} metrics up YoY"
+        return "↓", "#d92626", f"Deteriorating: {improving}/{total} metrics up YoY"
+    return "→", "#c98800", f"Mixed: {improving}/{total} metrics up YoY"
 
 
 # ── Data fetching ─────────────────────────────────────────────────────────────

@@ -50,7 +50,7 @@ DISCLAIMER = (
 )
 
 # ── Page CSS ──────────────────────────────────────────────────────────────────
-from components.taplox_theme import inject_theme
+from components.pulse360_theme import inject_theme
 inject_theme()
 st.markdown("""
 <style>
@@ -195,12 +195,12 @@ with tabs[7]:
 
 with st.sidebar:
     # ── Quick Stats (compact card) ───────────────────────────────────────────
-    tl_color  = {"green": "#28a745", "yellow": "#f39c12", "red": "#e74c3c"}.get(
-        model_output.traffic_light, "#6c757d"
+    tl_color  = {"green": "#28a745", "yellow": "#c98800", "red": "#d92626"}.get(
+        model_output.traffic_light, "#6a6a6a"
     )
     delta_html = ""
     if prob_delta is not None:
-        d_color = "#e74c3c" if prob_delta > 0 else "#2ecc71"
+        d_color = "#d92626" if prob_delta > 0 else "#00a35a"
         d_arrow = "▲" if prob_delta > 0 else "▼"
         delta_html = (
             f'<span style="font-size:11px;color:{d_color};margin-left:6px;">'
@@ -208,26 +208,26 @@ with st.sidebar:
         )
     cfnai_html = ""
     if lei_growth is not None:
-        c_color = "#28a745" if lei_growth > 0 else "#e74c3c"
+        c_color = "#28a745" if lei_growth > 0 else "#d92626"
         cfnai_html = (
             f'<div style="display:flex;justify-content:space-between;'
-            f'padding:4px 0;border-top:1px solid #e9ecef;">'
-            f'<span style="color:#6c757d;font-size:12px;">CFNAI 3M avg</span>'
+            f'padding:4px 0;border-top:1px solid #ececec;">'
+            f'<span style="color:#6a6a6a;font-size:12px;">CFNAI 3M avg</span>'
             f'<span style="color:{c_color};font-size:12px;font-weight:600;">'
             f'{lei_growth:+.3f}</span></div>'
         )
-    conf_color = {"High": "#28a745", "Medium": "#f39c12", "Low": "#e74c3c"}.get(
-        phase_output.confidence, "#6c757d"
+    conf_color = {"High": "#28a745", "Medium": "#c98800", "Low": "#d92626"}.get(
+        phase_output.confidence, "#6a6a6a"
     )
     st.markdown(
         f"""
-        <div style="background:#ffffff;border:1px solid #e9ecef;border-radius:10px;
+        <div style="background:#ffffff;border:1px solid #ececec;border-radius:10px;
                     padding:10px 14px;margin-bottom:8px;">
-          <div style="font-size:11px;color:#adb5bd;margin-bottom:6px;font-weight:600;
+          <div style="font-size:11px;color:#a0a0a0;margin-bottom:6px;font-weight:600;
                       letter-spacing:.05em;">📊 QUICK STATS</div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;
-                      padding:4px 0;border-top:1px solid #e9ecef;">
-            <span style="color:#6c757d;font-size:12px;">Recession Prob.</span>
+                      padding:4px 0;border-top:1px solid #ececec;">
+            <span style="color:#6a6a6a;font-size:12px;">Recession Prob.</span>
             <span>
               <span style="color:{tl_color};font-size:18px;font-weight:700;">
                 {model_output.probability:.1f}%
@@ -235,15 +235,15 @@ with st.sidebar:
             </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;
-                      padding:4px 0;border-top:1px solid #e9ecef;">
-            <span style="color:#6c757d;font-size:12px;">Cycle Phase</span>
-            <span style="color:#293241;font-size:13px;font-weight:600;">
+                      padding:4px 0;border-top:1px solid #ececec;">
+            <span style="color:#6a6a6a;font-size:12px;">Cycle Phase</span>
+            <span style="color:#0a0a0a;font-size:13px;font-weight:600;">
               {phase_output.emoji} {phase_output.phase}
             </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;
-                      padding:4px 0;border-top:1px solid #e9ecef;">
-            <span style="color:#6c757d;font-size:12px;">Confidence</span>
+                      padding:4px 0;border-top:1px solid #ececec;">
+            <span style="color:#6a6a6a;font-size:12px;">Confidence</span>
             <span style="color:{conf_color};font-size:12px;font-weight:600;">
               {phase_output.confidence}
             </span>

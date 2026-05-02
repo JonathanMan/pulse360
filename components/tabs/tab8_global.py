@@ -67,11 +67,11 @@ def render_tab8(model_output, phase_output) -> None:
         if usd_broad["last_value"] is not None and not usd_broad["data"].empty:
             _avg = usd_broad["data"].mean()
             if usd_broad["last_value"] > _avg * 1.03:
-                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — strong dollar; headwind for US multinationals and EM assets; favour domestic US exposure.", "#f39c12")
+                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — strong dollar; headwind for US multinationals and EM assets; favour domestic US exposure.", "#c98800")
             elif usd_broad["last_value"] < _avg * 0.97:
-                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — weak dollar; tailwind for US multinationals and EM equities; consider international diversification.", "#2ecc71")
+                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — weak dollar; tailwind for US multinationals and EM equities; consider international diversification.", "#00a35a")
             else:
-                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — near long-run average; FX neutral; no major cross-currency headwind or tailwind.", "#2ecc71")
+                render_action_item(f"USD broad index at {usd_broad['last_value']:.1f} — near long-run average; FX neutral; no major cross-currency headwind or tailwind.", "#00a35a")
 
     with col2:
         st.markdown("##### EUR/USD Exchange Rate")
@@ -95,11 +95,11 @@ def render_tab8(model_output, phase_output) -> None:
         if eur_usd["last_value"] is not None:
             _ev = eur_usd["last_value"]
             if _ev > 1.10:
-                render_action_item(f"EUR/USD at {_ev:.4f} — dollar weakness; European equities more competitive; consider EUR-hedged international exposure.", "#2ecc71")
+                render_action_item(f"EUR/USD at {_ev:.4f} — dollar weakness; European equities more competitive; consider EUR-hedged international exposure.", "#00a35a")
             elif _ev >= 1.0:
-                render_action_item(f"EUR/USD at {_ev:.4f} — near parity zone; FX neutral; no significant cross-currency tailwind or headwind.", "#f39c12")
+                render_action_item(f"EUR/USD at {_ev:.4f} — near parity zone; FX neutral; no significant cross-currency tailwind or headwind.", "#c98800")
             else:
-                render_action_item(f"EUR/USD at {_ev:.4f} — below parity; USD dominance; potential European economic stress; underweight EUR assets.", "#e74c3c")
+                render_action_item(f"EUR/USD at {_ev:.4f} — below parity; USD dominance; potential European economic stress; underweight EUR assets.", "#d92626")
 
     # ── Row 2: USD/JPY | Brent Crude ─────────────────────────────────────────
     col3, col4 = st.columns(2)
@@ -121,11 +121,11 @@ def render_tab8(model_output, phase_output) -> None:
         if jpy_usd["last_value"] is not None:
             _jv = jpy_usd["last_value"]
             if _jv > 145:
-                render_action_item(f"USD/JPY at {_jv:.1f} — yen weakness; Japanese exporters benefit but Bank of Japan intervention risk elevated.", "#f39c12")
+                render_action_item(f"USD/JPY at {_jv:.1f} — yen weakness; Japanese exporters benefit but Bank of Japan intervention risk elevated.", "#c98800")
             elif _jv >= 120:
-                render_action_item(f"USD/JPY at {_jv:.1f} — moderate range; yen normalising; Japan equities fairly valued on FX basis.", "#2ecc71")
+                render_action_item(f"USD/JPY at {_jv:.1f} — moderate range; yen normalising; Japan equities fairly valued on FX basis.", "#00a35a")
             else:
-                render_action_item(f"USD/JPY at {_jv:.1f} — strong yen; Japanese export competitiveness at risk; underweight Japan exporters.", "#e74c3c")
+                render_action_item(f"USD/JPY at {_jv:.1f} — strong yen; Japanese export competitiveness at risk; underweight Japan exporters.", "#d92626")
 
     with col4:
         st.markdown("##### Brent Crude Oil ($/bbl)")
@@ -133,7 +133,7 @@ def render_tab8(model_output, phase_output) -> None:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=brent["data"].index, y=brent["data"].values,
-                mode="lines", line={"color": "#e74c3c", "width": 2},
+                mode="lines", line={"color": "#d92626", "width": 2},
                 name="Brent Crude",
                 fill="tozeroy", fillcolor="rgba(231,76,60,0.06)",
             ))
@@ -145,11 +145,11 @@ def render_tab8(model_output, phase_output) -> None:
         if brent["last_value"] is not None:
             _bv = brent["last_value"]
             if _bv > 90:
-                render_action_item(f"Brent at ${_bv:.0f}/bbl — energy inflation risk elevated; overweight energy sector; monitor consumer spending impact.", "#e74c3c")
+                render_action_item(f"Brent at ${_bv:.0f}/bbl — energy inflation risk elevated; overweight energy sector; monitor consumer spending impact.", "#d92626")
             elif _bv >= 60:
-                render_action_item(f"Brent at ${_bv:.0f}/bbl — moderate range; energy market balanced; no major inflation shock from oil.", "#f39c12")
+                render_action_item(f"Brent at ${_bv:.0f}/bbl — moderate range; energy market balanced; no major inflation shock from oil.", "#c98800")
             else:
-                render_action_item(f"Brent at ${_bv:.0f}/bbl — below $60; weak global demand signal; avoid energy sector; deflation risk elevated.", "#e74c3c")
+                render_action_item(f"Brent at ${_bv:.0f}/bbl — below $60; weak global demand signal; avoid energy sector; deflation risk elevated.", "#d92626")
 
     # ── Global Commodity Index ────────────────────────────────────────────────
     st.markdown("##### Global Commodity Price Index (World Bank / FRED)")
@@ -171,11 +171,11 @@ def render_tab8(model_output, phase_output) -> None:
     if commodity["last_value"] is not None and len(commodity["data"]) >= 5:
         _yoy_comm = (commodity["data"].iloc[-1] / commodity["data"].iloc[-5] - 1) * 100
         if _yoy_comm > 10:
-            render_action_item(f"Global commodities +{_yoy_comm:.1f}% YoY — real asset inflation hedge; favour commodity producers and materials.", "#f39c12")
+            render_action_item(f"Global commodities +{_yoy_comm:.1f}% YoY — real asset inflation hedge; favour commodity producers and materials.", "#c98800")
         elif _yoy_comm >= -5:
-            render_action_item(f"Global commodities {_yoy_comm:+.1f}% YoY — stable; no major inflationary or deflationary commodity shock.", "#2ecc71")
+            render_action_item(f"Global commodities {_yoy_comm:+.1f}% YoY — stable; no major inflationary or deflationary commodity shock.", "#00a35a")
         else:
-            render_action_item(f"Global commodities {_yoy_comm:.1f}% YoY — falling sharply; global demand weakness signal; avoid cyclical commodity exposure.", "#e74c3c")
+            render_action_item(f"Global commodities {_yoy_comm:.1f}% YoY — falling sharply; global demand weakness signal; avoid cyclical commodity exposure.", "#d92626")
 
     # ── Metrics row ───────────────────────────────────────────────────────────
     st.markdown("##### Current Readings at a Glance")

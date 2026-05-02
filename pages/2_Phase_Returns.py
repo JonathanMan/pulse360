@@ -22,7 +22,7 @@ from models.phase_returns import (
 )
 from components.chart_utils import dark_layout, add_nber
 
-from components.taplox_theme import inject_theme
+from components.pulse360_theme import inject_theme
 inject_theme()
 
 st.markdown("""
@@ -98,11 +98,11 @@ st.markdown(
             {current_phase}
         </span>
         &nbsp;&nbsp;
-        <span style="color:#6c757d; font-size:0.9rem;">
+        <span style="color:#6a6a6a; font-size:0.9rem;">
             Current phase · Model probability {current_prob:.1f}%
         </span>
         <br><br>
-        <span style="color:#293241; font-size:0.9rem;">
+        <span style="color:#0a0a0a; font-size:0.9rem;">
             Based on this phase, historical median outcomes: &nbsp;
     """,
     unsafe_allow_html=True,
@@ -114,7 +114,7 @@ if current_phase in returns_table.index and not returns_table.empty:
     for i, asset in enumerate(returns_table.columns):
         val = returns_table.loc[current_phase, asset]
         with cols_inline[i]:
-            color = "#2ecc71" if (val or 0) >= 0 else "#e74c3c"
+            color = "#00a35a" if (val or 0) >= 0 else "#d92626"
             label = f"{val:+.1f}%" if val is not None else "—"
             st.metric(label=asset, value=label)
 
@@ -186,15 +186,15 @@ st.caption(
 
 def _color_cell(val):
     if pd.isna(val) or val is None:
-        return "color: #6c757d"
+        return "color: #6a6a6a"
     if val > 15:
         return "background-color: rgba(40,167,69,0.20); color: #1a5c30; font-weight:600"
     if val > 5:
         return "background-color: rgba(40,167,69,0.10); color: #1a5c30"
     if val > 0:
-        return "background-color: rgba(40,167,69,0.05); color: #293241"
+        return "background-color: rgba(40,167,69,0.05); color: #0a0a0a"
     if val > -5:
-        return "background-color: rgba(231,76,60,0.05); color: #293241"
+        return "background-color: rgba(231,76,60,0.05); color: #0a0a0a"
     if val > -15:
         return "background-color: rgba(231,76,60,0.10); color: #8b1a1a"
     return "background-color: rgba(231,76,60,0.20); color: #8b1a1a; font-weight:600"
@@ -211,7 +211,7 @@ st.dataframe(
         .map(_color_cell)
         .set_table_styles([{
             "selector": "th",
-            "props": [("background-color", "#f5f7fb"), ("color", "#293241"), ("font-weight", "600")]
+            "props": [("background-color", "#f4f4f4"), ("color", "#0a0a0a"), ("font-weight", "600")]
         }]),
     use_container_width=True,
 )
@@ -255,7 +255,7 @@ for phase in PHASES:
         continue
     vals = returns_table.loc[phase]
     colors = [
-        "#2ecc71" if (v or 0) >= 0 else "#e74c3c"
+        "#00a35a" if (v or 0) >= 0 else "#d92626"
         for v in vals
     ]
     fig_bar.add_trace(go.Bar(

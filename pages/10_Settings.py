@@ -66,7 +66,7 @@ st.markdown("""
         color: #cccccc;
         margin-bottom: 3px;
     }
-    .sp-feature::before { content: "✓  "; color: #2ecc71; }
+    .sp-feature::before { content: "✓  "; color: #00a35a; }
     .sp-locked {
         font-size: 0.78rem;
         color: #444;
@@ -87,9 +87,9 @@ st.markdown("""
     }
 
     /* Status pills */
-    .status-ok   { color: #2ecc71; font-weight: 600; font-size: 0.82rem; }
-    .status-warn { color: #f39c12; font-weight: 600; font-size: 0.82rem; }
-    .status-err  { color: #e74c3c; font-weight: 600; font-size: 0.82rem; }
+    .status-ok   { color: #00a35a; font-weight: 600; font-size: 0.82rem; }
+    .status-warn { color: #c98800; font-weight: 600; font-size: 0.82rem; }
+    .status-err  { color: #d92626; font-weight: 600; font-size: 0.82rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -111,7 +111,7 @@ st.markdown(
 current_key = get_profile_key()
 
 _BADGE_COLOURS: dict[str, tuple[str, str]] = {
-    "Beginner": ("#2ecc71", "#0e2a1a"),
+    "Beginner": ("#00a35a", "#0e2a1a"),
     "Investor": ("#3498db", "#0a1e2e"),
     "Analyst":  ("#9b59b6", "#1a0e2a"),
 }
@@ -305,7 +305,7 @@ with about_col2:
     for feat, min_lvl in feature_table:
         if current_level >= min_lvl:
             icon  = "✅"
-            color = "#2ecc71"
+            color = "#00a35a"
         else:
             icon  = "🔒"
             color = "#444"

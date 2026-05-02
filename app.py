@@ -9,7 +9,7 @@ Deploy:       push to GitHub → connect to Streamlit Cloud → add secrets
 """
 
 import streamlit as st
-from components.taplox_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
+from components.pulse360_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
 
 st.set_page_config(
     page_title="Pulse360",

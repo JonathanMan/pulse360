@@ -62,11 +62,11 @@ def render_tab7(model_output, phase_output) -> None:
         if houst["last_value"] is not None:
             _hv = houst["last_value"]
             if _hv > 1400:
-                render_action_item(f"Housing starts at {_hv:,.0f}K — above trend; construction sector healthy; homebuilders and building materials supported.", "#2ecc71")
+                render_action_item(f"Housing starts at {_hv:,.0f}K — above trend; construction sector healthy; homebuilders and building materials supported.", "#00a35a")
             elif _hv > 1000:
-                render_action_item(f"Housing starts at {_hv:,.0f}K — moderate; market adjusting to rate environment; selective homebuilder exposure.", "#f39c12")
+                render_action_item(f"Housing starts at {_hv:,.0f}K — moderate; market adjusting to rate environment; selective homebuilder exposure.", "#c98800")
             else:
-                render_action_item(f"Housing starts at {_hv:,.0f}K — depressed; residential investment contracting; avoid homebuilders and rate-sensitive REITs.", "#e74c3c")
+                render_action_item(f"Housing starts at {_hv:,.0f}K — depressed; residential investment contracting; avoid homebuilders and rate-sensitive REITs.", "#d92626")
 
     with col2:
         st.markdown("##### Building Permits (PERMIT)")
@@ -74,7 +74,7 @@ def render_tab7(model_output, phase_output) -> None:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=permit["data"].index, y=permit["data"].values,
-                mode="lines", line={"color": "#2ecc71", "width": 2},
+                mode="lines", line={"color": "#00a35a", "width": 2},
                 name="Building Permits (000s)",
                 fill="tozeroy", fillcolor="rgba(46,204,113,0.08)",
             ))
@@ -86,11 +86,11 @@ def render_tab7(model_output, phase_output) -> None:
         if permit["last_value"] is not None:
             _pv = permit["last_value"]
             if _pv > 1400:
-                render_action_item(f"Permits at {_pv:,.0f}K — strong pipeline; homebuilder and materials sectors supported by forward activity.", "#2ecc71")
+                render_action_item(f"Permits at {_pv:,.0f}K — strong pipeline; homebuilder and materials sectors supported by forward activity.", "#00a35a")
             elif _pv > 1000:
-                render_action_item(f"Permits at {_pv:,.0f}K — moderate pipeline; healthy but not booming; neutral stance on housing.", "#f39c12")
+                render_action_item(f"Permits at {_pv:,.0f}K — moderate pipeline; healthy but not booming; neutral stance on housing.", "#c98800")
             else:
-                render_action_item(f"Permits at {_pv:,.0f}K — weak pipeline; forward construction contracting; housing recession risk elevated.", "#e74c3c")
+                render_action_item(f"Permits at {_pv:,.0f}K — weak pipeline; forward construction contracting; housing recession risk elevated.", "#d92626")
 
     # ── Row 2: Case-Shiller HPI YoY | Consumer Sentiment ─────────────────────
     col3, col4 = st.columns(2)
@@ -100,7 +100,7 @@ def render_tab7(model_output, phase_output) -> None:
         if not cs_hpi["data"].empty:
             cs_yoy = yoy_pct(cs_hpi["data"], periods=12).dropna()
             if not cs_yoy.empty:
-                colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in cs_yoy.values]
+                colors = ["#00a35a" if v >= 0 else "#d92626" for v in cs_yoy.values]
                 fig = go.Figure(go.Bar(
                     x=cs_yoy.index, y=cs_yoy.values,
                     marker_color=colors,
@@ -117,29 +117,29 @@ def render_tab7(model_output, phase_output) -> None:
             if not _cs_yoy.empty:
                 _cv = _cs_yoy.iloc[-1]
                 if _cv > 5:
-                    render_action_item(f"Home prices up {_cv:.1f}% YoY — housing wealth supporting consumer confidence; watch for affordability constraint.", "#f39c12")
+                    render_action_item(f"Home prices up {_cv:.1f}% YoY — housing wealth supporting consumer confidence; watch for affordability constraint.", "#c98800")
                 elif _cv >= 0:
-                    render_action_item(f"Home prices up {_cv:.1f}% YoY — moderate growth; healthy market signal; no bubble or bust concern.", "#2ecc71")
+                    render_action_item(f"Home prices up {_cv:.1f}% YoY — moderate growth; healthy market signal; no bubble or bust concern.", "#00a35a")
                 else:
-                    render_action_item(f"Home prices down {abs(_cv):.1f}% YoY — housing wealth destruction; consumer spending headwind; avoid real estate.", "#e74c3c")
+                    render_action_item(f"Home prices down {abs(_cv):.1f}% YoY — housing wealth destruction; consumer spending headwind; avoid real estate.", "#d92626")
 
     with col4:
         st.markdown("##### U of Michigan Consumer Sentiment")
         if not umcsent["data"].empty:
             sent_val = umcsent["last_value"] or 0
-            line_color = "#2ecc71" if sent_val >= 80 else "#f39c12" if sent_val >= 60 else "#e74c3c"
+            line_color = "#00a35a" if sent_val >= 80 else "#c98800" if sent_val >= 60 else "#d92626"
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=umcsent["data"].index, y=umcsent["data"].values,
                 mode="lines", line={"color": line_color, "width": 2},
                 name="Consumer Sentiment",
             ))
-            fig.add_hline(y=80, line_dash="dot", line_color="#2ecc71",
+            fig.add_hline(y=80, line_dash="dot", line_color="#00a35a",
                           line_width=1, annotation_text="80 — confident",
-                          annotation_font_color="#2ecc71", annotation_font_size=10)
-            fig.add_hline(y=60, line_dash="dot", line_color="#e74c3c",
+                          annotation_font_color="#00a35a", annotation_font_size=10)
+            fig.add_hline(y=60, line_dash="dot", line_color="#d92626",
                           line_width=1, annotation_text="60 — pessimistic",
-                          annotation_font_color="#e74c3c", annotation_font_size=10)
+                          annotation_font_color="#d92626", annotation_font_size=10)
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Index Level")
             st.plotly_chart(fig, use_container_width=True, key="tab7_sentiment")
@@ -148,11 +148,11 @@ def render_tab7(model_output, phase_output) -> None:
         if umcsent["last_value"] is not None:
             _sv = umcsent["last_value"]
             if _sv >= 80:
-                render_action_item(f"Sentiment at {_sv:.1f} — confident consumers; spending cycle intact; consumer discretionary and retail favoured.", "#2ecc71")
+                render_action_item(f"Sentiment at {_sv:.1f} — confident consumers; spending cycle intact; consumer discretionary and retail favoured.", "#00a35a")
             elif _sv >= 60:
-                render_action_item(f"Sentiment at {_sv:.1f} — mixed outlook; spending cautious; focus on non-discretionary consumer staples.", "#f39c12")
+                render_action_item(f"Sentiment at {_sv:.1f} — mixed outlook; spending cautious; focus on non-discretionary consumer staples.", "#c98800")
             else:
-                render_action_item(f"Sentiment at {_sv:.1f} — pessimistic; spending retraction risk; reduce discretionary, add consumer staples.", "#e74c3c")
+                render_action_item(f"Sentiment at {_sv:.1f} — pessimistic; spending retraction risk; reduce discretionary, add consumer staples.", "#d92626")
 
     # ── Row 3: Retail Sales | Personal Savings Rate ───────────────────────────
     col5, col6 = st.columns(2)
@@ -162,7 +162,7 @@ def render_tab7(model_output, phase_output) -> None:
         if not rsxfs["data"].empty:
             rs_yoy = yoy_pct(rsxfs["data"]).dropna()
             if not rs_yoy.empty:
-                colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in rs_yoy.values]
+                colors = ["#00a35a" if v >= 0 else "#d92626" for v in rs_yoy.values]
                 fig = go.Figure(go.Bar(
                     x=rs_yoy.index, y=rs_yoy.values,
                     marker_color=colors,
@@ -175,7 +175,7 @@ def render_tab7(model_output, phase_output) -> None:
                         fig.add_trace(go.Scatter(
                             x=mv_yoy.index, y=mv_yoy.values,
                             mode="lines",
-                            line={"color": "#f39c12", "width": 2, "dash": "dot"},
+                            line={"color": "#c98800", "width": 2, "dash": "dot"},
                             name="ex-Motor Vehicles (RSFSXMV)",
                         ))
                 fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
@@ -194,11 +194,11 @@ def render_tab7(model_output, phase_output) -> None:
             if not _rs_yoy.empty:
                 _rv = _rs_yoy.iloc[-1]
                 if _rv > 3:
-                    render_action_item(f"Retail sales +{_rv:.1f}% YoY — consumer engine firing; consumer discretionary and payments sectors benefit.", "#2ecc71")
+                    render_action_item(f"Retail sales +{_rv:.1f}% YoY — consumer engine firing; consumer discretionary and payments sectors benefit.", "#00a35a")
                 elif _rv >= 0:
-                    render_action_item(f"Retail sales +{_rv:.1f}% YoY — spending decelerating; selective consumer exposure; watch for further softening.", "#f39c12")
+                    render_action_item(f"Retail sales +{_rv:.1f}% YoY — spending decelerating; selective consumer exposure; watch for further softening.", "#c98800")
                 else:
-                    render_action_item(f"Retail sales {_rv:.1f}% YoY — consumer retrenchment underway; shift to consumer staples and defensive sectors.", "#e74c3c")
+                    render_action_item(f"Retail sales {_rv:.1f}% YoY — consumer retrenchment underway; shift to consumer staples and defensive sectors.", "#d92626")
 
     with col6:
         st.markdown("##### Personal Savings Rate (PSAVERT)")
@@ -218,11 +218,11 @@ def render_tab7(model_output, phase_output) -> None:
         if psavert["last_value"] is not None:
             _psv = psavert["last_value"]
             if _psv > 7:
-                render_action_item(f"Savings rate at {_psv:.1f}% — consumers building buffer; potential future spending catalyst but current demand subdued.", "#f39c12")
+                render_action_item(f"Savings rate at {_psv:.1f}% — consumers building buffer; potential future spending catalyst but current demand subdued.", "#c98800")
             elif _psv >= 3:
-                render_action_item(f"Savings rate at {_psv:.1f}% — normalised; consumer spending capacity healthy; supports sustained demand.", "#2ecc71")
+                render_action_item(f"Savings rate at {_psv:.1f}% — normalised; consumer spending capacity healthy; supports sustained demand.", "#00a35a")
             else:
-                render_action_item(f"Savings rate at {_psv:.1f}% — very low; spending may be unsustainable; watch for pullback as buffer runs out.", "#e74c3c")
+                render_action_item(f"Savings rate at {_psv:.1f}% — very low; spending may be unsustainable; watch for pullback as buffer runs out.", "#d92626")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

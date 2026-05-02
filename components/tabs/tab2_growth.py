@@ -56,9 +56,9 @@ def render_tab2(model_output, phase_output) -> None:
         if indpro["last_value"] is not None and len(indpro["data"]) >= 2:
             _ip_trend = indpro["data"].iloc[-1] - indpro["data"].iloc[-2]
             if _ip_trend > 0:
-                render_action_item("Industrial output expanding — supports cyclical exposure; materials and industrials historically outperform.", "#2ecc71")
+                render_action_item("Industrial output expanding — supports cyclical exposure; materials and industrials historically outperform.", "#00a35a")
             else:
-                render_action_item("Industrial output contracting — reduce cyclical exposure; watch for sustained decline as a recession precursor.", "#e74c3c")
+                render_action_item("Industrial output contracting — reduce cyclical exposure; watch for sustained decline as a recession precursor.", "#d92626")
 
     with col2:
         st.markdown("##### Capacity Utilization (TCU)")
@@ -66,7 +66,7 @@ def render_tab2(model_output, phase_output) -> None:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=tcu["data"].index, y=tcu["data"].values,
-                mode="lines", line={"color": "#2ecc71", "width": 2},
+                mode="lines", line={"color": "#00a35a", "width": 2},
                 name="Capacity Utilization",
             ))
             fig = threshold_line(fig, 80, "80% — historical ceiling", "#e67e22", "dot")
@@ -76,19 +76,19 @@ def render_tab2(model_output, phase_output) -> None:
         chart_meta(tcu, decimals=1)
         if tcu["last_value"] is not None:
             if tcu["last_value"] >= 80:
-                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — near full capacity; watch for inflationary pressure and margin compression.", "#f39c12")
+                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — near full capacity; watch for inflationary pressure and margin compression.", "#c98800")
             elif tcu["last_value"] >= 75:
-                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — healthy growth without overheating; no capacity constraint concerns.", "#2ecc71")
+                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — healthy growth without overheating; no capacity constraint concerns.", "#00a35a")
             else:
-                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — significant slack in the economy; conditions support accommodative policy.", "#e74c3c")
+                render_action_item(f"Utilization at {tcu['last_value']:.1f}% — significant slack in the economy; conditions support accommodative policy.", "#d92626")
 
     # ── Row 2: ISM PMI notice ─────────────────────────────────────────────────
     st.markdown("##### ISM PMI — Manufacturing &amp; Services")
     st.markdown(
         """
-        <div style="background:#1a1a2e; border:1px solid #444; border-left:3px solid #f39c12;
+        <div style="background:#1a1a2e; border:1px solid #444; border-left:3px solid #c98800;
                     border-radius:6px; padding:12px 16px; color:#bbb; font-size:13px;">
-            <strong style="color:#f39c12;">⚠ Data unavailable via FRED</strong><br>
+            <strong style="color:#c98800;">⚠ Data unavailable via FRED</strong><br>
             ISM removed its Manufacturing and Services PMI data from the FRED API in 2024
             due to licensing restrictions. These series (<code>NAPM</code>, <code>NMFCI</code>)
             can no longer be fetched programmatically for free.<br><br>
@@ -107,7 +107,7 @@ def render_tab2(model_output, phase_output) -> None:
     st.markdown("##### Durable Goods Orders ex-Defense ex-Aircraft (ADXTNO)")
     if not adxtno["data"].empty:
         mom = adxtno["data"].pct_change() * 100
-        colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in mom.values]
+        colors = ["#00a35a" if v >= 0 else "#d92626" for v in mom.values]
         fig = go.Figure(go.Bar(
             x=mom.index, y=mom.values,
             marker_color=colors,
@@ -121,11 +121,11 @@ def render_tab2(model_output, phase_output) -> None:
     if not adxtno["data"].empty and len(adxtno["data"]) >= 2:
         _dg_mom = adxtno["data"].pct_change().iloc[-1] * 100
         if _dg_mom >= 1.0:
-            render_action_item(f"Durable goods orders +{_dg_mom:.1f}% MoM — business investment expanding; supports industrials and capex-linked equities.", "#2ecc71")
+            render_action_item(f"Durable goods orders +{_dg_mom:.1f}% MoM — business investment expanding; supports industrials and capex-linked equities.", "#00a35a")
         elif _dg_mom >= 0:
-            render_action_item(f"Durable goods orders +{_dg_mom:.1f}% MoM — capex momentum stalling; watch for consecutive months of weakness.", "#f39c12")
+            render_action_item(f"Durable goods orders +{_dg_mom:.1f}% MoM — capex momentum stalling; watch for consecutive months of weakness.", "#c98800")
         else:
-            render_action_item(f"Durable goods orders {_dg_mom:.1f}% MoM — capex contraction signal; reduce industrials exposure and monitor trend.", "#e74c3c")
+            render_action_item(f"Durable goods orders {_dg_mom:.1f}% MoM — capex contraction signal; reduce industrials exposure and monitor trend.", "#d92626")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

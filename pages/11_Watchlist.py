@@ -47,14 +47,14 @@ from components.stock_score_utils import (
 def _badge(score: int) -> str:
     """Coloured verdict badge."""
     if score >= 75:
-        return '<span style="color:#2ecc71;font-weight:700;">⭐ Elite</span>'
+        return '<span style="color:#00a35a;font-weight:700;">⭐ Elite</span>'
     if score >= 60:
         return '<span style="color:#27ae60;font-weight:700;">✅ Strong</span>'
     if score >= 45:
-        return '<span style="color:#f39c12;font-weight:700;">🟡 Fair</span>'
+        return '<span style="color:#c98800;font-weight:700;">🟡 Fair</span>'
     if score >= 30:
         return '<span style="color:#e67e22;font-weight:700;">⚠️ Weak</span>'
-    return '<span style="color:#e74c3c;font-weight:700;">🔴 Avoid</span>'
+    return '<span style="color:#d92626;font-weight:700;">🔴 Avoid</span>'
 
 
 def _quick_action(score: int, sector: str, regime: str) -> tuple[str, str]:
@@ -81,13 +81,13 @@ def _earnings_cell(ed_str: str | None, today: date) -> str:
             return '<span style="color:#444;">—</span>'
         label = ed.strftime("%b %-d")
         if days == 0:
-            color, tip = "#e74c3c", "Earnings today!"
+            color, tip = "#d92626", "Earnings today!"
         elif days <= 6:
-            color, tip = "#e74c3c", f"In {days}d — imminent!"
+            color, tip = "#d92626", f"In {days}d — imminent!"
         elif days <= 14:
-            color, tip = "#f39c12", f"In {days} days"
+            color, tip = "#c98800", f"In {days} days"
         elif days <= 30:
-            color, tip = "#2ecc71", f"In {days} days"
+            color, tip = "#00a35a", f"In {days} days"
         else:
             color, tip = "#666", f"In {days} days"
         return (
@@ -149,7 +149,7 @@ if not watchlist:
     st.markdown(
         '<div style="text-align:center;padding:3rem 0;">'
         '<div style="font-size:2.5rem;margin-bottom:0.5rem;">⭐</div>'
-        '<div style="color:#6c757d;font-size:1rem;">Your watchlist is empty.</div>'
+        '<div style="color:#6a6a6a;font-size:1rem;">Your watchlist is empty.</div>'
         '<div style="color:#9aa0ac;font-size:0.85rem;margin-top:0.4rem;">'
         'Add tickers above, or use the <strong>⭐ Add to Watchlist</strong> button '
         'on the Buffett Score page after analysing a stock.'
@@ -285,13 +285,13 @@ if upcoming:
         score_val = s_match.get("MacroAdj", s_match.get("Score", 0))
         sc_color  = _score_color(int(score_val))
         if days == 0:
-            border, bg, countdown = "#e74c3c", "#fff5f5", "🔴 Today"
+            border, bg, countdown = "#d92626", "#fff5f5", "🔴 Today"
         elif days <= 6:
-            border, bg, countdown = "#e74c3c", "#fff0f0", f"🔴 in {days}d"
+            border, bg, countdown = "#d92626", "#fff0f0", f"🔴 in {days}d"
         elif days <= 14:
-            border, bg, countdown = "#f39c12", "#fffbf0", f"🟡 in {days}d"
+            border, bg, countdown = "#c98800", "#fffbf0", f"🟡 in {days}d"
         else:
-            border, bg, countdown = "#2ecc71", "#f0fff4", f"🟢 in {days}d"
+            border, bg, countdown = "#00a35a", "#f0fff4", f"🟢 in {days}d"
         date_str = ed.strftime("%b %-d")
         with card_cols[idx]:
             st.markdown(
@@ -327,7 +327,7 @@ for s in scored:
 
     # Circle of Competence dot
     _tier      = _COMPLEXITY.get(ticker, "moderate")
-    _tier_color = {"straightforward": "#2ecc71", "moderate": "#f39c12", "specialist": "#e74c3c"}[_tier]
+    _tier_color = {"straightforward": "#00a35a", "moderate": "#c98800", "specialist": "#d92626"}[_tier]
     _tier_tip   = {
         "straightforward": "Straightforward — clear moat, simple model; suitable for all investors",
         "moderate":        "Moderate complexity — understandable with research",
@@ -343,7 +343,7 @@ for s in scored:
     if macro_regime == "Normal" or delta == 0:
         score_cell = f'<span style="color:{col};font-weight:700;">{base_sc}</span>'
     else:
-        d_color = "#2ecc71" if delta > 0 else "#e74c3c"
+        d_color = "#00a35a" if delta > 0 else "#d92626"
         d_sign  = "+" if delta > 0 else ""
         score_cell = (
             f'<span style="color:{mac_col};font-weight:800;">{mac_sc}</span>'
@@ -354,7 +354,7 @@ for s in scored:
     # Stale data indicator
     stale_tip = f"Stale data — as of {cached_at}" if cached_at else "Stale data"
     cache_tag = (
-        f' <span style="color:#f39c12;font-size:0.65rem;" title="{stale_tip}">📦</span>'
+        f' <span style="color:#c98800;font-size:0.65rem;" title="{stale_tip}">📦</span>'
         if is_stale else ""
     )
 
@@ -370,11 +370,11 @@ for s in scored:
     macro_sens = _macro_sens_cell(sector, macro_regime)
 
     rows_html += (
-        f'<tr style="border-bottom:1px solid #e9ecef;">'
+        f'<tr style="border-bottom:1px solid #ececec;">'
         f'<td style="color:#3498db;font-weight:700;padding:{row_pad};font-size:{row_font};">'
         f'{ticker}{_coc_dot}{cache_tag}</td>'
         f'<td style="color:#495057;padding:{row_pad};font-size:{row_font};">{company[:28]}</td>'
-        f'<td style="color:#6c757d;padding:{row_pad};font-size:0.72rem;">{sector}</td>'
+        f'<td style="color:#6a6a6a;padding:{row_pad};font-size:0.72rem;">{sector}</td>'
         f'<td style="text-align:center;padding:{row_pad};">{score_cell}</td>'
         f'<td style="text-align:center;padding:{row_pad};">{macro_sens}</td>'
         f'<td style="text-align:center;padding:{row_pad};font-size:1rem;" '
@@ -389,8 +389,8 @@ for s in scored:
         f'text-align:center;font-weight:600;">{int(s.get("Valuation",0))}/20</td>'
         f'<td style="color:{_score_color_sub(int(s.get("Momentum",0)),10)};font-size:0.75rem;'
         f'text-align:center;font-weight:600;">{int(s.get("Momentum",0))}/10</td>'
-        f'<td style="color:#3b7ddd;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
-        f'<td style="color:#3b7ddd;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
+        f'<td style="color:#0a0a0a;font-size:0.75rem;text-align:center;">{fcf_str}</td>'
+        f'<td style="color:#0a0a0a;font-size:0.75rem;text-align:center;">{fpe_str}</td>'
         f'<td style="color:#495057;font-size:0.75rem;text-align:right;">{price_str}</td>'
         f'<td style="font-size:0.75rem;padding:{row_pad};">{_badge(mac_sc)}</td>'
         f'</tr>'
@@ -400,7 +400,7 @@ for s in scored:
 _thead = (
     f'<div style="overflow-x:auto;margin:10px 0;">'
     f'<table style="width:100%;border-collapse:collapse;background:#ffffff;font-size:{row_font};">'
-    f'<thead><tr style="border-bottom:2px solid #dee2e6;color:#6c757d;font-size:0.65rem;'
+    f'<thead><tr style="border-bottom:2px solid #dee2e6;color:#6a6a6a;font-size:0.65rem;'
     f'text-transform:uppercase;letter-spacing:.05em;">'
     f'<th style="padding:{row_pad};text-align:left;">Ticker</th>'
     f'<th style="padding:{row_pad};text-align:left;">Company</th>'

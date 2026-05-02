@@ -24,7 +24,7 @@ PROFILES: dict[str, dict] = {
         "label":       "Curious Learner",
         "icon":        "🌱",
         "level":       0,
-        "colour":      "#2ecc71",
+        "colour":      "#00a35a",
         "description": (
             "Macro concepts explained clearly. "
             "Stock quality at a glance. No jargon."

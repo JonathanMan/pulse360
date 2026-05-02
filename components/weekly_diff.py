@@ -94,7 +94,7 @@ def _delta_color(delta: float, higher_bad: bool) -> str:
     if abs(delta) < 1e-6:
         return "#888888"
     worsening = (delta > 0) == higher_bad
-    return "#e74c3c" if worsening else "#2ecc71"
+    return "#d92626" if worsening else "#00a35a"
 
 
 def _arrow(delta: float) -> str:
@@ -192,7 +192,7 @@ def render_weekly_diff(
         with col_b:
             if prev_month_prob is not None:
                 tl_prev = "green" if prev_month_prob < 25 else "yellow" if prev_month_prob < 50 else "red"
-                prev_color = {"green": "#2ecc71", "yellow": "#f39c12", "red": "#e74c3c"}[tl_prev]
+                prev_color = {"green": "#00a35a", "yellow": "#c98800", "red": "#d92626"}[tl_prev]
                 st.markdown(
                     f"<div style='font-size:0.8rem;color:#888'>Last month</div>"
                     f"<div style='font-size:1.3rem;font-weight:600;color:{prev_color}'>"
@@ -211,11 +211,11 @@ def render_weekly_diff(
         st.markdown("##### Cycle phase")
 
         phase_colors = {
-            "Early Expansion": "#2ecc71",
+            "Early Expansion": "#00a35a",
             "Mid Expansion":   "#27ae60",
-            "Late Expansion":  "#f39c12",
+            "Late Expansion":  "#c98800",
             "Peak":            "#e67e22",
-            "Contraction":     "#e74c3c",
+            "Contraction":     "#d92626",
             "Trough":          "#9b59b6",
         }
         curr_phase = phase_output.phase
@@ -227,7 +227,7 @@ def render_weekly_diff(
                 f"<span style='color:{prev_phase_color}'>{prev_phase}</span>"
                 f" → "
                 f"<span style='color:{curr_phase_color};font-weight:600'>{curr_phase}</span>"
-                f" <span style='color:#f39c12;font-size:0.8rem'>⚡ phase change</span>"
+                f" <span style='color:#c98800;font-size:0.8rem'>⚡ phase change</span>"
             )
         else:
             phase_html = (

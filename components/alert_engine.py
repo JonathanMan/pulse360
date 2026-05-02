@@ -220,36 +220,36 @@ def send_email_alert(rule: dict, current_value: float) -> bool:
         op_label     = OPERATOR_LABELS.get(rule["operator"], rule["operator"])
         subject      = f"🚨 Pulse360 Alert: {rule['name']}"
         body_html    = f"""
-<html><body style="font-family:sans-serif;color:#293241;max-width:560px;margin:auto;">
-  <div style="background:#3b7ddd;padding:18px 24px;border-radius:8px 8px 0 0;">
+<html><body style="font-family:sans-serif;color:#0a0a0a;max-width:560px;margin:auto;">
+  <div style="background:#0a0a0a;padding:18px 24px;border-radius:8px 8px 0 0;">
     <h2 style="color:#fff;margin:0;">📊 Pulse360 Alert Fired</h2>
   </div>
-  <div style="background:#f5f7fb;padding:20px 24px;border-radius:0 0 8px 8px;
-              border:1px solid #e9ecef;border-top:none;">
-    <h3 style="margin-top:0;color:#293241;">{rule['name']}</h3>
+  <div style="background:#f4f4f4;padding:20px 24px;border-radius:0 0 8px 8px;
+              border:1px solid #ececec;border-top:none;">
+    <h3 style="margin-top:0;color:#0a0a0a;">{rule['name']}</h3>
     <table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
       <tr>
-        <td style="padding:6px 10px;color:#6c757d;white-space:nowrap;">Series</td>
+        <td style="padding:6px 10px;color:#6a6a6a;white-space:nowrap;">Series</td>
         <td style="padding:6px 10px;font-weight:600;">{series_label}</td>
       </tr>
       <tr style="background:#fff;">
-        <td style="padding:6px 10px;color:#6c757d;">Condition</td>
+        <td style="padding:6px 10px;color:#6a6a6a;">Condition</td>
         <td style="padding:6px 10px;font-weight:600;">
           {series_label} {op_label} {rule['threshold']}
         </td>
       </tr>
       <tr>
-        <td style="padding:6px 10px;color:#6c757d;">Current value</td>
-        <td style="padding:6px 10px;font-weight:700;color:#e74c3c;">
+        <td style="padding:6px 10px;color:#6a6a6a;">Current value</td>
+        <td style="padding:6px 10px;font-weight:700;color:#d92626;">
           {current_value:.2f}
         </td>
       </tr>
       <tr style="background:#fff;">
-        <td style="padding:6px 10px;color:#6c757d;">Triggered at</td>
+        <td style="padding:6px 10px;color:#6a6a6a;">Triggered at</td>
         <td style="padding:6px 10px;">{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</td>
       </tr>
     </table>
-    <p style="font-size:0.82rem;color:#6c757d;border-top:1px solid #e9ecef;
+    <p style="font-size:0.82rem;color:#6a6a6a;border-top:1px solid #ececec;
               padding-top:12px;margin-bottom:0;">
       This is an automated alert from <strong>Pulse360</strong>. Not personalised
       investment advice. Manage your alerts in the Alerts page of the dashboard.

@@ -30,7 +30,7 @@ from ai.portfolio_analyzer import (
 
 # ── Page config & styles ──────────────────────────────────────────────────────
 
-from components.taplox_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
+from components.pulse360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
 inject_theme()
 st.markdown(f"""
 <style>
@@ -61,8 +61,8 @@ st.markdown(f"""
         margin-right: 8px;
     }}
     .macro-green  {{ background: #e8f8ee; color: #1a5c30; border: 1px solid #28a745; }}
-    .macro-yellow {{ background: #fff8e5; color: #7a5000; border: 1px solid #f39c12; }}
-    .macro-red    {{ background: #fde8e8; color: #8b1a1a; border: 1px solid #e74c3c; }}
+    .macro-yellow {{ background: #fff8e5; color: #7a5000; border: 1px solid #c98800; }}
+    .macro-red    {{ background: #fde8e8; color: #8b1a1a; border: 1px solid #d92626; }}
     .analysis-box {{
         background: {CARD_BG};
         border: 1px solid {BORDER};
@@ -290,7 +290,7 @@ st.markdown(
 
 st.markdown(
     f'<span class="macro-badge {tl_class}">{tl_label}</span>'
-    f'<span style="color:#6c757d; font-size:0.85rem;">Cycle phase: <b style="color:#293241">{cycle_phase}</b> '
+    f'<span style="color:#6a6a6a; font-size:0.85rem;">Cycle phase: <b style="color:#0a0a0a">{cycle_phase}</b> '
     f'· Analysis is contextualised to current Pulse360 model state</span>',
     unsafe_allow_html=True,
 )
@@ -419,7 +419,7 @@ For funds: drop a brochure or factsheet page — Claude will extract holdings, s
     if not uploaded_images:
         st.markdown("""
 ---
-<div style="text-align:center; color:#6c757d; padding: 24px 0; font-size:0.9rem;">
+<div style="text-align:center; color:#6a6a6a; padding: 24px 0; font-size:0.9rem;">
     Upload one or more screenshots above to get started
 </div>
 """, unsafe_allow_html=True)
@@ -579,7 +579,7 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
         st.session_state.pop("csv_analysis_result", None)
         st.markdown("""
 ---
-<div style="text-align:center; color:#6c757d; padding: 24px 0; font-size:0.9rem;">
+<div style="text-align:center; color:#6a6a6a; padding: 24px 0; font-size:0.9rem;">
     Upload a CSV export above to get started
 </div>
 """, unsafe_allow_html=True)

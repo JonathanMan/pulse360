@@ -57,24 +57,24 @@ def render_tab3(model_output, phase_output) -> None:
                     mode="lines", line={"color": "#9b59b6", "width": 1.5, "dash": "dot"},
                     name="U-6 Underemployment",
                 ))
-            fig = threshold_line(fig, 4.0, "4% — cycle trough proxy", "#2ecc71", "dot")
+            fig = threshold_line(fig, 4.0, "4% — cycle trough proxy", "#00a35a", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="% Unemployed")
             st.plotly_chart(fig, use_container_width=True, key="tab3_unrate")
         chart_meta(unrate, decimals=1)
         if unrate["last_value"] is not None:
             if unrate["last_value"] <= 4.0:
-                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — tight labor market; watch for wage pressure and sustained Fed hawkishness.", "#f39c12")
+                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — tight labor market; watch for wage pressure and sustained Fed hawkishness.", "#c98800")
             elif unrate["last_value"] <= 5.0:
-                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — labor market healthy; no immediate recession signal from this metric.", "#2ecc71")
+                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — labor market healthy; no immediate recession signal from this metric.", "#00a35a")
             else:
-                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — labor market weakening; defensive positioning and reduced equity risk warranted.", "#e74c3c")
+                render_action_item(f"Unemployment at {unrate['last_value']:.1f}% — labor market weakening; defensive positioning and reduced equity risk warranted.", "#d92626")
 
     with col2:
         st.markdown("##### Sahm Rule Recession Indicator")
         if not sahm["data"].empty:
             sahm_val = sahm["last_value"] or 0
-            line_color = "#e74c3c" if sahm_val >= 0.5 else "#f39c12" if sahm_val >= 0.3 else "#2ecc71"
+            line_color = "#d92626" if sahm_val >= 0.5 else "#c98800" if sahm_val >= 0.3 else "#00a35a"
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=sahm["data"].index, y=sahm["data"].values,
@@ -82,18 +82,18 @@ def render_tab3(model_output, phase_output) -> None:
                 name="Sahm Rule",
                 fill="tozeroy", fillcolor="rgba(231,76,60,0.08)",
             ))
-            fig = threshold_line(fig, 0.5, "0.5 — recession trigger", "#e74c3c", "dash")
-            fig = threshold_line(fig, 0.3, "0.3 — warning zone", "#f39c12", "dot")
+            fig = threshold_line(fig, 0.5, "0.5 — recession trigger", "#d92626", "dash")
+            fig = threshold_line(fig, 0.3, "0.3 — warning zone", "#c98800", "dot")
             fig = dark_layout(fig, yaxis_title="Sahm Indicator (pp)")
             st.plotly_chart(fig, use_container_width=True, key="tab3_sahm")
         chart_meta(sahm, decimals=2)
         if sahm["last_value"] is not None:
             if sahm["last_value"] >= 0.5:
-                render_action_item(f"Sahm Rule TRIGGERED at {sahm['last_value']:.2f} — recession signal active; shift decisively to defensives and capital preservation.", "#e74c3c")
+                render_action_item(f"Sahm Rule TRIGGERED at {sahm['last_value']:.2f} — recession signal active; shift decisively to defensives and capital preservation.", "#d92626")
             elif sahm["last_value"] >= 0.3:
-                render_action_item(f"Sahm Rule at {sahm['last_value']:.2f} — warning zone; trim cyclical exposure and build cash buffer.", "#f39c12")
+                render_action_item(f"Sahm Rule at {sahm['last_value']:.2f} — warning zone; trim cyclical exposure and build cash buffer.", "#c98800")
             else:
-                render_action_item(f"Sahm Rule at {sahm['last_value']:.2f} — benign; no labor deterioration detected; maintain current positioning.", "#2ecc71")
+                render_action_item(f"Sahm Rule at {sahm['last_value']:.2f} — benign; no labor deterioration detected; maintain current positioning.", "#00a35a")
 
     # ── Row 2: Nonfarm Payrolls MoM | Initial Claims ─────────────────────────
     col3, col4 = st.columns(2)
@@ -102,7 +102,7 @@ def render_tab3(model_output, phase_output) -> None:
         st.markdown("##### Nonfarm Payrolls (MoM Change)")
         if not payems["data"].empty:
             mom_payems = payems["data"].diff().dropna()
-            colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in mom_payems.values]
+            colors = ["#00a35a" if v >= 0 else "#d92626" for v in mom_payems.values]
             fig = go.Figure(go.Bar(
                 x=mom_payems.index, y=mom_payems.values / 1000,  # convert to thousands
                 marker_color=colors,
@@ -116,11 +116,11 @@ def render_tab3(model_output, phase_output) -> None:
         if not payems["data"].empty and len(payems["data"]) >= 2:
             _pay_mom = payems["data"].diff().iloc[-1] / 1000
             if _pay_mom >= 200:
-                render_action_item(f"+{_pay_mom:.0f}K jobs added — strong job creation; consumer spending engine intact; risk assets supported.", "#2ecc71")
+                render_action_item(f"+{_pay_mom:.0f}K jobs added — strong job creation; consumer spending engine intact; risk assets supported.", "#00a35a")
             elif _pay_mom >= 0:
-                render_action_item(f"+{_pay_mom:.0f}K jobs added — moderate growth; expansion continues but momentum moderating; monitor trend.", "#f39c12")
+                render_action_item(f"+{_pay_mom:.0f}K jobs added — moderate growth; expansion continues but momentum moderating; monitor trend.", "#c98800")
             else:
-                render_action_item(f"{_pay_mom:.0f}K jobs lost — labor market contracting; defensive rotation and duration extension warranted.", "#e74c3c")
+                render_action_item(f"{_pay_mom:.0f}K jobs lost — labor market contracting; defensive rotation and duration extension warranted.", "#d92626")
 
     with col4:
         st.markdown("##### Initial Claims 4-Week Avg (IC4WSA)")
@@ -131,16 +131,16 @@ def render_tab3(model_output, phase_output) -> None:
                 mode="lines", line={"color": "#e67e22", "width": 2},
                 name="Initial Claims 4W Avg",
             ))
-            fig = threshold_line(fig, 300, "300K — elevated threshold", "#e74c3c", "dot")
+            fig = threshold_line(fig, 300, "300K — elevated threshold", "#d92626", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Claims (000s)")
             st.plotly_chart(fig, use_container_width=True, key="tab3_ic4w")
         chart_meta(ic4w, decimals=0)
         if ic4w["last_value"] is not None:
             if ic4w["last_value"] > 300000:
-                render_action_item(f"Claims at {ic4w['last_value']/1000:.0f}K — above 300K threshold; labor market stress elevated; watch before adding equity risk.", "#e74c3c")
+                render_action_item(f"Claims at {ic4w['last_value']/1000:.0f}K — above 300K threshold; labor market stress elevated; watch before adding equity risk.", "#d92626")
             else:
-                render_action_item(f"Claims at {ic4w['last_value']/1000:.0f}K — normal range; no meaningful layoff trend; labor market remains supportive.", "#2ecc71")
+                render_action_item(f"Claims at {ic4w['last_value']/1000:.0f}K — normal range; no meaningful layoff trend; labor market remains supportive.", "#00a35a")
 
     # ── Row 3: JOLTS Job Openings ─────────────────────────────────────────────
     st.markdown("##### JOLTS Job Openings (JTSJOL)")
@@ -159,11 +159,11 @@ def render_tab3(model_output, phase_output) -> None:
     if jolts["last_value"] is not None:
         _jolts_m = jolts["last_value"] / 1_000_000
         if _jolts_m > 8:
-            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor demand strong; wage inflation risk; Fed likely to stay restrictive.", "#f39c12")
+            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor demand strong; wage inflation risk; Fed likely to stay restrictive.", "#c98800")
         elif _jolts_m >= 5:
-            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor market rebalancing toward sustainable levels; benign signal.", "#2ecc71")
+            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor market rebalancing toward sustainable levels; benign signal.", "#00a35a")
         else:
-            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor demand weakening; monitor unemployment rate for follow-through.", "#e74c3c")
+            render_action_item(f"JOLTS openings at {_jolts_m:.1f}M — labor demand weakening; monitor unemployment rate for follow-through.", "#d92626")
 
     # ── Investment Implications ───────────────────────────────────────────────
     st.markdown("---")

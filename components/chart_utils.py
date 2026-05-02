@@ -42,10 +42,10 @@ _RANGESELECTOR = {
         {"step": "all", "label": "Max"},
     ],
     "bgcolor":     "#ffffff",
-    "activecolor": "#3b7ddd",
-    "bordercolor": "#e9ecef",
+    "activecolor": "#0a0a0a",
+    "bordercolor": "#ececec",
     "borderwidth": 1,
-    "font":        {"color": "#6c757d", "size": 10},
+    "font":        {"color": "#a0a0a0", "size": 9, "family": "Geist Mono, monospace"},
     "x":           0,
     "xanchor":     "left",
     "y":           1.0,
@@ -69,8 +69,8 @@ def dark_layout(
     - Optional rangeslider (thin scrubber bar beneath chart)
     """
     xaxis_cfg: dict = {
-        "gridcolor":     "#e9ecef",
-        "color":         "#6c757d",
+        "gridcolor":     "#ececec",
+        "color":         "#6a6a6a",
         "showgrid":      True,
         "rangeselector": _RANGESELECTOR,
     }
@@ -78,19 +78,19 @@ def dark_layout(
         xaxis_cfg["rangeslider"] = {
             "visible":     True,
             "bgcolor":     "#ffffff",
-            "bordercolor": "#e9ecef",
+            "bordercolor": "#ececec",
             "thickness":   0.05,
         }
 
     fig.update_layout(
-        title        = {"text": title, "font": {"size": 13, "color": "#293241"}},
+        title        = {"text": title, "font": {"size": 13, "color": "#0a0a0a"}},
         paper_bgcolor= "rgba(0,0,0,0)",
         plot_bgcolor = "rgba(0,0,0,0)",
-        font         = {"color": "#293241"},
+        font         = {"color": "#0a0a0a"},
         xaxis        = xaxis_cfg,
         yaxis        = {
-            "gridcolor": "#e9ecef",
-            "color":     "#6c757d",
+            "gridcolor": "#ececec",
+            "color":     "#6a6a6a",
             "showgrid":  True,
             "title":     yaxis_title,
         },
@@ -99,14 +99,14 @@ def dark_layout(
         # ── Tableau-style tooltip card ────────────────────────────────────────
         hoverlabel   = {
             "bgcolor":    "#ffffff",
-            "bordercolor":"#e9ecef",
-            "font":       {"size": 12, "color": "#293241"},
+            "bordercolor":"#ececec",
+            "font":       {"size": 12, "color": "#0a0a0a"},
             "align":      "left",
             "namelength": -1,   # never truncate series names
         },
         legend       = {
             "bgcolor":     "rgba(0,0,0,0)",
-            "font":        {"color": "#6c757d"},
+            "font":        {"color": "#6a6a6a"},
             "orientation": "h",
             "y":           -0.15,
         },
@@ -114,8 +114,8 @@ def dark_layout(
 
     if yaxis2_title:
         fig.update_layout(yaxis2={
-            "gridcolor": "#e9ecef",
-            "color":     "#6c757d",
+            "gridcolor": "#ececec",
+            "color":     "#6a6a6a",
             "title":     yaxis2_title,
             "overlaying":"y",
             "side":      "right",
@@ -342,22 +342,22 @@ def _delta_badge_html(label: str, delta: float, decimals: int = 2) -> str:
 
     Colour convention (direction-neutral for the label; value drives colour):
         positive → green  (#28a745)
-        negative → red    (#e74c3c)
-        zero     → muted  (#6c757d)
+        negative → red    (#d92626)
+        zero     → muted  (#6a6a6a)
     """
     if delta > 0:
         arrow, color = "▲", "#28a745"
     elif delta < 0:
-        arrow, color = "▼", "#e74c3c"
+        arrow, color = "▼", "#d92626"
     else:
-        arrow, color = "─", "#6c757d"
+        arrow, color = "─", "#6a6a6a"
 
     formatted = f"{delta:+.{decimals}f}"
     return (
         f'<span style="display:inline-flex;align-items:center;gap:1px;'
         f'font-size:0.70rem;font-weight:600;color:{color};margin-left:7px;">'
         f'{arrow}&thinsp;{formatted}'
-        f'<span style="font-weight:400;color:#6c757d;margin-left:2px;">{label}</span>'
+        f'<span style="font-weight:400;color:#6a6a6a;margin-left:2px;">{label}</span>'
         f'</span>'
     )
 
@@ -373,10 +373,10 @@ def _pctile_badge_html(pctile: float) -> str:
     """
     p = round(pctile)
     if p <= 10 or p >= 90:
-        bg, border, color = "#fff8e5", "#f39c12", "#7a5000"
+        bg, border, color = "#fff8e5", "#c98800", "#7a5000"
         label = f"P{p} ⚡"
     elif p <= 25 or p >= 75:
-        bg, border, color = "#e8f1fb", "#3b7ddd", "#1a4a8a"
+        bg, border, color = "#f4f4f4", "#0a0a0a", "#1a4a8a"
         label = f"P{p}"
     else:
         bg, border, color = "#e8f8ee", "#28a745", "#1a5c30"
@@ -404,7 +404,7 @@ def render_percentile_badge(pctile: float, prefix: str = "") -> None:
         pctile: Float 0–100 from percentile_rank().
         prefix: Optional text rendered before the pill (plain text).
     """
-    html = f'<span style="font-size:0.8rem;color:#6c757d;">{prefix}</span>' if prefix else ""
+    html = f'<span style="font-size:0.8rem;color:#6a6a6a;">{prefix}</span>' if prefix else ""
     html += _pctile_badge_html(pctile)
     st.markdown(html, unsafe_allow_html=True)
 
@@ -464,12 +464,12 @@ def chart_meta(result: dict, decimals: int = 2) -> None:
                 pctile_html = _pctile_badge_html(pct)
 
         st.markdown(
-            f'<span style="font-size:0.78rem;color:#6c757d;">'
-            f'<code style="font-size:0.75rem;background:#f5f7fb;'
-            f'border:1px solid #e9ecef;border-radius:4px;padding:1px 5px;'
-            f'color:#293241;">{result["series_id"]}</code>'
+            f'<span style="font-size:0.78rem;color:#6a6a6a;">'
+            f'<code style="font-size:0.75rem;background:#f4f4f4;'
+            f'border:1px solid #ececec;border-radius:4px;padding:1px 5px;'
+            f'color:#0a0a0a;">{result["series_id"]}</code>'
             f'&nbsp;·&nbsp;Current:&nbsp;'
-            f'<strong style="color:#293241;">{result["last_value"]:.{decimals}f}</strong>'
+            f'<strong style="color:#0a0a0a;">{result["last_value"]:.{decimals}f}</strong>'
             f'&nbsp;·&nbsp;As&nbsp;of:&nbsp;{result["last_date"]}'
             f'{delta_html}'
             f'{pctile_html}</span>',
@@ -522,7 +522,7 @@ def threshold_line(
     fig: go.Figure,
     y: float,
     label: str = "",
-    color: str = "#e74c3c",
+    color: str = "#d92626",
     dash: str = "dash",
 ) -> go.Figure:
     """Add a horizontal threshold line to a figure."""
@@ -583,7 +583,7 @@ def render_implications(text: str, traffic_light: str = "green") -> None:
 # Action-item card  (signal-coloured callout below charts and sections)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def render_action_item(text: str, color: str = "#f39c12") -> None:
+def render_action_item(text: str, color: str = "#c98800") -> None:
     """
     Render a styled action-item card below a chart or dashboard section.
 
@@ -594,7 +594,7 @@ def render_action_item(text: str, color: str = "#f39c12") -> None:
     Args:
         text:  The action message. Leading "→ " is stripped automatically.
         color: Hex accent colour, typically signal-matched:
-               "#2ecc71" green · "#f39c12" amber · "#e74c3c" red
+               "#00a35a" green · "#c98800" amber · "#d92626" red
     """
     clean = text.lstrip("→ ").strip()
     st.markdown(
@@ -610,7 +610,7 @@ def render_action_item(text: str, color: str = "#f39c12") -> None:
             <span style="color:{color}; font-weight:700; font-size:13px; margin-right:6px;">
                 💡 Action
             </span>
-            <span style="color:#293241; font-size:13px; line-height:1.6;">
+            <span style="color:#0a0a0a; font-size:13px; line-height:1.6;">
                 {clean}
             </span>
         </div>

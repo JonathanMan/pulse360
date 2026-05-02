@@ -38,23 +38,23 @@ def _get_parallels(model_output: RecessionModelOutput):
 
 def _recession_gauge(probability: float, traffic_light: str) -> go.Figure:
     bar_color = {
-        "green":  "#2ecc71",
-        "yellow": "#f39c12",
-        "red":    "#e74c3c",
+        "green":  "#00a35a",
+        "yellow": "#c98800",
+        "red":    "#d92626",
     }.get(traffic_light, "#95a5a6")
 
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=probability,
-        number={"suffix": "%", "font": {"size": 30, "color": "#293241"}},
+        number={"suffix": "%", "font": {"size": 30, "color": "#0a0a0a"}},
         gauge={
             "axis": {
                 "range": [0, 100],
                 "tickvals": [0, 25, 50, 75, 100],
                 "ticktext": ["0", "25", "50", "75", "100"],
-                "tickfont": {"size": 10, "color": "#6c757d"},
+                "tickfont": {"size": 10, "color": "#6a6a6a"},
                 "tickwidth": 1,
-                "tickcolor": "#adb5bd",
+                "tickcolor": "#a0a0a0",
             },
             "bar":       {"color": bar_color, "thickness": 0.65},
             "bgcolor":   "#f0f2f5",
@@ -71,7 +71,7 @@ def _recession_gauge(probability: float, traffic_light: str) -> go.Figure:
         height=190,
         margin={"t": 10, "b": 5, "l": 20, "r": 20},
         paper_bgcolor="rgba(0,0,0,0)",
-        font={"color": "#293241"},
+        font={"color": "#0a0a0a"},
     )
     return fig
 
@@ -84,9 +84,9 @@ def _contributions_chart(model_output: RecessionModelOutput) -> go.Figure:
     features = sorted(model_output.features, key=lambda f: f.contribution, reverse=True)
 
     bar_colors = [
-        "#e74c3c" if f.stress_score > 0.66
-        else "#f39c12" if f.stress_score > 0.33
-        else "#2ecc71"
+        "#d92626" if f.stress_score > 0.66
+        else "#c98800" if f.stress_score > 0.33
+        else "#00a35a"
         for f in features
     ]
 
@@ -97,7 +97,7 @@ def _contributions_chart(model_output: RecessionModelOutput) -> go.Figure:
         marker_color=bar_colors,
         text=[f"{f.contribution:.1f}pp" for f in features],
         textposition="outside",
-        textfont={"size": 11, "color": "#293241"},
+        textfont={"size": 11, "color": "#0a0a0a"},
         hovertemplate=(
             "<b>%{y}</b><br>"
             "Contribution: %{x:.2f} pp<br>"
@@ -111,12 +111,12 @@ def _contributions_chart(model_output: RecessionModelOutput) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis={
             "title": "Contribution to Probability (percentage points)",
-            "color": "#6c757d",
-            "gridcolor": "#e9ecef",
+            "color": "#6a6a6a",
+            "gridcolor": "#ececec",
             "range": [0, max(f.contribution for f in features) * 1.35],
         },
-        yaxis={"color": "#293241", "gridcolor": "rgba(0,0,0,0)"},
-        font={"color": "#293241"},
+        yaxis={"color": "#0a0a0a", "gridcolor": "rgba(0,0,0,0)"},
+        font={"color": "#0a0a0a"},
         showlegend=False,
     )
     return fig
@@ -161,11 +161,11 @@ def _risk_scorecard(model_output: RecessionModelOutput) -> None:
                 f"""
                 <div style="text-align:center; padding:10px 6px;
                             background:{bg}; border-radius:10px;
-                            border:1px solid #e9ecef; min-height:90px;">
+                            border:1px solid #ececec; min-height:90px;">
                     <div style="font-size:22px; line-height:1;">{icon}</div>
-                    <div style="font-size:11px; color:#293241; margin-top:5px;
+                    <div style="font-size:11px; color:#0a0a0a; margin-top:5px;
                                 font-weight:600;">{_SCORECARD_LABELS[sid]}</div>
-                    <div style="font-size:10px; color:#6c757d; margin-top:2px;">
+                    <div style="font-size:10px; color:#6a6a6a; margin-top:2px;">
                         {status}
                     </div>
                     <div style="margin-top:5px;">{pctile_html}</div>
@@ -203,8 +203,8 @@ def _contributions_table(model_output: RecessionModelOutput) -> None:
 def _ret_html(val: float | None) -> str:
     """Format a return value as coloured HTML — green positive, red negative."""
     if val is None:
-        return '<span style="color:#adb5bd;">—</span>'
-    color  = "#28a745" if val > 0 else "#e74c3c" if val < 0 else "#6c757d"
+        return '<span style="color:#a0a0a0;">—</span>'
+    color  = "#28a745" if val > 0 else "#d92626" if val < 0 else "#6a6a6a"
     prefix = "+" if val > 0 else ""
     return f'<span style="color:{color};font-weight:600;">{prefix}{val:.1f}%</span>'
 
@@ -243,7 +243,7 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
         "BAMLH0A0HYM2": "HY Spreads",
     }
 
-    tl_colors = {"green": "#2ecc71", "yellow": "#f39c12", "red": "#e74c3c"}
+    tl_colors = {"green": "#00a35a", "yellow": "#c98800", "red": "#d92626"}
     tl_bg     = {"green": "#e8f8ee", "yellow": "#fff8e5", "red": "#fde8e8"}
 
     cols = st.columns(len(parallels))
@@ -254,7 +254,7 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
         month_str = p.date.strftime("%b %Y")
 
         # Similarity bar (0–100)
-        sim_color = "#2ecc71" if p.similarity_pct > 80 else "#f39c12" if p.similarity_pct > 60 else "#e74c3c"
+        sim_color = "#00a35a" if p.similarity_pct > 80 else "#c98800" if p.similarity_pct > 60 else "#d92626"
         sim_bar_w = round(p.similarity_pct)
 
         # Feature vector mini comparison (current vs then)
@@ -263,11 +263,11 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
         for sid, label in _SID_LABELS.items():
             then_val = p.feature_vector.get(sid, 0.5)
             now_val  = current_fmap.get(sid, 0.5)
-            then_bar_color = "#e74c3c" if then_val > 0.66 else "#f39c12" if then_val > 0.33 else "#2ecc71"
-            now_bar_color  = "#e74c3c" if now_val  > 0.66 else "#f39c12" if now_val  > 0.33 else "#2ecc71"
+            then_bar_color = "#d92626" if then_val > 0.66 else "#c98800" if then_val > 0.33 else "#00a35a"
+            now_bar_color  = "#d92626" if now_val  > 0.66 else "#c98800" if now_val  > 0.33 else "#00a35a"
             feat_rows_html += (
                 f'<tr>'
-                f'<td style="font-size:10px;color:#6c757d;padding:2px 4px;white-space:nowrap;">{label}</td>'
+                f'<td style="font-size:10px;color:#6a6a6a;padding:2px 4px;white-space:nowrap;">{label}</td>'
                 f'<td style="padding:2px 4px;">'
                 f'<div style="background:#f0f2f5;border-radius:3px;height:8px;width:100%;">'
                 f'<div style="background:{then_bar_color};border-radius:3px;height:8px;'
@@ -294,8 +294,8 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
             )
 
         outcome_html = (
-            f'<div style="font-size:10px;color:#6c757d;margin-top:8px;'
-            f'padding:5px 8px;background:#f5f7fb;border-radius:5px;">'
+            f'<div style="font-size:10px;color:#6a6a6a;margin-top:8px;'
+            f'padding:5px 8px;background:#f4f4f4;border-radius:5px;">'
             f'{p.outcome_note}</div>'
             if p.outcome_note else ""
         )
@@ -303,13 +303,13 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
         with col:
             st.markdown(
                 f"""
-                <div style="border:1px solid #e9ecef;border-radius:10px;padding:12px 14px;
+                <div style="border:1px solid #ececec;border-radius:10px;padding:12px 14px;
                             background:#ffffff;height:100%;">
 
                   <!-- Header -->
                   <div style="display:flex;align-items:center;justify-content:space-between;
                               margin-bottom:8px;">
-                    <div style="font-size:15px;font-weight:700;color:#293241;">
+                    <div style="font-size:15px;font-weight:700;color:#0a0a0a;">
                       #{p.rank} · {month_str}
                     </div>
                     <div style="background:{tl_b};border:1px solid {tl_c};border-radius:6px;
@@ -319,7 +319,7 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
                   </div>
 
                   <!-- Similarity bar -->
-                  <div style="font-size:10px;color:#6c757d;margin-bottom:3px;">
+                  <div style="font-size:10px;color:#6a6a6a;margin-bottom:3px;">
                     Similarity
                   </div>
                   <div style="background:#f0f2f5;border-radius:4px;height:10px;
@@ -327,41 +327,41 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
                     <div style="background:{sim_color};border-radius:4px;height:10px;
                                 width:{sim_bar_w}%;transition:width 0.4s;"></div>
                   </div>
-                  <div style="font-size:11px;color:#6c757d;margin-top:-8px;
+                  <div style="font-size:11px;color:#6a6a6a;margin-top:-8px;
                               margin-bottom:10px;text-align:right;">
                     {p.similarity_pct:.0f}% match
                   </div>
 
                   <!-- Feature comparison -->
-                  <div style="font-size:10px;font-weight:700;color:#6c757d;
+                  <div style="font-size:10px;font-weight:700;color:#6a6a6a;
                               text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">
                     Stress profile
                   </div>
                   <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
                     <tr>
-                      <th style="font-size:9px;color:#adb5bd;font-weight:400;
+                      <th style="font-size:9px;color:#a0a0a0;font-weight:400;
                                  padding:1px 4px;text-align:left;"></th>
-                      <th style="font-size:9px;color:#6c757d;font-weight:700;
+                      <th style="font-size:9px;color:#6a6a6a;font-weight:700;
                                  padding:1px 4px;text-align:left;">{month_str[:3]}'
                         {month_str[-2:]}</th>
-                      <th style="font-size:9px;color:#3b7ddd;font-weight:700;
+                      <th style="font-size:9px;color:#0a0a0a;font-weight:700;
                                  padding:1px 4px;text-align:left;">Now</th>
                     </tr>
                     {feat_rows_html}
                   </table>
 
                   <!-- Forward returns -->
-                  <div style="font-size:10px;font-weight:700;color:#6c757d;
+                  <div style="font-size:10px;font-weight:700;color:#6a6a6a;
                               text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">
                     What followed
                   </div>
                   <table style="width:100%;border-collapse:collapse;">
                     <tr>
-                      <th style="font-size:9px;color:#6c757d;font-weight:400;
+                      <th style="font-size:9px;color:#6a6a6a;font-weight:400;
                                  padding:2px 4px;text-align:left;">Asset</th>
-                      <th style="font-size:9px;color:#6c757d;font-weight:700;
+                      <th style="font-size:9px;color:#6a6a6a;font-weight:700;
                                  padding:2px 6px;text-align:right;">6M</th>
-                      <th style="font-size:9px;color:#6c757d;font-weight:700;
+                      <th style="font-size:9px;color:#6a6a6a;font-weight:700;
                                  padding:2px 6px;text-align:right;">12M</th>
                     </tr>
                     {ret_rows_html}
@@ -451,10 +451,10 @@ def render_overview_row(
                             text-align:center; margin-bottom:8px;">
                     <div style="font-size:34px; line-height:1;">{phase_output.emoji}</div>
                     <div style="font-size:17px; font-weight:700;
-                                color:#293241; margin-top:6px;">
+                                color:#0a0a0a; margin-top:6px;">
                         {phase_output.phase}
                     </div>
-                    <div style="font-size:11px; color:#6c757d;
+                    <div style="font-size:11px; color:#6a6a6a;
                                 margin-top:4px; font-weight:500;">
                         {phase_output.confidence} confidence
                     </div>
@@ -465,11 +465,11 @@ def render_overview_row(
             st.caption(phase_output.notes)
             for ind in phase_output.confirming_indicators[:3]:
                 st.markdown(
-                    f"<div style='font-size:11px; color:#6c757d; margin-top:2px;'>✓ {ind}</div>",
+                    f"<div style='font-size:11px; color:#6a6a6a; margin-top:2px;'>✓ {ind}</div>",
                     unsafe_allow_html=True,
                 )
             _pa_text = _phase_action(phase_output.phase)
-            _pa_color = phase_output.color if hasattr(phase_output, "color") else "#f39c12"
+            _pa_color = phase_output.color if hasattr(phase_output, "color") else "#c98800"
             render_action_item(_pa_text, _pa_color)
 
     with col_gauge:
@@ -481,8 +481,8 @@ def render_overview_row(
                 key="overview_gauge",
             )
             if prob_delta is not None:
-                delta_color  = "#e74c3c" if prob_delta > 0 else "#28a745"
-                delta_neutral = "#6c757d"
+                delta_color  = "#d92626" if prob_delta > 0 else "#28a745"
+                delta_neutral = "#6a6a6a"
                 d_color = delta_color if abs(prob_delta) >= 0.1 else delta_neutral
                 d_arrow = "▲" if prob_delta > 0 else ("▼" if prob_delta < 0 else "─")
                 st.markdown(
@@ -498,7 +498,7 @@ def render_overview_row(
                 pctile_badge = _pctile_badge_html(stress_pct)
                 st.markdown(
                     f'<div style="text-align:center; margin-bottom:4px;">'
-                    f'<span style="font-size:0.72rem;color:#6c757d;">Stress level</span>'
+                    f'<span style="font-size:0.72rem;color:#6a6a6a;">Stress level</span>'
                     f'&nbsp;{pctile_badge}</div>',
                     unsafe_allow_html=True,
                 )
@@ -506,14 +506,14 @@ def render_overview_row(
                 stale_labels = ", ".join(model_output.stale_features)
                 st.markdown(
                     f'<span style="display:inline-flex;align-items:center;gap:6px;'
-                    f'background:#fff8e5;border:1px solid #f39c12;border-radius:999px;'
+                    f'background:#fff8e5;border:1px solid #c98800;border-radius:999px;'
                     f'padding:3px 12px;font-size:0.78rem;font-weight:600;color:#7a5000;">'
                     f'⚠️ Stale: {stale_labels}</span>',
                     unsafe_allow_html=True,
                 )
             if model_output.data_as_of:
                 st.caption(f"Data as of {model_output.data_as_of.strftime('%Y-%m-%d')}")
-            _prob_color = "#28a745" if model_output.probability < 25 else "#f39c12" if model_output.probability < 50 else "#e74c3c"
+            _prob_color = "#28a745" if model_output.probability < 25 else "#c98800" if model_output.probability < 50 else "#d92626"
             render_action_item(_prob_action(model_output.probability), _prob_color)
 
     with col_lei:
@@ -521,7 +521,7 @@ def render_overview_row(
             st.markdown("**LEI Momentum**")
             if lei_growth is not None:
                 arrow = "↑" if lei_growth > 0 else "↓"
-                color = "#28a745" if lei_growth > 0 else "#e74c3c"
+                color = "#28a745" if lei_growth > 0 else "#d92626"
                 st.markdown(
                     f"""
                     <div style="text-align:center; padding:16px 8px 8px 8px;">
@@ -532,7 +532,7 @@ def render_overview_row(
                                     margin-top:4px;">
                             {lei_growth:+.1f}%
                         </div>
-                        <div style="font-size:11px; color:#6c757d; margin-top:4px;">
+                        <div style="font-size:11px; color:#6a6a6a; margin-top:4px;">
                             6-mo annualised
                         </div>
                     </div>
@@ -542,7 +542,7 @@ def render_overview_row(
             else:
                 st.info("LEI data unavailable", icon="⚠️")
             if lei_growth is not None:
-                _lei_color = "#28a745" if lei_growth > 1.0 else "#f39c12" if lei_growth >= 0 else "#e74c3c"
+                _lei_color = "#28a745" if lei_growth > 1.0 else "#c98800" if lei_growth >= 0 else "#d92626"
                 render_action_item(_lei_action(lei_growth), _lei_color)
 
     # ── Row 2: risk scorecard ────────────────────────────────────────────────
@@ -551,7 +551,7 @@ def render_overview_row(
         _risk_scorecard(model_output)
         _sc_stressed = sum(1 for f in model_output.features if f.stress_score > 0.66)
         _sc_elevated = sum(1 for f in model_output.features if 0.33 < f.stress_score <= 0.66)
-        _sc_color = "#e74c3c" if _sc_stressed >= 3 else "#f39c12" if (_sc_stressed >= 1 or _sc_elevated >= 3) else "#28a745"
+        _sc_color = "#d92626" if _sc_stressed >= 3 else "#c98800" if (_sc_stressed >= 1 or _sc_elevated >= 3) else "#28a745"
         render_action_item(_scorecard_action(model_output), _sc_color)
 
     # ── Row 3: expandable model detail ───────────────────────────────────────

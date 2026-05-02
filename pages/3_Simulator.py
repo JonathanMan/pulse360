@@ -25,7 +25,7 @@ from models.recession_model import (
 )
 from ai.claude_client import stream_scenario_analysis
 
-from components.taplox_theme import inject_theme
+from components.pulse360_theme import inject_theme
 inject_theme()
 
 st.markdown("""
@@ -227,20 +227,20 @@ for feat in _FEAT_CFG:
 
 probability   = round(total_stress * 100, 1)
 traffic_light = "green" if probability < 25 else "yellow" if probability < 50 else "red"
-tl_color      = {"green": "#2ecc71", "yellow": "#f39c12", "red": "#e74c3c"}[traffic_light]
+tl_color      = {"green": "#00a35a", "yellow": "#c98800", "red": "#d92626"}[traffic_light]
 
 # Simple phase from scenario (no UNRATE trend available in simulator)
 def _scenario_phase(prob: float, cfnai: float, t10y3m: float) -> tuple[str, str]:
     lei_neg = cfnai < 0
     inverted = t10y3m < 0
     if prob > 70:
-        return "Contraction",    "#e74c3c"
+        return "Contraction",    "#d92626"
     if prob > 50:
         return "Peak",           "#e67e22"
     if prob > 30:
-        return "Late Expansion", "#f39c12"
+        return "Late Expansion", "#c98800"
     if prob < 20 and not lei_neg:
-        return "Early Expansion","#2ecc71"
+        return "Early Expansion","#00a35a"
     return "Mid Expansion",      "#27ae60"
 
 phase_name, phase_color = _scenario_phase(
@@ -263,8 +263,8 @@ with col_right:
                 "range":     [0, 100],
                 "tickvals":  [0, 25, 50, 75, 100],
                 "tickwidth": 1,
-                "tickcolor": "#adb5bd",
-                "tickfont":  {"color": "#6c757d", "size": 11},
+                "tickcolor": "#a0a0a0",
+                "tickfont":  {"color": "#6a6a6a", "size": 11},
             },
             "bar":       {"color": tl_color, "thickness": 0.22},
             "bgcolor":   "rgba(0,0,0,0)",
@@ -285,7 +285,7 @@ with col_right:
         height       = 220,
         margin       = {"l": 20, "r": 20, "t": 10, "b": 10},
         paper_bgcolor = "rgba(0,0,0,0)",
-        font         = {"color": "#293241"},
+        font         = {"color": "#0a0a0a"},
     )
     st.plotly_chart(fig_gauge, use_container_width=True, key="sim_gauge")
     st.caption(
@@ -300,7 +300,7 @@ with col_right:
     st.markdown(
         f'<div style="text-align:center; margin: -12px 0 16px; '
         f'background:{phase_color}22; border:1px solid {phase_color}55; '
-        f'border-radius:8px; padding:8px; font-weight:600; color:#293241; font-size:1rem;">'
+        f'border-radius:8px; padding:8px; font-weight:600; color:#0a0a0a; font-size:1rem;">'
         f'{phase_name}</div>',
         unsafe_allow_html=True,
     )
@@ -317,7 +317,7 @@ with col_right:
     names   = [r["name"].replace("Treasury Spread","Spread").replace("Manufacturing ","") for r in feature_results]
     contribs = [r["contribution"] for r in feature_results]
     bar_colors = [
-        "#e74c3c" if r["stress"] >= 0.70 else "#f39c12" if r["stress"] >= 0.40 else "#2ecc71"
+        "#d92626" if r["stress"] >= 0.70 else "#c98800" if r["stress"] >= 0.40 else "#00a35a"
         for r in feature_results
     ]
     fig_bar = go.Figure(go.Bar(
@@ -327,7 +327,7 @@ with col_right:
         marker_color = bar_colors,
         text        = [f"{c:.1f}pp" for c in contribs],
         textposition = "outside",
-        textfont    = {"size": 11, "color": "#293241"},
+        textfont    = {"size": 11, "color": "#0a0a0a"},
         hovertemplate = "%{y}: <b>%{x:.2f}pp</b><extra></extra>",
     ))
     fig_bar.update_layout(
@@ -335,8 +335,8 @@ with col_right:
         margin        = {"l": 10, "r": 50, "t": 10, "b": 10},
         paper_bgcolor  = "rgba(0,0,0,0)",
         plot_bgcolor   = "rgba(0,0,0,0)",
-        xaxis         = {"title": "", "color": "#6c757d", "showgrid": False, "zeroline": False},
-        yaxis         = {"color": "#293241", "automargin": True, "tickfont": {"size": 11}},
+        xaxis         = {"title": "", "color": "#6a6a6a", "showgrid": False, "zeroline": False},
+        yaxis         = {"color": "#0a0a0a", "automargin": True, "tickfont": {"size": 11}},
         showlegend    = False,
     )
     st.plotly_chart(fig_bar, use_container_width=True, key="sim_contribs")
