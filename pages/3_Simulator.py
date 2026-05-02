@@ -25,15 +25,12 @@ from models.recession_model import (
 )
 from ai.claude_client import stream_scenario_analysis
 
+from components.taplox_theme import inject_theme
+inject_theme()
+
 st.markdown("""
 <style>
-    .stApp { background-color: #ffffff; }
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
-    div[data-testid="metric-container"] {
-        background: #1a1a2e; border-radius: 8px;
-        padding: 12px 16px; border: 1px solid #333;
-    }
-    .stExpander { border: 1px solid #333 !important; border-radius: 8px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -266,8 +263,8 @@ with col_right:
                 "range":     [0, 100],
                 "tickvals":  [0, 25, 50, 75, 100],
                 "tickwidth": 1,
-                "tickcolor": "#555",
-                "tickfont":  {"color": "#888", "size": 11},
+                "tickcolor": "#adb5bd",
+                "tickfont":  {"color": "#6c757d", "size": 11},
             },
             "bar":       {"color": tl_color, "thickness": 0.22},
             "bgcolor":   "rgba(0,0,0,0)",
@@ -288,7 +285,7 @@ with col_right:
         height       = 220,
         margin       = {"l": 20, "r": 20, "t": 10, "b": 10},
         paper_bgcolor = "rgba(0,0,0,0)",
-        font         = {"color": "#aaa"},
+        font         = {"color": "#293241"},
     )
     st.plotly_chart(fig_gauge, use_container_width=True, key="sim_gauge")
     st.caption(
@@ -303,7 +300,7 @@ with col_right:
     st.markdown(
         f'<div style="text-align:center; margin: -12px 0 16px; '
         f'background:{phase_color}22; border:1px solid {phase_color}55; '
-        f'border-radius:8px; padding:8px; font-weight:600; color:{phase_color}; font-size:1rem;">'
+        f'border-radius:8px; padding:8px; font-weight:600; color:#293241; font-size:1rem;">'
         f'{phase_name}</div>',
         unsafe_allow_html=True,
     )
@@ -330,7 +327,7 @@ with col_right:
         marker_color = bar_colors,
         text        = [f"{c:.1f}pp" for c in contribs],
         textposition = "outside",
-        textfont    = {"size": 11, "color": "#aaa"},
+        textfont    = {"size": 11, "color": "#293241"},
         hovertemplate = "%{y}: <b>%{x:.2f}pp</b><extra></extra>",
     ))
     fig_bar.update_layout(
@@ -338,8 +335,8 @@ with col_right:
         margin        = {"l": 10, "r": 50, "t": 10, "b": 10},
         paper_bgcolor  = "rgba(0,0,0,0)",
         plot_bgcolor   = "rgba(0,0,0,0)",
-        xaxis         = {"title": "", "color": "#555", "showgrid": False, "zeroline": False},
-        yaxis         = {"color": "#aaa", "automargin": True, "tickfont": {"size": 11}},
+        xaxis         = {"title": "", "color": "#6c757d", "showgrid": False, "zeroline": False},
+        yaxis         = {"color": "#293241", "automargin": True, "tickfont": {"size": 11}},
         showlegend    = False,
     )
     st.plotly_chart(fig_bar, use_container_width=True, key="sim_contribs")

@@ -29,6 +29,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from ai.claude_client import extract_tickers_from_screenshot
+from components.taplox_theme import inject_theme
 from components.user_profile import feature_visible
 from components.stock_score_utils import (
     fetch_stock_data,
@@ -376,6 +377,8 @@ def _build_heatmap_df(scored: list[dict]) -> tuple[pd.DataFrame, list[str], list
 
 # ── Page ───────────────────────────────────────────────────────────────────────
 
+inject_theme()
+
 st.title("📋 Portfolio Macro Heatmap")
 st.caption(
     "Stress-test your holdings across 5 macro regimes. "
@@ -591,20 +594,20 @@ fig.update_layout(
     plot_bgcolor="rgba(0,0,0,0)",
     title=dict(
         text="Portfolio Buffett Score by Macro Regime",
-        font=dict(size=15, color="#cccccc"),
+        font=dict(size=15, color="#293241"),
         x=0.01,
     ),
     xaxis=dict(
         side="top",
-        tickfont=dict(size=11, color="#cccccc"),
+        tickfont=dict(size=11, color="#293241"),
         showgrid=False,
     ),
     yaxis=dict(
         autorange="reversed",
-        tickfont=dict(size=11, color="#cccccc"),
+        tickfont=dict(size=11, color="#293241"),
         showgrid=False,
     ),
-    font=dict(color="#cccccc"),
+    font=dict(color="#293241"),
 )
 
 st.plotly_chart(fig, use_container_width=True)
@@ -651,11 +654,11 @@ def _highlight_vuln(row):
     score_idx = vuln_df.columns.get_loc("Weakest Score")
     score = row.iloc[score_idx]
     if score < 30:
-        styles[score_idx] = "background-color:#4d1a1a;color:#ff6b6b;"
+        styles[score_idx] = "background-color:#fde8e8;color:#8b1a1a;font-weight:600;"
     elif score < 45:
-        styles[score_idx] = "background-color:#4d3300;color:#f39c12;"
+        styles[score_idx] = "background-color:#fff8e5;color:#7a5000;font-weight:600;"
     else:
-        styles[score_idx] = "color:#2ecc71;"
+        styles[score_idx] = "color:#1a5c30;font-weight:600;"
     return styles
 
 st.dataframe(

@@ -16,15 +16,12 @@ from models.cycle_classifier import classify_cycle_phase
 from data.fred_client import compute_cfnai_signal
 
 # ── Dark-theme CSS (mirrors Dashboard) ───────────────────────────────────────
+from components.taplox_theme import inject_theme
+inject_theme()
+
 st.markdown("""
 <style>
-    .stApp { background-color: #ffffff; }
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
-    div[data-testid="metric-container"] {
-        background: #1a1a2e; border-radius: 8px;
-        padding: 12px 16px; border: 1px solid #333;
-    }
-    .stExpander { border: 1px solid #333 !important; border-radius: 8px !important; }
 </style>
 """, unsafe_allow_html=True)
 

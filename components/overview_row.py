@@ -293,9 +293,13 @@ def render_overview_row(
                     unsafe_allow_html=True,
                 )
             if model_output.has_stale_data:
-                st.warning(
-                    f"⚠️ Stale: {', '.join(model_output.stale_features)}",
-                    icon=None,
+                stale_labels = ", ".join(model_output.stale_features)
+                st.markdown(
+                    f'<span style="display:inline-flex;align-items:center;gap:6px;'
+                    f'background:#fff8e5;border:1px solid #f39c12;border-radius:999px;'
+                    f'padding:3px 12px;font-size:0.78rem;font-weight:600;color:#7a5000;">'
+                    f'⚠️ Stale: {stale_labels}</span>',
+                    unsafe_allow_html=True,
                 )
             if model_output.data_as_of:
                 st.caption(f"Data as of {model_output.data_as_of.strftime('%Y-%m-%d')}")

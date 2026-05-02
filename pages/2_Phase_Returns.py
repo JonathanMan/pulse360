@@ -22,15 +22,12 @@ from models.phase_returns import (
 )
 from components.chart_utils import dark_layout, add_nber
 
+from components.taplox_theme import inject_theme
+inject_theme()
+
 st.markdown("""
 <style>
-    .stApp { background-color: #ffffff; }
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
-    div[data-testid="metric-container"] {
-        background: #1a1a2e; border-radius: 8px;
-        padding: 12px 16px; border: 1px solid #333;
-    }
-    .stExpander { border: 1px solid #333 !important; border-radius: 8px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,11 +98,11 @@ st.markdown(
             {current_phase}
         </span>
         &nbsp;&nbsp;
-        <span style="color:#aaa; font-size:0.9rem;">
+        <span style="color:#6c757d; font-size:0.9rem;">
             Current phase · Model probability {current_prob:.1f}%
         </span>
         <br><br>
-        <span style="color:#ccc; font-size:0.9rem;">
+        <span style="color:#293241; font-size:0.9rem;">
             Based on this phase, historical median outcomes: &nbsp;
     """,
     unsafe_allow_html=True,
@@ -189,18 +186,18 @@ st.caption(
 
 def _color_cell(val):
     if pd.isna(val) or val is None:
-        return "color: #555"
+        return "color: #6c757d"
     if val > 15:
-        return "background-color: rgba(46,204,113,0.35); color: white; font-weight:600"
+        return "background-color: rgba(40,167,69,0.20); color: #1a5c30; font-weight:600"
     if val > 5:
-        return "background-color: rgba(46,204,113,0.18); color: white"
+        return "background-color: rgba(40,167,69,0.10); color: #1a5c30"
     if val > 0:
-        return "background-color: rgba(46,204,113,0.08); color: #ccc"
+        return "background-color: rgba(40,167,69,0.05); color: #293241"
     if val > -5:
-        return "background-color: rgba(231,76,60,0.08); color: #ccc"
+        return "background-color: rgba(231,76,60,0.05); color: #293241"
     if val > -15:
-        return "background-color: rgba(231,76,60,0.18); color: white"
-    return "background-color: rgba(231,76,60,0.35); color: white; font-weight:600"
+        return "background-color: rgba(231,76,60,0.10); color: #8b1a1a"
+    return "background-color: rgba(231,76,60,0.20); color: #8b1a1a; font-weight:600"
 
 display_returns = returns_table.copy()
 for col in display_returns.columns:
@@ -214,7 +211,7 @@ st.dataframe(
         .map(_color_cell)
         .set_table_styles([{
             "selector": "th",
-            "props": [("background-color", "#1a1a2e"), ("color", "white"), ("font-weight", "600")]
+            "props": [("background-color", "#f5f7fb"), ("color", "#293241"), ("font-weight", "600")]
         }]),
     use_container_width=True,
 )

@@ -20,110 +20,53 @@ from __future__ import annotations
 import streamlit as st
 
 from ai.claude_client import stream_briefing_section
+from components.taplox_theme import inject_theme
 
-# ── Dark-theme CSS ────────────────────────────────────────────────────────────
+inject_theme()
+
 st.markdown("""
 <style>
-    /* ── Base (main content only — leave sidebar untouched) ── */
     .main .block-container { padding-top: 1rem; max-width: 1200px; }
 
-    /* ── All body text white — scoped to main content only ── */
-    .main p, .main li,
-    .main [data-testid="stMarkdownContainer"] p,
-    .main [data-testid="stMarkdownContainer"] li,
-    .main [data-testid="stMarkdownContainer"] td,
-    .main [data-testid="stMarkdownContainer"] th { color: #ffffff !important; }
-
-    /* ── Headings — main content only ── */
-    .main h1, .main h2, .main h3, .main h4, .main h5, .main h6,
-    .main [data-testid="stMarkdownContainer"] h1,
-    .main [data-testid="stMarkdownContainer"] h2,
-    .main [data-testid="stMarkdownContainer"] h3,
-    .main [data-testid="stMarkdownContainer"] h4 { color: #e0e0ff !important; }
-
-    /* ── Caption / small text — main content only ── */
-    .main small, .main .stCaption,
-    .main [data-testid="stCaptionContainer"] { color: #aaaaaa !important; }
-
-    /* ── Inline code — main content only ── */
-    .main [data-testid="stMarkdownContainer"] code {
-        background: #1e1e3a !important;
-        color: #c8c8ff !important;
-        border-radius: 4px;
-        padding: 1px 5px;
-    }
-
-    /* ── Result box wrapper ── */
+    /* ── Result box wrapper (light theme) ── */
     .result-box {
-        background: #12122a;
-        border: 1px solid #2a2a5a;
-        border-left: 3px solid #4a4aaa;
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-left: 3px solid #3b7ddd;
         border-radius: 8px;
         padding: 18px 20px;
         margin-top: 10px;
         line-height: 1.7;
-        color: #ffffff;
+        color: #293241;
     }
     .result-box p, .result-box li, .result-box td, .result-box th,
-    .result-box span { color: #ffffff !important; }
+    .result-box span { color: #293241 !important; }
     .result-box h1, .result-box h2, .result-box h3,
-    .result-box h4 { color: #e0e0ff !important; }
+    .result-box h4 { color: #293241 !important; font-weight: 600; }
 
-    /* ── Input fields — main content only ── */
-    .main div[data-testid="stTextInput"] > div > input {
-        background: #12122a !important;
-        border-color: #333 !important;
-        color: #ffffff !important;
-    }
-    .main div[data-testid="stTextInput"] label { color: #cccccc !important; }
-
-    /* ── Selectbox — main content only ── */
-    .main div[data-testid="stSelectbox"] label { color: #cccccc !important; }
-    .main div[data-testid="stSelectbox"] > div > div {
-        background: #12122a !important;
-        border-color: #333 !important;
-        color: #ffffff !important;
-    }
-
-    /* ── Tables inside result boxes ── */
+    /* ── Tables inside result boxes (light theme) ── */
     .result-box table {
         width: 100%;
         border-collapse: collapse;
         margin: 8px 0;
     }
     .result-box th {
-        background: #1e1e40 !important;
-        color: #c8c8ff !important;
+        background: #f5f7fb !important;
+        color: #293241 !important;
         padding: 8px 12px;
-        border: 1px solid #333;
+        border: 1px solid #e9ecef;
         font-size: 13px;
+        font-weight: 600;
     }
     .result-box td {
         padding: 7px 12px;
-        border: 1px solid #222;
+        border: 1px solid #e9ecef;
         font-size: 13px;
         vertical-align: top;
-        color: #ffffff !important;
+        color: #293241 !important;
     }
     .result-box tr:nth-child(even) td {
-        background: #0f0f22 !important;
-    }
-
-    /* ── Horizontal rule ── */
-    hr { border-color: #2a2a4a !important; }
-
-    /* ── Run buttons ── */
-    .stButton > button {
-        background: #2a2a6a;
-        color: #ffffff;
-        border: 1px solid #4a4a9a;
-        border-radius: 6px;
-        font-weight: 600;
-    }
-    .stButton > button:hover {
-        background: #3a3a8a;
-        border-color: #7a7aca;
-        color: #ffffff;
+        background: #f9fafb !important;
     }
 
     /* ── Signal legend chips ── */
@@ -131,10 +74,10 @@ st.markdown("""
         display: inline-flex;
         gap: 14px;
         font-size: 12px;
-        color: #aaa;
+        color: #6c757d;
         margin-bottom: 6px;
     }
-    .sig-green  { color: #2ecc71; font-weight: 600; }
+    .sig-green  { color: #28a745; font-weight: 600; }
     .sig-orange { color: #f39c12; font-weight: 600; }
     .sig-red    { color: #e74c3c; font-weight: 600; }
 </style>

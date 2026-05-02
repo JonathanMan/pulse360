@@ -104,7 +104,7 @@ h1, h2, h3, h4, h5, h6,
 }}
 [data-testid="stCaptionContainer"] p,
 .main small {{
-    color: {TEXT_MUT} !important;
+    color: {TEXT_SEC} !important;
 }}
 
 /* ── Metric tiles ─────────────────────────────────────────────────────────── */
