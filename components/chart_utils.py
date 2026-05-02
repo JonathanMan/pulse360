@@ -7,12 +7,14 @@ Exports:
     dark_layout(fig, ...)          → go.Figure   (light theme + hover + rangeselector)
     add_nber(fig, start_date)      → go.Figure   (NBER recession shading)
     add_end_labels(fig, ...)       → go.Figure   (direct line labels, no legend)
-    chart_meta(result, decimals)   → None        (renders st.caption / warnings)
+    chart_meta(result, decimals)   → None        (renders metadata + percentile badge)
     hover_tmpl(name, ...)          → str         (Tableau-style hovertemplate string)
     time_window_start(key)         → str         (ISO date string, 10Y default)
     yoy_pct(series)                → pd.Series
     threshold_line(fig, ...)       → go.Figure
     render_action_item(text, color)→ None        (styled action-item card below charts)
+    percentile_rank(series, value) → float|None  (0–100 percentile of current value)
+    render_percentile_badge(pctile)→ None        (standalone percentile pill widget)
 """
 
 from __future__ import annotations
@@ -276,16 +278,116 @@ def hover_tmpl(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Percentile ranking utilities
+# ─────────────────────────────────────────────────────────────────────────────
+
+def percentile_rank(series: pd.Series, value: float | None = None) -> float | None:
+    """
+    Compute the percentile rank (0–100) of the last — or a specified — value
+    within the full distribution of `series`.
+
+    Uses a rank-style percentile: fraction of observations ≤ the target value.
+    Requires at least 20 non-NaN data points to return a meaningful result.
+
+    Args:
+        series: pd.Series of historical values (DatetimeIndex, float).
+        value:  Override the target value; defaults to series.iloc[-1].
+
+    Returns:
+        Float 0–100, or None if data is insufficient.
+    """
+    clean = series.dropna()
+    if len(clean) < 20:
+        return None
+    try:
+        v = float(clean.iloc[-1]) if value is None else float(value)
+        pct = float((clean <= v).sum()) / len(clean) * 100
+        return round(pct, 1)
+    except Exception:
+        return None
+
+
+def _pctile_badge_html(pctile: float) -> str:
+    """
+    Return an inline HTML pill string for the given percentile rank.
+
+    Colour coding (direction-neutral — flags historical extremes):
+      P0–P10   / P90–P100  → amber  (unusual low / unusual high)
+      P10–P25  / P75–P90   → blue   (below / above average)
+      P25–P75              → green  (normal range)
+    """
+    p = round(pctile)
+    if p <= 10 or p >= 90:
+        bg, border, color = "#fff8e5", "#f39c12", "#7a5000"
+        label = f"P{p} ⚡"
+    elif p <= 25 or p >= 75:
+        bg, border, color = "#e8f1fb", "#3b7ddd", "#1a4a8a"
+        label = f"P{p}"
+    else:
+        bg, border, color = "#e8f8ee", "#28a745", "#1a5c30"
+        label = f"P{p}"
+
+    return (
+        f'<span title="Percentile rank: current value is higher than {p}% '
+        f'of all historical observations in this window" '
+        f'style="display:inline-flex;align-items:center;'
+        f'background:{bg};border:1px solid {border};border-radius:999px;'
+        f'padding:1px 7px;font-size:0.70rem;font-weight:700;color:{color};'
+        f'margin-left:6px;cursor:default;">'
+        f'{label}</span>'
+    )
+
+
+def render_percentile_badge(pctile: float, prefix: str = "") -> None:
+    """
+    Render a standalone percentile pill badge via st.markdown().
+
+    Useful for placing a badge anywhere outside of chart_meta() —
+    e.g. in the Overview Row or next to a metric tile.
+
+    Args:
+        pctile: Float 0–100 from percentile_rank().
+        prefix: Optional text rendered before the pill (plain text).
+    """
+    html = f'<span style="font-size:0.8rem;color:#6c757d;">{prefix}</span>' if prefix else ""
+    html += _pctile_badge_html(pctile)
+    st.markdown(html, unsafe_allow_html=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Chart metadata footer
 # ─────────────────────────────────────────────────────────────────────────────
 
 def chart_meta(result: dict, decimals: int = 2) -> None:
-    """Render series ID, current value, and staleness info below a chart."""
+    """
+    Render series ID, current value, percentile rank badge, and staleness info
+    below a chart.
+
+    The percentile badge is computed automatically from result["data"] and
+    colour-coded by how extreme the current reading is vs. its own history:
+      🟢 P25–P75  = normal range
+      🔵 P10–P25 / P75–P90 = above/below average
+      🟡 P0–P10  / P90–P100 = historical extreme  (⚡ flag)
+    """
     if result["last_value"] is not None:
-        st.caption(
-            f"`{result['series_id']}` · "
-            f"Current: **{result['last_value']:.{decimals}f}** · "
-            f"As of: {result['last_date']}"
+        # ── Percentile badge ──────────────────────────────────────────────────
+        pctile_html = ""
+        series_data = result.get("data")
+        if series_data is not None and not series_data.empty:
+            pct = percentile_rank(series_data)
+            if pct is not None:
+                pctile_html = _pctile_badge_html(pct)
+
+        st.markdown(
+            f'<span style="font-size:0.78rem;color:#6c757d;">'
+            f'<code style="font-size:0.75rem;background:#f5f7fb;'
+            f'border:1px solid #e9ecef;border-radius:4px;padding:1px 5px;'
+            f'color:#293241;">{result["series_id"]}</code>'
+            f'&nbsp;·&nbsp;Current:&nbsp;'
+            f'<strong style="color:#293241;">{result["last_value"]:.{decimals}f}</strong>'
+            f'&nbsp;·&nbsp;As&nbsp;of:&nbsp;{result["last_date"]}'
+            f'{pctile_html}</span>',
+            unsafe_allow_html=True,
         )
     if result["is_stale"]:
         st.warning(f"⚠️ {result['series_id']}: {result['stale_message']}", icon=None)

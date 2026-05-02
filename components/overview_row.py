@@ -17,7 +17,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.chart_utils import render_action_item
+from components.chart_utils import render_action_item, _pctile_badge_html
 from models.cycle_classifier import CyclePhaseOutput
 from models.recession_model import RecessionModelOutput
 
@@ -142,18 +142,23 @@ def _risk_scorecard(model_output: RecessionModelOutput) -> None:
         else:
             icon, status, bg = "🟢", "Normal",    "#e8f8ee"
 
+        # Stress score as a pseudo-percentile (0 = most benign, 100 = max stress)
+        stress_pct = round(feat.stress_score * 100)
+        pctile_html = _pctile_badge_html(stress_pct)
+
         with cols[i]:
             st.markdown(
                 f"""
                 <div style="text-align:center; padding:10px 6px;
                             background:{bg}; border-radius:10px;
-                            border:1px solid #e9ecef; min-height:80px;">
+                            border:1px solid #e9ecef; min-height:90px;">
                     <div style="font-size:22px; line-height:1;">{icon}</div>
                     <div style="font-size:11px; color:#293241; margin-top:5px;
                                 font-weight:600;">{_SCORECARD_LABELS[sid]}</div>
                     <div style="font-size:10px; color:#6c757d; margin-top:2px;">
                         {status}
                     </div>
+                    <div style="margin-top:5px;">{pctile_html}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -290,6 +295,17 @@ def render_overview_row(
                     f"<div style='text-align:center; font-size:13px; color:{d_color}; "
                     f"margin-top:-6px; margin-bottom:4px;'>"
                     f"{d_arrow} {prob_delta:+.1f}pp vs last month</div>",
+                    unsafe_allow_html=True,
+                )
+            # ── Stress percentile badge (aggregate across all 5 features) ────
+            if model_output.features:
+                avg_stress = sum(f.stress_score for f in model_output.features) / len(model_output.features)
+                stress_pct = round(avg_stress * 100)
+                pctile_badge = _pctile_badge_html(stress_pct)
+                st.markdown(
+                    f'<div style="text-align:center; margin-bottom:4px;">'
+                    f'<span style="font-size:0.72rem;color:#6c757d;">Stress level</span>'
+                    f'&nbsp;{pctile_badge}</div>',
                     unsafe_allow_html=True,
                 )
             if model_output.has_stale_data:
