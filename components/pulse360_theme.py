@@ -394,6 +394,35 @@ hr {{
 
 /* ── Selection ───────────────────────────────────────────────────────────── */
 ::selection {{ background: {SUCCESS}; color: #fff; }}
+
+/* ── Aggressive border-radius reset on Streamlit containers ──────────────── */
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stHorizontalBlock"] > div,
+[data-testid="column"] > div > div,
+[data-testid="stMetricLabel"],
+[data-testid="metric-container"],
+[data-testid="stAlert"],
+[data-testid="stExpander"],
+[data-testid="stForm"],
+[data-baseweb="card"],
+[data-baseweb="notification"],
+div[class*="stContainer"],
+div[class*="stColumn"] {{
+    border-radius: 0 !important;
+}}
+
+/* ── st.container(border=True) — remove rounded corners ─────────────────── */
+[data-testid="stVerticalBlockBorderWrapper"] > div {{
+    border-radius: 0 !important;
+    border-color: {BORDER} !important;
+}}
+
+/* ── Stale / warning pills to p360 style ────────────────────────────────── */
+[data-testid="stAlert"] [data-baseweb="notification"] {{
+    border-radius: 0 !important;
+    border-left-width: 2px !important;
+}}
 </style>
 """
 

@@ -445,18 +445,19 @@ def render_overview_row(
             st.markdown("**Cycle Phase**")
             st.markdown(
                 f"""
-                <div style="background:{phase_output.color}15;
-                            border:2px solid {phase_output.color};
-                            border-radius: 2px; padding:14px 10px;
-                            text-align:center; margin-bottom:8px;">
-                    <div style="font-size:34px; line-height:1;">{phase_output.emoji}</div>
-                    <div style="font-size:17px; font-weight:700;
-                                color:#0a0a0a; margin-top:6px;">
-                        {phase_output.phase}
+                <div style="border-top:2px solid {phase_output.color};
+                            border-radius:0; padding:12px 0 10px 0;
+                            margin-bottom:8px;">
+                    <div style="font-size:11px; font-weight:600;
+                                color:#a0a0a0; text-transform:uppercase;
+                                letter-spacing:0.12em;
+                                font-family:'Geist Mono',monospace;">
+                        CONFIDENCE · {phase_output.confidence.upper()}
                     </div>
-                    <div style="font-size:11px; color:#6a6a6a;
-                                margin-top:4px; font-weight:500;">
-                        {phase_output.confidence} confidence
+                    <div style="font-size:22px; font-weight:700;
+                                color:#0a0a0a; margin-top:8px;
+                                letter-spacing:-0.03em; line-height:1.1;">
+                        {phase_output.phase}
                     </div>
                 </div>
                 """,
