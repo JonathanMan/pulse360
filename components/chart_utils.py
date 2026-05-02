@@ -70,7 +70,8 @@ def dark_layout(
     """
     xaxis_cfg: dict = {
         "gridcolor":     "#ececec",
-        "color":         "#6a6a6a",
+        "color":         "#a0a0a0",
+        "tickfont":      {"family": "Geist Mono, monospace", "size": 10, "color": "#a0a0a0"},
         "showgrid":      True,
         "rangeselector": _RANGESELECTOR,
     }
@@ -587,7 +588,7 @@ def render_action_item(text: str, color: str = "#c98800") -> None:
     """
     Render a styled action-item card below a chart or dashboard section.
 
-    Displays a left-accent card with a bold "💡 Action" label in the signal
+    Displays a left-accent card with a bold "Action" label in the signal
     colour and white body text — larger and more visually distinct than a
     plain st.caption().
 
@@ -603,12 +604,12 @@ def render_action_item(text: str, color: str = "#c98800") -> None:
             background: {color}12;
             border: 1px solid {color}55;
             border-left: 3px solid {color};
-            border-radius: 8px;
+            border-radius: 0;
             padding: 10px 16px;
             margin: 10px 0 6px 0;
         ">
             <span style="color:{color}; font-weight:700; font-size:13px; margin-right:6px;">
-                💡 Action
+                Action
             </span>
             <span style="color:#0a0a0a; font-size:13px; line-height:1.6;">
                 {clean}
