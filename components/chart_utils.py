@@ -7,7 +7,7 @@ Exports:
     dark_layout(fig, ...)          → go.Figure   (light theme + hover + rangeselector)
     add_nber(fig, start_date)      → go.Figure   (NBER recession shading)
     add_end_labels(fig, ...)       → go.Figure   (direct line labels, no legend)
-    chart_meta(result, decimals)   → None        (renders metadata + percentile badge)
+    chart_meta(result, decimals)   → None        (renders metadata + percentile + deltas)
     hover_tmpl(name, ...)          → str         (Tableau-style hovertemplate string)
     time_window_start(key)         → str         (ISO date string, 10Y default)
     yoy_pct(series)                → pd.Series
@@ -307,6 +307,61 @@ def percentile_rank(series: pd.Series, value: float | None = None) -> float | No
         return None
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Period-over-period delta utilities  (MoM / QoQ / 1W / 1D  +  YoY)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _infer_frequency(series: pd.Series) -> str:
+    """
+    Infer the observation frequency of a FRED series from the median gap
+    between consecutive data points.
+
+    Returns one of: "daily", "weekly", "monthly", "quarterly", "unknown".
+    """
+    if len(series) < 3 or not isinstance(series.index, pd.DatetimeIndex):
+        return "unknown"
+    gaps = series.index.to_series().diff().dropna().dt.days
+    median_gap = gaps.median()
+    if median_gap <= 3:
+        return "daily"
+    if median_gap <= 10:
+        return "weekly"
+    if median_gap <= 50:
+        return "monthly"
+    return "quarterly"
+
+
+def _delta_badge_html(label: str, delta: float, decimals: int = 2) -> str:
+    """
+    Return an inline HTML delta badge: coloured ▲/▼ value + period label.
+
+    Args:
+        label:    Period label, e.g. "MoM", "YoY", "QoQ", "1W".
+        delta:    Absolute change (same units as the series value).
+        decimals: Decimal places for formatting (mirrors chart_meta decimals).
+
+    Colour convention (direction-neutral for the label; value drives colour):
+        positive → green  (#28a745)
+        negative → red    (#e74c3c)
+        zero     → muted  (#6c757d)
+    """
+    if delta > 0:
+        arrow, color = "▲", "#28a745"
+    elif delta < 0:
+        arrow, color = "▼", "#e74c3c"
+    else:
+        arrow, color = "─", "#6c757d"
+
+    formatted = f"{delta:+.{decimals}f}"
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:1px;'
+        f'font-size:0.70rem;font-weight:600;color:{color};margin-left:7px;">'
+        f'{arrow}&thinsp;{formatted}'
+        f'<span style="font-weight:400;color:#6c757d;margin-left:2px;">{label}</span>'
+        f'</span>'
+    )
+
+
 def _pctile_badge_html(pctile: float) -> str:
     """
     Return an inline HTML pill string for the given percentile rank.
@@ -360,21 +415,51 @@ def render_percentile_badge(pctile: float, prefix: str = "") -> None:
 
 def chart_meta(result: dict, decimals: int = 2) -> None:
     """
-    Render series ID, current value, percentile rank badge, and staleness info
-    below a chart.
+    Render a rich metadata line below every chart:
 
-    The percentile badge is computed automatically from result["data"] and
-    colour-coded by how extreme the current reading is vs. its own history:
-      🟢 P25–P75  = normal range
-      🔵 P10–P25 / P75–P90 = above/below average
-      🟡 P0–P10  / P90–P100 = historical extreme  (⚡ flag)
+        SERIES_ID · Current: X.XX  ▲ +Y MoM  ▼ -Z YoY  P42
+
+    Components (all auto-computed from result["data"]):
+      • Series ID chip + current value + as-of date
+      • Short-period delta badge (MoM / QoQ / 1W / 1D) — absolute change
+      • Year-over-year delta badge — absolute change
+      • Percentile rank pill (P0–P100, colour-coded by extremity)
+
+    Stale / error warnings are rendered below if present.
+
+    Args:
+        result:   Dict returned by fetch_series().
+        decimals: Decimal places for current value AND delta formatting.
     """
     if result["last_value"] is not None:
-        # ── Percentile badge ──────────────────────────────────────────────────
+        series_data: pd.Series | None = result.get("data")
+        delta_html  = ""
         pctile_html = ""
-        series_data = result.get("data")
+
         if series_data is not None and not series_data.empty:
-            pct = percentile_rank(series_data)
+            clean = series_data.dropna()
+
+            # ── Delta badges ──────────────────────────────────────────────────
+            if len(clean) >= 2:
+                freq = _infer_frequency(clean)
+                last = float(clean.iloc[-1])
+
+                # Short-period delta
+                _short_label = {"daily": "1D", "weekly": "1W",
+                                "monthly": "MoM", "quarterly": "QoQ"}.get(freq)
+                if _short_label:
+                    short_delta = last - float(clean.iloc[-2])
+                    delta_html += _delta_badge_html(_short_label, short_delta, decimals)
+
+                # YoY delta (look back ~1 year worth of observations)
+                _yoy_n = {"daily": 252, "weekly": 52,
+                          "monthly": 12, "quarterly": 4}.get(freq, 12)
+                if len(clean) > _yoy_n:
+                    yoy_delta = last - float(clean.iloc[-(_yoy_n + 1)])
+                    delta_html += _delta_badge_html("YoY", yoy_delta, decimals)
+
+            # ── Percentile badge ──────────────────────────────────────────────
+            pct = percentile_rank(clean)
             if pct is not None:
                 pctile_html = _pctile_badge_html(pct)
 
@@ -386,6 +471,7 @@ def chart_meta(result: dict, decimals: int = 2) -> None:
             f'&nbsp;·&nbsp;Current:&nbsp;'
             f'<strong style="color:#293241;">{result["last_value"]:.{decimals}f}</strong>'
             f'&nbsp;·&nbsp;As&nbsp;of:&nbsp;{result["last_date"]}'
+            f'{delta_html}'
             f'{pctile_html}</span>',
             unsafe_allow_html=True,
         )
