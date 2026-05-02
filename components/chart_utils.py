@@ -101,7 +101,7 @@ def dark_layout(
         hoverlabel   = {
             "bgcolor":    "#ffffff",
             "bordercolor":"#ececec",
-            "font":       {"size": 12, "color": "#0a0a0a"},
+            "font":       {"size": 12, "color": "#0a0a0a", "family": "Geist Mono, monospace"},
             "align":      "left",
             "namelength": -1,   # never truncate series names
         },
@@ -122,6 +122,9 @@ def dark_layout(
             "side":      "right",
             "showgrid":  False,
         })
+
+    fig.update_xaxes(tickfont=dict(family="Geist Mono, monospace", size=10, color="#a0a0a0"))
+    fig.update_yaxes(tickfont=dict(family="Geist Mono, monospace", size=10, color="#a0a0a0"))
     return fig
 
 

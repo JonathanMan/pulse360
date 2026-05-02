@@ -130,6 +130,7 @@ section.main, .main, .block-container {{
 }}
 
 /* Active nav item — left-border indicator */
+[data-testid="stSidebar"] [aria-current="page"],
 [data-testid="stSidebar"] [aria-selected="true"],
 [data-testid="stSidebar"] .st-emotion-cache-active-nav {{
     background-color: {SUBTLE_BG} !important;
@@ -416,6 +417,12 @@ div[class*="stColumn"] {{
 [data-testid="stVerticalBlockBorderWrapper"] > div {{
     border-radius: 0 !important;
     border-color: {BORDER} !important;
+}}
+[data-testid="stVerticalBlockBorderWrapper"] > div:first-child {{
+    border-radius: 0 !important;
+}}
+section[data-testid="stSidebar"] ~ div [data-testid="stVerticalBlockBorderWrapper"] > div {{
+    border-radius: 0 !important;
 }}
 
 /* ── Stale / warning pills to p360 style ────────────────────────────────── */

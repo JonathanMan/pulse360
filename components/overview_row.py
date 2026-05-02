@@ -41,7 +41,7 @@ def _recession_gauge(probability: float, traffic_light: str) -> go.Figure:
         "green":  "#00a35a",
         "yellow": "#c98800",
         "red":    "#d92626",
-    }.get(traffic_light, "#95a5a6")
+    }.get(traffic_light, "#a0a0a0")
 
     fig = go.Figure(go.Indicator(
         mode="gauge+number",

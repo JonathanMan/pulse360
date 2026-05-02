@@ -30,7 +30,7 @@ from ai.portfolio_analyzer import (
 
 # ── Page config & styles ──────────────────────────────────────────────────────
 
-from components.pulse360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
+from components.pulse360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, SUBTLE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
 inject_theme()
 st.markdown(f"""
 <style>
@@ -38,13 +38,13 @@ st.markdown(f"""
     /* Upload zone styling */
     div[data-testid="stFileUploader"] {{
         border: 2px dashed {BORDER} !important;
-        border-radius: 12px !important;
+        border-radius: 0 !important;
         padding: 8px !important;
         background: {PAGE_BG} !important;
     }}
     div[data-testid="stFileUploader"]:hover {{
         border-color: {BLUE} !important;
-        background: #e8f1fb !important;
+        background: {SUBTLE_BG} !important;
     }}
     .upload-tip {{
         font-size: 0.85rem;
@@ -55,7 +55,7 @@ st.markdown(f"""
     .macro-badge {{
         display: inline-block;
         padding: 3px 10px;
-        border-radius: 6px;
+        border-radius: 999px;
         font-size: 0.8rem;
         font-weight: 600;
         margin-right: 8px;
@@ -66,7 +66,7 @@ st.markdown(f"""
     .analysis-box {{
         background: {CARD_BG};
         border: 1px solid {BORDER};
-        border-radius: 10px;
+        border-radius: 0;
         padding: 20px 24px;
         margin-top: 16px;
         line-height: 1.7;
@@ -75,13 +75,13 @@ st.markdown(f"""
     .portfolio-chat {{
         background: {PAGE_BG};
         border: 1px solid {BORDER};
-        border-radius: 10px;
+        border-radius: 0;
         padding: 16px 20px;
         margin-top: 24px;
     }}
     .chat-msg-user {{
-        background: #e8f1fb;
-        border-radius: 8px;
+        background: {SUBTLE_BG};
+        border-radius: 0;
         padding: 10px 14px;
         margin: 8px 0;
         color: {TEXT_PRI};
@@ -90,7 +90,7 @@ st.markdown(f"""
     .chat-msg-ai {{
         background: {CARD_BG};
         border-left: 3px solid {BLUE};
-        border-radius: 0 8px 8px 0;
+        border-radius: 0;
         padding: 10px 14px;
         margin: 8px 0;
         color: {TEXT_PRI};
