@@ -57,7 +57,7 @@ def _recession_gauge(probability: float, traffic_light: str) -> go.Figure:
                 "tickcolor": "#a0a0a0",
             },
             "bar":       {"color": bar_color, "thickness": 0.65},
-            "bgcolor":   "#f0f2f5",
+            "bgcolor":   "#f4f4f4",
             "borderwidth": 0,
             "steps": [
                 {"range": [0,  25], "color": "#e8f8ee"},
@@ -160,7 +160,7 @@ def _risk_scorecard(model_output: RecessionModelOutput) -> None:
             st.markdown(
                 f"""
                 <div style="text-align:center; padding:10px 6px;
-                            background:{bg}; border-radius:10px;
+                            background:{bg}; border-radius: 2px;
                             border:1px solid #ececec; min-height:90px;">
                     <div style="font-size:22px; line-height:1;">{icon}</div>
                     <div style="font-size:11px; color:#0a0a0a; margin-top:5px;
@@ -250,7 +250,7 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
 
     for col, p in zip(cols, parallels):
         tl_c  = tl_colors.get(p.traffic_light, "#95a5a6")
-        tl_b  = tl_bg.get(p.traffic_light, "#f0f2f5")
+        tl_b  = tl_bg.get(p.traffic_light, "#f4f4f4")
         month_str = p.date.strftime("%b %Y")
 
         # Similarity bar (0–100)
@@ -269,11 +269,11 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
                 f'<tr>'
                 f'<td style="font-size:10px;color:#6a6a6a;padding:2px 4px;white-space:nowrap;">{label}</td>'
                 f'<td style="padding:2px 4px;">'
-                f'<div style="background:#f0f2f5;border-radius:3px;height:8px;width:100%;">'
+                f'<div style="background:#f4f4f4;border-radius:3px;height:8px;width:100%;">'
                 f'<div style="background:{then_bar_color};border-radius:3px;height:8px;'
                 f'width:{round(then_val*100)}%;"></div></div></td>'
                 f'<td style="padding:2px 4px;">'
-                f'<div style="background:#f0f2f5;border-radius:3px;height:8px;width:100%;">'
+                f'<div style="background:#f4f4f4;border-radius:3px;height:8px;width:100%;">'
                 f'<div style="background:{now_bar_color};border-radius:3px;height:8px;'
                 f'width:{round(now_val*100)}%;"></div></div></td>'
                 f'</tr>'
@@ -295,7 +295,7 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
 
         outcome_html = (
             f'<div style="font-size:10px;color:#6a6a6a;margin-top:8px;'
-            f'padding:5px 8px;background:#f4f4f4;border-radius:5px;">'
+            f'padding:5px 8px;background:#f4f4f4;border-radius: 2px;">'
             f'{p.outcome_note}</div>'
             if p.outcome_note else ""
         )
@@ -303,7 +303,7 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
         with col:
             st.markdown(
                 f"""
-                <div style="border:1px solid #ececec;border-radius:10px;padding:12px 14px;
+                <div style="border:1px solid #ececec;border-radius: 2px;padding:12px 14px;
                             background:#ffffff;height:100%;">
 
                   <!-- Header -->
@@ -312,7 +312,7 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
                     <div style="font-size:15px;font-weight:700;color:#0a0a0a;">
                       #{p.rank} · {month_str}
                     </div>
-                    <div style="background:{tl_b};border:1px solid {tl_c};border-radius:6px;
+                    <div style="background:{tl_b};border:1px solid {tl_c};border-radius: 2px;
                                 padding:2px 8px;font-size:10px;font-weight:700;color:{tl_c};">
                       {p.recession_prob:.0f}% risk
                     </div>
@@ -322,9 +322,9 @@ def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
                   <div style="font-size:10px;color:#6a6a6a;margin-bottom:3px;">
                     Similarity
                   </div>
-                  <div style="background:#f0f2f5;border-radius:4px;height:10px;
+                  <div style="background:#f4f4f4;border-radius: 2px;height:10px;
                               margin-bottom:10px;width:100%;">
-                    <div style="background:{sim_color};border-radius:4px;height:10px;
+                    <div style="background:{sim_color};border-radius: 2px;height:10px;
                                 width:{sim_bar_w}%;transition:width 0.4s;"></div>
                   </div>
                   <div style="font-size:11px;color:#6a6a6a;margin-top:-8px;
@@ -447,7 +447,7 @@ def render_overview_row(
                 f"""
                 <div style="background:{phase_output.color}15;
                             border:2px solid {phase_output.color};
-                            border-radius:12px; padding:14px 10px;
+                            border-radius: 2px; padding:14px 10px;
                             text-align:center; margin-bottom:8px;">
                     <div style="font-size:34px; line-height:1;">{phase_output.emoji}</div>
                     <div style="font-size:17px; font-weight:700;
