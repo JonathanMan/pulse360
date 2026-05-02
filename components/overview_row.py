@@ -22,6 +22,16 @@ from models.cycle_classifier import CyclePhaseOutput
 from models.recession_model import RecessionModelOutput
 
 
+# Lazy import for historical parallels — avoids circular deps and
+# allows the overview row to render even if the parallels module fails
+def _get_parallels(model_output: RecessionModelOutput):
+    try:
+        from models.historical_parallels import find_historical_parallels
+        return find_historical_parallels(model_output, n=3)
+    except Exception:
+        return []
+
+
 # ---------------------------------------------------------------------------
 # Recession probability gauge
 # ---------------------------------------------------------------------------
@@ -184,6 +194,190 @@ def _contributions_table(model_output: RecessionModelOutput) -> None:
             "As of":            str(f.last_date) if f.last_date else "N/A",
         })
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+
+# ---------------------------------------------------------------------------
+# Historical parallels renderer
+# ---------------------------------------------------------------------------
+
+def _ret_html(val: float | None) -> str:
+    """Format a return value as coloured HTML — green positive, red negative."""
+    if val is None:
+        return '<span style="color:#adb5bd;">—</span>'
+    color  = "#28a745" if val > 0 else "#e74c3c" if val < 0 else "#6c757d"
+    prefix = "+" if val > 0 else ""
+    return f'<span style="color:{color};font-weight:600;">{prefix}{val:.1f}%</span>'
+
+
+def _render_historical_parallels(model_output: RecessionModelOutput) -> None:
+    """
+    Show the 3 closest historical macro periods plus forward asset returns.
+    Calls _get_parallels() which lazy-imports the parallels engine.
+    """
+    st.caption(
+        "The recession model's current stress-vector fingerprint is compared "
+        "against every month since 1997.  The three closest matches are shown "
+        "below — what the macro environment looked like then, and how key "
+        "asset classes performed over the following 6 and 12 months.  "
+        "**Not investment advice — past parallels don't guarantee future returns.**"
+    )
+
+    with st.spinner("Finding historical parallels…"):
+        parallels = _get_parallels(model_output)
+
+    if not parallels:
+        st.info(
+            "Historical parallels unavailable — backtest data may still be loading. "
+            "Try refreshing the page.",
+            icon="⏳",
+        )
+        return
+
+    # Feature labels for the mini comparison
+    _SID_LABELS = {
+        "T10Y3M":       "Yield Curve",
+        "SAHMREALTIME": "Sahm Rule",
+        "CFNAI":        "Activity (CFNAI)",
+        "NFCI":         "Fin. Conditions",
+        "ICSA":         "Jobless Claims",
+        "BAMLH0A0HYM2": "HY Spreads",
+    }
+
+    tl_colors = {"green": "#2ecc71", "yellow": "#f39c12", "red": "#e74c3c"}
+    tl_bg     = {"green": "#e8f8ee", "yellow": "#fff8e5", "red": "#fde8e8"}
+
+    cols = st.columns(len(parallels))
+
+    for col, p in zip(cols, parallels):
+        tl_c  = tl_colors.get(p.traffic_light, "#95a5a6")
+        tl_b  = tl_bg.get(p.traffic_light, "#f0f2f5")
+        month_str = p.date.strftime("%b %Y")
+
+        # Similarity bar (0–100)
+        sim_color = "#2ecc71" if p.similarity_pct > 80 else "#f39c12" if p.similarity_pct > 60 else "#e74c3c"
+        sim_bar_w = round(p.similarity_pct)
+
+        # Feature vector mini comparison (current vs then)
+        current_fmap = {f.series_id: f.stress_score for f in model_output.features}
+        feat_rows_html = ""
+        for sid, label in _SID_LABELS.items():
+            then_val = p.feature_vector.get(sid, 0.5)
+            now_val  = current_fmap.get(sid, 0.5)
+            then_bar_color = "#e74c3c" if then_val > 0.66 else "#f39c12" if then_val > 0.33 else "#2ecc71"
+            now_bar_color  = "#e74c3c" if now_val  > 0.66 else "#f39c12" if now_val  > 0.33 else "#2ecc71"
+            feat_rows_html += (
+                f'<tr>'
+                f'<td style="font-size:10px;color:#6c757d;padding:2px 4px;white-space:nowrap;">{label}</td>'
+                f'<td style="padding:2px 4px;">'
+                f'<div style="background:#f0f2f5;border-radius:3px;height:8px;width:100%;">'
+                f'<div style="background:{then_bar_color};border-radius:3px;height:8px;'
+                f'width:{round(then_val*100)}%;"></div></div></td>'
+                f'<td style="padding:2px 4px;">'
+                f'<div style="background:#f0f2f5;border-radius:3px;height:8px;width:100%;">'
+                f'<div style="background:{now_bar_color};border-radius:3px;height:8px;'
+                f'width:{round(now_val*100)}%;"></div></div></td>'
+                f'</tr>'
+            )
+
+        # Forward returns table
+        ret_rows_html = ""
+        for fr in p.forward_returns:
+            ret_rows_html += (
+                f'<tr>'
+                f'<td style="font-size:11px;padding:3px 4px;white-space:nowrap;">'
+                f'{fr.emoji} {fr.asset}</td>'
+                f'<td style="font-size:11px;text-align:right;padding:3px 6px;">'
+                f'{_ret_html(fr.ret_6m)}</td>'
+                f'<td style="font-size:11px;text-align:right;padding:3px 6px;">'
+                f'{_ret_html(fr.ret_12m)}</td>'
+                f'</tr>'
+            )
+
+        outcome_html = (
+            f'<div style="font-size:10px;color:#6c757d;margin-top:8px;'
+            f'padding:5px 8px;background:#f5f7fb;border-radius:5px;">'
+            f'{p.outcome_note}</div>'
+            if p.outcome_note else ""
+        )
+
+        with col:
+            st.markdown(
+                f"""
+                <div style="border:1px solid #e9ecef;border-radius:10px;padding:12px 14px;
+                            background:#ffffff;height:100%;">
+
+                  <!-- Header -->
+                  <div style="display:flex;align-items:center;justify-content:space-between;
+                              margin-bottom:8px;">
+                    <div style="font-size:15px;font-weight:700;color:#293241;">
+                      #{p.rank} · {month_str}
+                    </div>
+                    <div style="background:{tl_b};border:1px solid {tl_c};border-radius:6px;
+                                padding:2px 8px;font-size:10px;font-weight:700;color:{tl_c};">
+                      {p.recession_prob:.0f}% risk
+                    </div>
+                  </div>
+
+                  <!-- Similarity bar -->
+                  <div style="font-size:10px;color:#6c757d;margin-bottom:3px;">
+                    Similarity
+                  </div>
+                  <div style="background:#f0f2f5;border-radius:4px;height:10px;
+                              margin-bottom:10px;width:100%;">
+                    <div style="background:{sim_color};border-radius:4px;height:10px;
+                                width:{sim_bar_w}%;transition:width 0.4s;"></div>
+                  </div>
+                  <div style="font-size:11px;color:#6c757d;margin-top:-8px;
+                              margin-bottom:10px;text-align:right;">
+                    {p.similarity_pct:.0f}% match
+                  </div>
+
+                  <!-- Feature comparison -->
+                  <div style="font-size:10px;font-weight:700;color:#6c757d;
+                              text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">
+                    Stress profile
+                  </div>
+                  <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
+                    <tr>
+                      <th style="font-size:9px;color:#adb5bd;font-weight:400;
+                                 padding:1px 4px;text-align:left;"></th>
+                      <th style="font-size:9px;color:#6c757d;font-weight:700;
+                                 padding:1px 4px;text-align:left;">{month_str[:3]}'
+                        {month_str[-2:]}</th>
+                      <th style="font-size:9px;color:#3b7ddd;font-weight:700;
+                                 padding:1px 4px;text-align:left;">Now</th>
+                    </tr>
+                    {feat_rows_html}
+                  </table>
+
+                  <!-- Forward returns -->
+                  <div style="font-size:10px;font-weight:700;color:#6c757d;
+                              text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">
+                    What followed
+                  </div>
+                  <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                      <th style="font-size:9px;color:#6c757d;font-weight:400;
+                                 padding:2px 4px;text-align:left;">Asset</th>
+                      <th style="font-size:9px;color:#6c757d;font-weight:700;
+                                 padding:2px 6px;text-align:right;">6M</th>
+                      <th style="font-size:9px;color:#6c757d;font-weight:700;
+                                 padding:2px 6px;text-align:right;">12M</th>
+                    </tr>
+                    {ret_rows_html}
+                  </table>
+
+                  {outcome_html}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.caption(
+        "Similarity is 100% minus the weighted Euclidean distance across the 6 model "
+        "stress dimensions (yield curve, Sahm, CFNAI, NFCI, claims, HY spreads). "
+        "Forward returns are actual historical price returns — not forecasts."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -368,5 +562,9 @@ def render_overview_row(
             key="overview_contributions",
         )
         _contributions_table(model_output)
+
+    # ── Row 4: historical parallels ───────────────────────────────────────────
+    with st.expander("🕰️ Historical Parallels — Closest Macro Matches", expanded=False):
+        _render_historical_parallels(model_output)
 
     st.markdown("---")

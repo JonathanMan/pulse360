@@ -428,4 +428,17 @@ with st.sidebar:
         )
 
 
+# ── Alert engine — check rules on every page load ─────────────────────────────
+# We only run the check when the dashboard has already cached live values in
+# session state (key: "pulse360_live_values"), so we never trigger a fresh FRED
+# pull from the router itself.  The Dashboard page populates that key.
+try:
+    from components.alert_engine import check_and_render_alerts as _check_alerts
+    _live = st.session_state.get("pulse360_live_values")
+    _prob = st.session_state.get("pulse360_recession_prob")
+    if _live is not None:
+        _check_alerts(_live, _prob)
+except Exception:
+    pass  # never let alert failures break page routing
+
 pg.run()

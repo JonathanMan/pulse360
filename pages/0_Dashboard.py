@@ -124,6 +124,14 @@ st.session_state["recession_probability"] = model_output.probability
 st.session_state["traffic_light"]         = model_output.traffic_light
 st.session_state["feature_summary"]       = format_features_for_prompt(model_output.features)
 
+# Populate live values for the alert engine (keyed by FRED series_id)
+st.session_state["pulse360_recession_prob"] = model_output.probability
+st.session_state["pulse360_live_values"] = {
+    f.series_id: f.current_value
+    for f in model_output.features
+    if f.current_value is not None
+}
+
 # ── Persistent overview row ────────────────────────────────────────────────────
 render_overview_row(model_output, phase_output, lei_growth, prob_delta=prob_delta)
 
