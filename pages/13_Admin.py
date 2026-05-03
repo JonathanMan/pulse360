@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from components.analytics import is_admin
@@ -83,22 +84,15 @@ with left:
             pv.groupby("page")
             .size()
             .reset_index(name="Views")
-            .sort_values("Views", ascending=False)
+            .sort_values("Views", ascending=True)
             .rename(columns={"page": "Page"})
         )
-        st.dataframe(
-            counts,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Views": st.column_config.ProgressColumn(
-                    "Views",
-                    min_value=0,
-                    max_value=int(counts["Views"].max()),
-                    format="%d",
-                )
-            },
+        fig_pages = px.bar(
+            counts, x="Views", y="Page", orientation="h",
+            height=max(250, len(counts) * 36),
         )
+        fig_pages.update_layout(margin=dict(l=0, r=0, t=0, b=0), yaxis_title="")
+        st.plotly_chart(fig_pages, use_container_width=True)
     else:
         st.caption("No page view data yet.")
 
@@ -108,15 +102,18 @@ with right:
         df.groupby(["date", "event_type"])
         .size()
         .unstack(fill_value=0)
+        .reset_index()
     )
     for col in ("page_view", "login"):
         if col not in daily.columns:
             daily[col] = 0
-    st.line_chart(
-        daily[["page_view", "login"]].rename(
-            columns={"page_view": "Page views", "login": "Logins"}
-        )
+    daily = daily.rename(columns={"page_view": "Page views", "login": "Logins", "date": "Date"})
+    fig_daily = px.line(
+        daily, x="Date", y=["Page views", "Logins"],
+        markers=True, height=300,
     )
+    fig_daily.update_layout(margin=dict(l=0, r=0, t=0, b=0), legend_title="")
+    st.plotly_chart(fig_daily, use_container_width=True)
 
 # ── Per-user summary ───────────────────────────────────────────────────────────
 st.markdown("#### Users")
