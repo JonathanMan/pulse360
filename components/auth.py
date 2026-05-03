@@ -1,14 +1,19 @@
 """
 components/auth.py
 ===================
-Email/password authentication via Supabase Auth.
+Email/password + Google OAuth authentication via Supabase Auth.
 
-Usage in app.py:
-    from components.auth import require_auth, render_logout_button
-    require_auth()   # call before any page content — stops if not logged in
+OAuth flow (implicit):
+  1. User clicks "Continue with Google"
+  2. Browser redirects to Google via Supabase OAuth URL
+  3. Google authenticates and Supabase redirects back with #access_token=... in URL fragment
+  4. JavaScript extracts the token from the fragment and returns it to Python
+  5. Python validates the token with Supabase and stores the user in session_state
 """
 
 from __future__ import annotations
+
+from urllib.parse import urlencode
 
 import streamlit as st
 
@@ -17,8 +22,11 @@ from components.pulse360_theme import (
     BLUE, BORDER, CARD_BG, FG_MUTED, FG_PRIMARY, FG_SEC, PAGE_BG, TEXT_PRI, TEXT_SEC,
 )
 
-_SESSION_KEY = "sb_user"
+_SESSION_KEY  = "sb_user"
+_REDIRECT_URL = "https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app"
 
+
+# ── Public API ─────────────────────────────────────────────────────────────────
 
 def get_session_user() -> dict | None:
     return st.session_state.get(_SESSION_KEY)
@@ -31,9 +39,10 @@ def get_session_email() -> str | None:
 
 def require_auth() -> dict:
     """
-    Call once at the top of app.py (before any page rendering).
-    Returns the user dict if authenticated; shows login form and stops if not.
+    Call once at the top of app.py. Handles OAuth callbacks, shows login
+    form if not authenticated, and returns the user dict when authenticated.
     """
+    _handle_oauth_callback()
     user = get_session_user()
     if user:
         return user
@@ -51,7 +60,6 @@ def logout() -> None:
 
 
 def render_logout_button() -> None:
-    """Render a compact logout row for the sidebar."""
     user = get_session_user()
     if not user:
         return
@@ -68,58 +76,101 @@ def render_logout_button() -> None:
             logout()
 
 
-# ── Private helpers ────────────────────────────────────────────────────────────
+# ── OAuth callback handler ─────────────────────────────────────────────────────
+
+def _handle_oauth_callback() -> None:
+    """
+    Check the URL fragment for an OAuth access_token (implicit flow).
+    Uses streamlit-javascript to read window.location.hash — returns 0 on
+    first render before JS executes, then the token dict on the next cycle.
+    """
+    if get_session_user():
+        return
+    try:
+        from streamlit_javascript import st_javascript
+        token_data = st_javascript(
+            """(() => {
+                const hash = window.location.hash;
+                if (hash && hash.includes('access_token')) {
+                    const p = new URLSearchParams(hash.substring(1));
+                    window.history.replaceState(
+                        {}, document.title,
+                        window.location.pathname + window.location.search
+                    );
+                    return { access_token: p.get('access_token') };
+                }
+                return null;
+            })()""",
+            key="oauth_cb",
+        )
+        if token_data and isinstance(token_data, dict) and token_data.get("access_token"):
+            resp = get_client().auth.get_user(token_data["access_token"])
+            if resp and resp.user:
+                st.session_state[_SESSION_KEY] = {
+                    "email": resp.user.email,
+                    "id":    str(resp.user.id),
+                }
+                st.rerun()
+    except Exception:
+        pass
+
+
+# ── Login page ─────────────────────────────────────────────────────────────────
+
+def _google_oauth_url() -> str:
+    params = urlencode({"provider": "google", "redirect_to": _REDIRECT_URL})
+    return f"{st.secrets['SUPABASE_URL']}/auth/v1/authorize?{params}"
+
 
 def _render_login_page() -> None:
-    st.set_page_config(
-        page_title="Pulse360 — Sign in",
-        page_icon="📊",
-        layout="centered",
-    )
     st.markdown(f"""
 <style>
   .stApp {{ background: {PAGE_BG}; }}
-  .auth-card {{
-    max-width: 420px;
-    margin: 60px auto 0 auto;
-    background: {CARD_BG};
-    border: 1px solid {BORDER};
-    border-radius: 12px;
-    padding: 36px 36px 28px 36px;
+  .auth-wrap {{
+    max-width: 400px;
+    margin: 48px auto 0 auto;
   }}
-  .auth-logo {{
+  .auth-header {{
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
   }}
-  .auth-logo-icon {{ font-size: 2.4rem; }}
-  .auth-logo-name {{
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: {TEXT_PRI};
-    letter-spacing: -0.03em;
-    margin-top: 4px;
+  .auth-icon  {{ font-size: 2.2rem; }}
+  .auth-name  {{
+    font-size: 1.45rem; font-weight: 800;
+    color: {TEXT_PRI}; letter-spacing: -0.03em; margin-top: 4px;
   }}
-  .auth-logo-sub {{
-    font-size: 0.78rem;
-    color: {TEXT_SEC};
-    margin-top: 2px;
+  .auth-sub   {{ font-size: 0.78rem; color: {TEXT_SEC}; margin-top: 2px; }}
+  .auth-card  {{
+    background: {CARD_BG}; border: 1px solid {BORDER};
+    border-radius: 12px; padding: 28px 28px 22px 28px;
   }}
-  div[data-testid="stTabs"] button {{
-    font-size: 0.88rem !important;
-    font-weight: 600 !important;
+  .auth-divider {{
+    display: flex; align-items: center; gap: 10px;
+    margin: 14px 0; color: {FG_MUTED}; font-size: 0.75rem;
+  }}
+  .auth-divider::before, .auth-divider::after {{
+    content: ""; flex: 1; height: 1px; background: {BORDER};
   }}
 </style>
-""", unsafe_allow_html=True)
-
-    st.markdown("""
-<div class="auth-card">
-  <div class="auth-logo">
-    <div class="auth-logo-icon">📊</div>
-    <div class="auth-logo-name">Pulse360</div>
-    <div class="auth-logo-sub">AI-Powered Economic Cycle Dashboard</div>
+<div class="auth-wrap">
+  <div class="auth-header">
+    <div class="auth-icon">📊</div>
+    <div class="auth-name">Pulse360</div>
+    <div class="auth-sub">AI-Powered Economic Cycle Dashboard</div>
   </div>
+  <div class="auth-card">
 </div>
 """, unsafe_allow_html=True)
+
+    # Google button
+    st.link_button(
+        "   Sign in with Google",
+        _google_oauth_url(),
+        use_container_width=True,
+        icon="🔵",
+    )
+
+    st.markdown('<div class="auth-divider">or</div>', unsafe_allow_html=True)
 
     tab_in, tab_up = st.tabs(["Sign in", "Create account"])
 
@@ -132,17 +183,17 @@ def _render_login_page() -> None:
             _do_sign_in(email.strip(), password)
 
     with tab_up:
-        st.caption("Create your account — no credit card required.")
+        st.caption("Create your account — free.")
         with st.form("signup_form", clear_on_submit=False):
             email    = st.text_input("Email", placeholder="you@example.com", key="su_email")
-            password = st.text_input(
-                "Password", type="password", key="su_pw",
-                help="Minimum 8 characters",
-            )
+            password = st.text_input("Password", type="password", key="su_pw",
+                                     help="Minimum 8 characters")
             submitted = st.form_submit_button("Create account", type="primary", use_container_width=True)
         if submitted:
             _do_sign_up(email.strip(), password)
 
+
+# ── Auth actions ───────────────────────────────────────────────────────────────
 
 def _do_sign_in(email: str, password: str) -> None:
     if not email or not password:
