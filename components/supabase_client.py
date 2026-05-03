@@ -22,9 +22,9 @@ def get_client() -> Client:
 
 
 def get_user_email() -> str:
-    try:
-        if st.user.is_logged_in and st.user.email:
-            return st.user.email
-    except Exception:
-        pass
+    """Return the authenticated user's email from the Supabase auth session."""
+    from components.auth import get_session_email
+    email = get_session_email()
+    if email:
+        return email
     return st.secrets.get("DEV_USER_EMAIL", "dev@localhost.com")
