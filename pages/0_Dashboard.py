@@ -54,7 +54,7 @@ from components.pulse360_theme import inject_theme
 inject_theme()
 st.markdown("""
 <style>
-    .main .block-container { padding-top: 1rem; max-width: 1400px; }
+    .main .block-container { padding-top: 1rem; }
     section[data-testid="stSidebar"] { width: 360px !important; }
 </style>
 """, unsafe_allow_html=True)
