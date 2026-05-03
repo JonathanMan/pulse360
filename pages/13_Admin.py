@@ -85,7 +85,7 @@ with left:
             .reset_index(name="views")
             .sort_values("views", ascending=False)
         )
-        st.bar_chart(counts.set_index("page")["views"])
+        st.bar_chart(counts, x="page", y="views", x_label="", y_label="Views")
     else:
         st.caption("No page view data yet.")
 
