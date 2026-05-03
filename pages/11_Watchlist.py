@@ -206,11 +206,15 @@ with st.spinner(f"Scoring {len(watchlist)} ticker(s)…"):
         earnings_map[ticker] = _earnings_date_cached(ticker)
 
 if failed:
-    st.warning(
-        f"Could not score: **{', '.join(failed)}** — "
-        "check the ticker symbols or try refreshing.",
-        icon="⚠️",
-    )
+    for bad in failed:
+        col_warn, col_rm = st.columns([8, 1])
+        with col_warn:
+            st.warning(f"Could not score **{bad}** — invalid ticker.", icon="⚠️")
+        with col_rm:
+            st.markdown("<div style='margin-top:0.4rem;'></div>", unsafe_allow_html=True)
+            if st.button("Remove", key=f"rm_bad_{bad}", type="secondary"):
+                remove_from_watchlist(bad)
+                st.rerun()
 
 if not scored:
     st.error("No scores available. Try refreshing or check your tickers.")
