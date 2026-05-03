@@ -16,6 +16,7 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 import streamlit as st
+import streamlit.components.v1 as _components
 
 from components.supabase_client import get_client
 from components.pulse360_theme import (
@@ -80,52 +81,51 @@ def render_logout_button() -> None:
 
 def _handle_oauth_callback() -> None:
     """
-    Check the URL fragment for an OAuth access_token (implicit flow).
+    Handle the OAuth implicit-flow callback.
 
-    The token is saved to localStorage before the fragment is cleared so it
-    survives the Streamlit rerun that happens between JS execution and Python
-    reading the result.  On the next render the bridge value is consumed.
+    Google redirects back with #access_token=... in the URL fragment.
+    Fragments are invisible to Python, so a zero-height JS component
+    extracts the token and immediately redirects the parent page to
+    ?p360_tk=<token> — a normal query param that Python can read.
+    On the next render Python validates the token and sets the session.
     """
     if get_session_user():
         return
-    try:
-        from streamlit_javascript import st_javascript
-        token_data = st_javascript(
-            """(() => {
-                // Bridge: check localStorage first (token stored on previous render)
-                try {
-                    const stored = localStorage.getItem('p360_oauth_token');
-                    if (stored) {
-                        localStorage.removeItem('p360_oauth_token');
-                        return JSON.parse(stored);
-                    }
-                } catch(e) {}
-                // First render: read fragment and persist to localStorage
-                const hash = window.location.hash;
-                if (hash && hash.includes('access_token')) {
-                    const p = new URLSearchParams(hash.substring(1));
-                    const token = { access_token: p.get('access_token') };
-                    try { localStorage.setItem('p360_oauth_token', JSON.stringify(token)); } catch(e) {}
-                    window.history.replaceState(
-                        {}, document.title,
-                        window.location.pathname + window.location.search
-                    );
-                    return token;
-                }
-                return null;
-            })()""",
-            key="oauth_cb",
-        )
-        if token_data and isinstance(token_data, dict) and token_data.get("access_token"):
-            resp = get_client().auth.get_user(token_data["access_token"])
+
+    # ── Step 1: read token from query param (set by our JS redirect) ──────────
+    token = st.query_params.get("p360_tk")
+    if token:
+        try:
+            resp = get_client().auth.get_user(token)
             if resp and resp.user:
                 st.session_state[_SESSION_KEY] = {
                     "email": resp.user.email,
                     "id":    str(resp.user.id),
                 }
-                st.rerun()
-    except Exception:
-        pass
+        except Exception:
+            pass
+        st.query_params.clear()
+        st.rerun()
+
+    # ── Step 2: inject JS to detect fragment and redirect with token as QP ────
+    _components.html(
+        """<script>
+        (function () {
+            var hash = window.parent.location.hash;
+            if (hash && hash.indexOf('access_token') !== -1) {
+                var p = new URLSearchParams(hash.substring(1));
+                var tk = p.get('access_token');
+                if (tk) {
+                    window.parent.location.replace(
+                        window.parent.location.pathname +
+                        '?p360_tk=' + encodeURIComponent(tk)
+                    );
+                }
+            }
+        })();
+        </script>""",
+        height=0,
+    )
 
 
 # ── Login page ─────────────────────────────────────────────────────────────────
@@ -175,15 +175,16 @@ def _render_login_page() -> None:
 </div>
 """, unsafe_allow_html=True)
 
-    # Google button
+    # Google button — handles both new and returning users automatically
     st.link_button(
-        "   Sign in with Google",
+        "   Continue with Google",
         _google_oauth_url(),
         use_container_width=True,
         icon="🔵",
     )
+    st.caption("New to Pulse360? Google sign-in creates your account automatically.")
 
-    st.markdown('<div class="auth-divider">or</div>', unsafe_allow_html=True)
+    st.markdown('<div class="auth-divider">or sign in with email</div>', unsafe_allow_html=True)
 
     tab_in, tab_up = st.tabs(["Sign in", "Create account"])
 
