@@ -98,6 +98,13 @@ section.main, .main, .block-container {{
     background-color: {PAGE_BG} !important;
 }}
 
+/* ── Full-width layout — remove per-page max-width caps ──────────────────── */
+.main .block-container {{
+    max-width: 100% !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+}}
+
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 [data-testid="stSidebar"],
 [data-testid="stSidebarContent"],
