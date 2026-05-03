@@ -221,7 +221,7 @@ with st.sidebar:
     )
     st.markdown(
         f"""
-        <div style="background:#ffffff;border:1px solid #ececec;border-radius:10px;
+        <div style="background:#ffffff;border:1px solid #ececec;border-radius:0;
                     padding:10px 14px;margin-bottom:8px;">
           <div style="font-size:11px;color:#a0a0a0;margin-bottom:6px;font-weight:600;
                       letter-spacing:.05em;">📊 QUICK STATS</div>

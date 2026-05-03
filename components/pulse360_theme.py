@@ -131,8 +131,7 @@ section.main, .main, .block-container {{
 
 /* Active nav item — left-border indicator */
 [data-testid="stSidebar"] [aria-current="page"],
-[data-testid="stSidebar"] [aria-selected="true"],
-[data-testid="stSidebar"] .st-emotion-cache-active-nav {{
+[data-testid="stSidebar"] [aria-selected="true"] {{
     background-color: {SUBTLE_BG} !important;
     border-left: 2px solid {FG_PRIMARY} !important;
     color: {FG_PRIMARY} !important;
@@ -320,6 +319,16 @@ h3 {{
     box-shadow: none !important;
     margin-bottom: 8px !important;
 }}
+[data-testid="stExpander"] details,
+[data-testid="stExpander"] details summary,
+[data-testid="stExpander"] > details {{
+    border-radius: 0 !important;
+}}
+details[data-testid],
+[data-testid="stExpander"] details {{
+    border-radius: 0 !important;
+    border-color: {BORDER} !important;
+}}
 [data-testid="stExpander"] summary,
 [data-testid="stExpander"] summary p {{
     color: {FG_PRIMARY} !important;
@@ -328,6 +337,7 @@ h3 {{
     text-transform: uppercase !important;
     letter-spacing: 0.14em !important;
     font-family: 'Geist Mono', monospace !important;
+    border-radius: 0 !important;
 }}
 
 /* ── Alerts ──────────────────────────────────────────────────────────────── */
@@ -396,6 +406,14 @@ hr {{
 /* ── Selection ───────────────────────────────────────────────────────────── */
 ::selection {{ background: {SUCCESS}; color: #fff; }}
 
+/* ── Expander details/summary elements (actual DOM nodes) ────────────────── */
+details {{
+    border-radius: 0 !important;
+}}
+details > summary {{
+    border-radius: 0 !important;
+}}
+
 /* ── Aggressive border-radius reset on Streamlit containers ──────────────── */
 [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
 [data-testid="stVerticalBlockBorderWrapper"],
@@ -409,26 +427,48 @@ hr {{
 [data-baseweb="card"],
 [data-baseweb="notification"],
 div[class*="stContainer"],
-div[class*="stColumn"] {{
+div[class*="stColumn"],
+[data-testid="stSidebarNavLink"],
+[data-testid="stSidebarNavViewButton"] {{
     border-radius: 0 !important;
 }}
 
 /* ── st.container(border=True) — remove rounded corners ─────────────────── */
-[data-testid="stVerticalBlockBorderWrapper"] > div {{
+[data-testid="stVerticalBlockBorderWrapper"] > div,
+[data-testid="stVerticalBlockBorderWrapper"] > div:first-child,
+[data-testid="stLayoutWrapper"] > [data-testid="stVerticalBlock"],
+[data-testid="stLayoutWrapper"] [data-testid="stVerticalBlock"].stVerticalBlock {{
     border-radius: 0 !important;
     border-color: {BORDER} !important;
-}}
-[data-testid="stVerticalBlockBorderWrapper"] > div:first-child {{
-    border-radius: 0 !important;
-}}
-section[data-testid="stSidebar"] ~ div [data-testid="stVerticalBlockBorderWrapper"] > div {{
-    border-radius: 0 !important;
 }}
 
 /* ── Stale / warning pills to p360 style ────────────────────────────────── */
 [data-testid="stAlert"] [data-baseweb="notification"] {{
     border-radius: 0 !important;
     border-left-width: 2px !important;
+}}
+
+/* ── st.info / st.warning / st.error — remove rounded corners ────────────── */
+[data-testid="stNotification"],
+[data-testid="stNotification"] > div,
+[data-baseweb="notification"],
+[data-baseweb="notification"] > div,
+[data-testid="stAlert"] > div,
+[data-testid="stAlert"] > div > div {{
+    border-radius: 0 !important;
+}}
+
+/* ── DataFrames — remove rounded corners ─────────────────────────────────── */
+[data-testid="stDataFrame"],
+[data-testid="stDataFrame"] > div,
+[data-testid="stDataFrameResizable"] {{
+    border-radius: 0 !important;
+}}
+
+/* ── Markdown HTML — ensure inline divs aren't clipped by emotion wrappers ── */
+[data-testid="stMarkdownContainer"] > div {{
+    border-radius: 0 !important;
+    overflow: visible !important;
 }}
 </style>
 """

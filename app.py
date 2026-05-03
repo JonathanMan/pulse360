@@ -266,7 +266,7 @@ with st.sidebar:
   .pb-wrap {{
     margin-bottom: 0.8rem;
     padding: 10px 12px;
-    border-radius: 8px;
+    border-radius: 0;
     background: {CARD_BG};
     border: 1px solid {BORDER};
   }}

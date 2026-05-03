@@ -607,7 +607,7 @@ def render_action_item(text: str, color: str = "#c98800") -> None:
             background: {color}12;
             border: 1px solid {color}55;
             border-left: 3px solid {color};
-            border-radius: 0;
+            border-radius: 0 !important;
             padding: 10px 16px;
             margin: 10px 0 6px 0;
         ">
