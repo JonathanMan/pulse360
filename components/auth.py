@@ -16,7 +16,6 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 import streamlit as st
-import streamlit.components.v1 as _components
 
 from components.supabase_client import get_client
 from components.pulse360_theme import (
@@ -83,49 +82,52 @@ def _handle_oauth_callback() -> None:
     """
     Handle the OAuth implicit-flow callback.
 
-    Google redirects back with #access_token=... in the URL fragment.
-    Fragments are invisible to Python, so a zero-height JS component
-    extracts the token and immediately redirects the parent page to
-    ?p360_tk=<token> — a normal query param that Python can read.
-    On the next render Python validates the token and sets the session.
+    Google redirects back with #access_token=... in the PARENT window's URL.
+    st_javascript runs inside a same-origin iframe, so we must read
+    window.parent.location.hash (not window.location.hash, which is the
+    iframe's own — always empty).  The localStorage bridge survives the
+    one Streamlit rerun that fires before Python reads the component value.
     """
     if get_session_user():
         return
-
-    # ── Step 1: read token from query param (set by our JS redirect) ──────────
-    token = st.query_params.get("p360_tk")
-    if token:
-        try:
-            resp = get_client().auth.get_user(token)
+    try:
+        from streamlit_javascript import st_javascript
+        token_data = st_javascript(
+            """(() => {
+                // Bridge: on re-render the token survives here
+                try {
+                    var stored = localStorage.getItem('p360_oauth_token');
+                    if (stored) {
+                        localStorage.removeItem('p360_oauth_token');
+                        return JSON.parse(stored);
+                    }
+                } catch(e) {}
+                // st_javascript runs in a same-origin iframe — must read PARENT hash
+                var hash = window.parent.location.hash;
+                if (hash && hash.indexOf('access_token') !== -1) {
+                    var p = new URLSearchParams(hash.substring(1));
+                    var token = { access_token: p.get('access_token') };
+                    try { localStorage.setItem('p360_oauth_token', JSON.stringify(token)); } catch(e) {}
+                    window.parent.history.replaceState(
+                        {}, document.title,
+                        window.parent.location.pathname + window.parent.location.search
+                    );
+                    return token;
+                }
+                return null;
+            })()""",
+            key="oauth_cb",
+        )
+        if token_data and isinstance(token_data, dict) and token_data.get("access_token"):
+            resp = get_client().auth.get_user(token_data["access_token"])
             if resp and resp.user:
                 st.session_state[_SESSION_KEY] = {
                     "email": resp.user.email,
                     "id":    str(resp.user.id),
                 }
-        except Exception:
-            pass
-        st.query_params.clear()
-        st.rerun()
-
-    # ── Step 2: inject JS to detect fragment and redirect with token as QP ────
-    _components.html(
-        """<script>
-        (function () {
-            var hash = window.parent.location.hash;
-            if (hash && hash.indexOf('access_token') !== -1) {
-                var p = new URLSearchParams(hash.substring(1));
-                var tk = p.get('access_token');
-                if (tk) {
-                    window.parent.location.replace(
-                        window.parent.location.pathname +
-                        '?p360_tk=' + encodeURIComponent(tk)
-                    );
-                }
-            }
-        })();
-        </script>""",
-        height=0,
-    )
+                st.rerun()
+    except Exception:
+        pass
 
 
 # ── Login page ─────────────────────────────────────────────────────────────────
