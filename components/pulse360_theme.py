@@ -105,7 +105,7 @@ section.main, .main, .block-container {{
     padding-right: 2rem !important;
 }}
 
-/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+/* ── Sidebar shell ───────────────────────────────────────────────────────── */
 [data-testid="stSidebar"],
 [data-testid="stSidebarContent"],
 [data-testid="stSidebarCollapsedControl"] {{
@@ -136,7 +136,53 @@ section.main, .main, .block-container {{
     font-weight: 600 !important;
 }}
 
-/* Active nav item — left-border indicator */
+/* ── Nav — "NAVIGATION" eyebrow above the link list ─────────────────────── */
+[data-testid="stSidebarNav"]::before {{
+    content: "NAVIGATION";
+    display: block;
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: {FG_MUTED};
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 1rem 1rem 0.5rem 1rem;
+}}
+
+/* ── Nav — section headers (Analysis / Account) ──────────────────────────── */
+[data-testid="stSidebarNavSeparatorHeader"] {{
+    font-family: 'Geist Mono', monospace !important;
+    font-size: 0.62rem !important;
+    font-weight: 600 !important;
+    color: {FG_MUTED} !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    padding: 0.75rem 1rem 0.25rem !important;
+    margin: 0 !important;
+}}
+
+/* ── Nav — individual links ──────────────────────────────────────────────── */
+[data-testid="stSidebarNavLink"] {{
+    padding: 6px 1rem !important;
+    border-radius: 0 !important;
+    color: {FG_SEC} !important;
+    font-size: 0.83rem !important;
+    font-weight: 400 !important;
+    transition: background 120ms ease, color 120ms ease !important;
+}}
+[data-testid="stSidebarNavLink"]:hover {{
+    background-color: {SUBTLE_BG} !important;
+    color: {FG_PRIMARY} !important;
+}}
+
+/* ── Nav — Material icon colour ─────────────────────────────────────────── */
+[data-testid="stSidebarNavLink"] [data-testid="stIconMaterial"] {{
+    color: {FG_MUTED} !important;
+    font-size: 1.1rem !important;
+}}
+
+/* ── Nav — active item ───────────────────────────────────────────────────── */
+[data-testid="stSidebarNavLink"][aria-current="page"],
 [data-testid="stSidebar"] [aria-current="page"],
 [data-testid="stSidebar"] [aria-selected="true"] {{
     background-color: {SUBTLE_BG} !important;
@@ -144,6 +190,9 @@ section.main, .main, .block-container {{
     color: {FG_PRIMARY} !important;
     font-weight: 600 !important;
     border-radius: 0 !important;
+}}
+[data-testid="stSidebarNavLink"][aria-current="page"] [data-testid="stIconMaterial"] {{
+    color: {FG_PRIMARY} !important;
 }}
 
 /* ── Body headings & text ─────────────────────────────────────────────────── */
