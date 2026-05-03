@@ -82,10 +82,23 @@ with left:
         counts = (
             pv.groupby("page")
             .size()
-            .reset_index(name="views")
-            .sort_values("views", ascending=False)
+            .reset_index(name="Views")
+            .sort_values("Views", ascending=False)
+            .rename(columns={"page": "Page"})
         )
-        st.bar_chart(counts, x="page", y="views", x_label="", y_label="Views")
+        st.dataframe(
+            counts,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Views": st.column_config.ProgressColumn(
+                    "Views",
+                    min_value=0,
+                    max_value=int(counts["Views"].max()),
+                    format="%d",
+                )
+            },
+        )
     else:
         st.caption("No page view data yet.")
 
@@ -96,11 +109,14 @@ with right:
         .size()
         .unstack(fill_value=0)
     )
-    # ensure both columns exist even if one event type never occurred
     for col in ("page_view", "login"):
         if col not in daily.columns:
             daily[col] = 0
-    st.line_chart(daily[["page_view", "login"]].rename(columns={"page_view": "Page views", "login": "Logins"}))
+    st.line_chart(
+        daily[["page_view", "login"]].rename(
+            columns={"page_view": "Page views", "login": "Logins"}
+        )
+    )
 
 # ── Per-user summary ───────────────────────────────────────────────────────────
 st.markdown("#### Users")
