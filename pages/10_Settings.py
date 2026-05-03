@@ -16,6 +16,8 @@ from __future__ import annotations
 import streamlit as st
 
 from components.user_profile import PROFILES, feature_visible, get_profile, get_profile_key
+from components.profile_store import save_profile
+from components.supabase_client import get_user_email
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.markdown("""
@@ -149,6 +151,7 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             disabled=is_active,
         ):
             st.session_state["pulse360_profile"] = key
+            save_profile(get_user_email(), key)
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
             st.rerun()

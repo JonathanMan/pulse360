@@ -81,8 +81,10 @@ def render_logout_button() -> None:
 def _handle_oauth_callback() -> None:
     """
     Check the URL fragment for an OAuth access_token (implicit flow).
-    Uses streamlit-javascript to read window.location.hash — returns 0 on
-    first render before JS executes, then the token dict on the next cycle.
+
+    The token is saved to localStorage before the fragment is cleared so it
+    survives the Streamlit rerun that happens between JS execution and Python
+    reading the result.  On the next render the bridge value is consumed.
     """
     if get_session_user():
         return
@@ -90,14 +92,25 @@ def _handle_oauth_callback() -> None:
         from streamlit_javascript import st_javascript
         token_data = st_javascript(
             """(() => {
+                // Bridge: check localStorage first (token stored on previous render)
+                try {
+                    const stored = localStorage.getItem('p360_oauth_token');
+                    if (stored) {
+                        localStorage.removeItem('p360_oauth_token');
+                        return JSON.parse(stored);
+                    }
+                } catch(e) {}
+                // First render: read fragment and persist to localStorage
                 const hash = window.location.hash;
                 if (hash && hash.includes('access_token')) {
                     const p = new URLSearchParams(hash.substring(1));
+                    const token = { access_token: p.get('access_token') };
+                    try { localStorage.setItem('p360_oauth_token', JSON.stringify(token)); } catch(e) {}
                     window.history.replaceState(
                         {}, document.title,
                         window.location.pathname + window.location.search
                     );
-                    return { access_token: p.get('access_token') };
+                    return token;
                 }
                 return null;
             })()""",

@@ -14,6 +14,7 @@ from components.pulse360_theme import (
     FG_PRIMARY, FG_SEC, FG_MUTED, SUCCESS, DANGER,
 )
 from components.auth import require_auth, render_logout_button
+from components.profile_store import load_profile, save_profile
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -223,6 +224,8 @@ def _render_onboarding() -> None:
 
         if st.button("Get Started →", type="primary", use_container_width=True):
             st.session_state["pulse360_profile"] = chosen
+            from components.supabase_client import get_user_email as _get_email_ob
+            save_profile(_get_email_ob(), chosen)
             for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(key, None)
             st.rerun()
@@ -274,6 +277,13 @@ def _render_onboarding() -> None:
 
 # ── Auth gate — must pass before any page renders ─────────────────────────────
 require_auth()
+
+# ── Restore saved profile from Supabase (first load per session only) ─────────
+if "pulse360_profile" not in st.session_state:
+    from components.supabase_client import get_user_email as _get_email_boot
+    _saved_profile = load_profile(_get_email_boot())
+    if _saved_profile:
+        st.session_state["pulse360_profile"] = _saved_profile
 
 # ── Run onboarding if no profile set ──────────────────────────────────────────
 if "pulse360_profile" not in st.session_state:
