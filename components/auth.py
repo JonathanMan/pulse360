@@ -125,6 +125,11 @@ def _handle_oauth_callback() -> None:
                     "email": resp.user.email,
                     "id":    str(resp.user.id),
                 }
+                try:
+                    from components.analytics import log_login
+                    log_login("google")
+                except Exception:
+                    pass
                 st.rerun()
     except Exception:
         pass
@@ -218,6 +223,11 @@ def _do_sign_in(email: str, password: str) -> None:
     try:
         resp = get_client().auth.sign_in_with_password({"email": email, "password": password})
         st.session_state[_SESSION_KEY] = {"email": resp.user.email, "id": str(resp.user.id)}
+        try:
+            from components.analytics import log_login
+            log_login("email")
+        except Exception:
+            pass
         st.rerun()
     except Exception as exc:
         msg = str(exc)

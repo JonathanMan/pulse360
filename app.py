@@ -15,6 +15,7 @@ from components.pulse360_theme import (
 )
 from components.auth import require_auth, render_logout_button
 from components.profile_store import load_profile, save_profile
+from components.analytics import log_page_view, is_admin
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -293,7 +294,14 @@ if "pulse360_profile" not in st.session_state:
 from components.user_profile import get_nav_pages, get_profile, PROFILES  # noqa: E402
 
 nav_sections = get_nav_pages()
+if is_admin():
+    nav_sections["Account"].append(
+        st.Page("pages/13_Admin.py", title="Analytics", icon=":material/monitoring:")
+    )
 pg = st.navigation(nav_sections)
+
+# ── Log page view (once per navigation, deduped in session) ───────────────────
+log_page_view(pg.title)
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
