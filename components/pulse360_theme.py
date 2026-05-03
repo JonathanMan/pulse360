@@ -150,7 +150,7 @@ section.main, .main, .block-container {{
 }}
 
 /* ── Nav — section headers (Analysis / Account) ──────────────────────────── */
-[data-testid="stSidebarNavSeparatorHeader"] {{
+[data-testid="stNavSectionHeader"] {{
     font-family: 'Geist Mono', monospace !important;
     font-size: 0.62rem !important;
     font-weight: 600 !important;
@@ -160,15 +160,26 @@ section.main, .main, .block-container {{
     padding: 0.75rem 1rem 0.25rem !important;
     margin: 0 !important;
 }}
+[data-testid="stNavSectionHeader"] span {{
+    font-size: 0.62rem !important;
+    font-weight: 600 !important;
+    color: {FG_MUTED} !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    font-family: 'Geist Mono', monospace !important;
+}}
 
 /* ── Nav — individual links ──────────────────────────────────────────────── */
 [data-testid="stSidebarNavLink"] {{
-    padding: 6px 1rem !important;
+    padding: 5px 1rem !important;
     border-radius: 0 !important;
     color: {FG_SEC} !important;
     font-size: 0.83rem !important;
     font-weight: 400 !important;
     transition: background 120ms ease, color 120ms ease !important;
+}}
+[data-testid="stSidebarNavLinkContainer"] {{
+    padding: 1px 0 !important;
 }}
 [data-testid="stSidebarNavLink"]:hover {{
     background-color: {SUBTLE_BG} !important;
