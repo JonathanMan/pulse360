@@ -80,7 +80,6 @@ _ASSET_SERIES: dict[str, str] = {
     "S&P 500":    "SP500",
     "IG Bonds":   "BAMLCC0A0CMTRIV",
     "HY Credit":  "BAMLHYH0A0HYM2TRIV",
-    "Gold":       "GOLDAMGBD228NLBM",
     "WTI Oil":    "DCOILWTICO",
 }
 
@@ -88,7 +87,6 @@ _ASSET_EMOJI: dict[str, str] = {
     "S&P 500":   "📈",
     "IG Bonds":  "🏦",
     "HY Credit": "⚡",
-    "Gold":      "🥇",
     "WTI Oil":   "🛢️",
 }
 

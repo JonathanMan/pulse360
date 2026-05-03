@@ -11,10 +11,9 @@ Phase labels are derived from the backtest probability model + NBER dates:
   • Expansion   — prob < 25%, not contraction/recovery
 
 Asset classes (all FRED total-return series):
-  • US Equities  — WILL5000INDFC  (Wilshire 5000 total return, 1971–)
-  • Treasuries   — BAMLUT0008TRIV (1–10Y govt total return, 1997–)
+  • US Equities  — SP500 (S&P 500, 1950–)
+  • Bonds (IG)   — BAMLCC0A0CMTRIV (ICE BofA IG Corp total return, 1996–)
   • High-Yield   — BAMLHYH0A0HYM2TRIV (HY corp total return, 1996–)
-  • Gold         — GOLDAMGBD228NLBM (London AM fix, 1968–)
   • Oil          — DCOILWTICO (WTI crude spot, 1986–)
 
 Caveat: phase labels are derived from the same model used to define the analysis
@@ -36,10 +35,9 @@ from data.fred_client import fetch_series
 logger = logging.getLogger(__name__)
 
 ASSET_CLASSES = {
-    "US Equities":  "WILL5000INDFC",
-    "Treasuries":   "BAMLUT0008TRIV",
+    "US Equities":  "SP500",
+    "Bonds (IG)":   "BAMLCC0A0CMTRIV",
     "High-Yield":   "BAMLHYH0A0HYM2TRIV",
-    "Gold":         "GOLDAMGBD228NLBM",
     "Oil (WTI)":    "DCOILWTICO",
 }
 

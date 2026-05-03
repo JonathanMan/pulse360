@@ -143,7 +143,7 @@ def fetch_shiller_cape() -> dict:
     }
 
     try:
-        url = "https://shiller.yale.edu/data/ie_data.xls"
+        url = "http://www.econ.yale.edu/~shiller/data/ie_data.xls"
         df = pd.read_excel(url, sheet_name="Data", skiprows=7, header=0)
 
         # Locate CAPE column (P/E10 or CAPE)

@@ -41,7 +41,6 @@ def render_tab6(model_output, phase_output) -> None:
     vix     = fetch_series("VIXCLS",         start_date=start)
     hy_oas  = fetch_series("BAMLH0A0HYM2",   start_date=start)
     ig_oas  = fetch_series("BAMLC0A0CM",     start_date=start)
-    w5000   = fetch_series("WILL5000INDFC",  start_date=start)
 
     # ── Row 1: S&P 500 | VIX ─────────────────────────────────────────────────
     col1, col2 = st.columns(2)
