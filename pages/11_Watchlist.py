@@ -114,7 +114,7 @@ st.markdown("""
 st.markdown("## ⭐ Watchlist")
 st.caption(
     "Your personal list of tracked stocks — scores auto-refresh every hour. "
-    "Watchlist is saved to your browser and persists across sessions."
+    "Watchlist is saved to your account and syncs across devices."
 )
 
 # ── Add ticker form ────────────────────────────────────────────────────────────

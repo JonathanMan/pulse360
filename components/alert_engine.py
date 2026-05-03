@@ -32,25 +32,19 @@ Public API:
 
 from __future__ import annotations
 
-import json
 import logging
 import smtplib
 import uuid
 from datetime import date, datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
 from typing import Any
 
 import streamlit as st
 
-logger = logging.getLogger(__name__)
+from components.supabase_client import get_client, get_user_email
 
-# ── Storage path ──────────────────────────────────────────────────────────────
-# Lives in the same directory as the app so it persists across Streamlit
-# restarts / deployments via the workspace folder.
-_RULES_FILE = Path(__file__).resolve().parent.parent / "data" / "alert_rules.json"
-_RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger(__name__)
 
 
 # ── Operators ─────────────────────────────────────────────────────────────────
@@ -83,21 +77,43 @@ SERIES_PRESETS: dict[str, str] = {
 # ── Persistence ───────────────────────────────────────────────────────────────
 
 def load_rules() -> list[dict]:
-    """Load rules from disk. Returns [] if file missing or corrupt."""
+    """Load the current user's rules from Supabase."""
     try:
-        if _RULES_FILE.exists():
-            return json.loads(_RULES_FILE.read_text())
+        rows = (
+            get_client()
+            .table("alert_rules")
+            .select("*")
+            .eq("user_email", get_user_email())
+            .order("created_at")
+            .execute()
+        )
+        return rows.data or []
     except Exception as exc:
         logger.warning("alert_engine: could not load rules: %s", exc)
-    return []
+        return []
 
 
 def save_rules(rules: list[dict]) -> None:
-    """Persist rules list to disk."""
-    try:
-        _RULES_FILE.write_text(json.dumps(rules, indent=2, default=str))
-    except Exception as exc:
-        logger.error("alert_engine: could not save rules: %s", exc)
+    """Upsert all rules for the current user. Used by check_rules to persist state."""
+    client = get_client()
+    email = get_user_email()
+    for rule in rules:
+        try:
+            client.table("alert_rules").upsert({
+                "id":             rule["id"],
+                "user_email":     email,
+                "name":           rule["name"],
+                "series_id":      rule["series_id"],
+                "operator":       rule["operator"],
+                "threshold":      rule["threshold"],
+                "email":          rule.get("email"),
+                "active":         rule.get("active", True),
+                "last_value":     rule.get("last_value"),
+                "last_triggered": rule.get("last_triggered"),
+                "created_at":     rule["created_at"],
+            }).execute()
+        except Exception as exc:
+            logger.error("alert_engine: could not save rule %s: %s", rule.get("id"), exc)
 
 
 # ── Rule CRUD ─────────────────────────────────────────────────────────────────
@@ -112,6 +128,7 @@ def add_rule(
     """Create a new rule, persist it, and return it."""
     rule: dict[str, Any] = {
         "id":             uuid.uuid4().hex,
+        "user_email":     get_user_email(),
         "name":           name.strip(),
         "series_id":      series_id.upper().strip(),
         "operator":       operator,
@@ -122,16 +139,21 @@ def add_rule(
         "last_triggered": None,
         "created_at":     datetime.utcnow().isoformat(),
     }
-    rules = load_rules()
-    rules.append(rule)
-    save_rules(rules)
+    try:
+        get_client().table("alert_rules").insert(rule).execute()
+    except Exception as exc:
+        logger.error("alert_engine: could not insert rule: %s", exc)
     return rule
 
 
 def delete_rule(rule_id: str) -> None:
-    """Remove rule by id and persist."""
-    rules = [r for r in load_rules() if r.get("id") != rule_id]
-    save_rules(rules)
+    """Remove rule by id."""
+    try:
+        get_client().table("alert_rules").delete().eq("id", rule_id).eq(
+            "user_email", get_user_email()
+        ).execute()
+    except Exception as exc:
+        logger.error("alert_engine: could not delete rule %s: %s", rule_id, exc)
 
 
 def toggle_rule(rule_id: str) -> None:
@@ -139,19 +161,24 @@ def toggle_rule(rule_id: str) -> None:
     rules = load_rules()
     for r in rules:
         if r.get("id") == rule_id:
-            r["active"] = not r.get("active", True)
+            new_active = not r.get("active", True)
+            try:
+                get_client().table("alert_rules").update({"active": new_active}).eq(
+                    "id", rule_id
+                ).eq("user_email", get_user_email()).execute()
+            except Exception as exc:
+                logger.error("alert_engine: could not toggle rule %s: %s", rule_id, exc)
             break
-    save_rules(rules)
 
 
 def _update_rule(rule_id: str, **kwargs) -> None:
     """Patch any field on a rule by id."""
-    rules = load_rules()
-    for r in rules:
-        if r.get("id") == rule_id:
-            r.update(kwargs)
-            break
-    save_rules(rules)
+    try:
+        get_client().table("alert_rules").update(kwargs).eq("id", rule_id).eq(
+            "user_email", get_user_email()
+        ).execute()
+    except Exception as exc:
+        logger.error("alert_engine: could not update rule %s: %s", rule_id, exc)
 
 
 # ── Rule evaluation ───────────────────────────────────────────────────────────
@@ -334,9 +361,6 @@ def check_and_render_alerts(
     Evaluates all active rules and renders Streamlit alert banners for
     any that fire.  Silently no-ops if no rules are defined.
     """
-    if not _RULES_FILE.exists():
-        return  # no rules file yet — skip entirely
-
     try:
         triggered = check_rules(live_values, recession_probability)
     except Exception as exc:
