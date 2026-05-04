@@ -114,7 +114,7 @@ st.markdown("""
 st.markdown("## ⭐ Watchlist")
 st.caption(
     "Your personal list of tracked stocks — scores auto-refresh every hour. "
-    "Watchlist is saved to your account and syncs across devices."
+    "Watchlist is saved to your browser and persists across sessions."
 )
 
 # ── Add ticker form ────────────────────────────────────────────────────────────
@@ -206,15 +206,11 @@ with st.spinner(f"Scoring {len(watchlist)} ticker(s)…"):
         earnings_map[ticker] = _earnings_date_cached(ticker)
 
 if failed:
-    for bad in failed:
-        col_warn, col_rm = st.columns([8, 1])
-        with col_warn:
-            st.warning(f"Could not score **{bad}** — invalid ticker.", icon="⚠️")
-        with col_rm:
-            st.markdown("<div style='margin-top:0.4rem;'></div>", unsafe_allow_html=True)
-            if st.button("Remove", key=f"rm_bad_{bad}", type="secondary"):
-                remove_from_watchlist(bad)
-                st.rerun()
+    st.warning(
+        f"Could not score: **{', '.join(failed)}** — "
+        "check the ticker symbols or try refreshing.",
+        icon="⚠️",
+    )
 
 if not scored:
     st.error("No scores available. Try refreshing or check your tickers.")
@@ -222,12 +218,17 @@ if not scored:
 
 # ── Apply macro adjustment ────────────────────────────────────────────────────
 for s in scored:
-    base = int(s.get("Score", 0))
-    sec  = s.get("Sector", "Unknown")
-    s["MacroAdj"]   = _macro_adj_score(base, sec, macro_regime)
-    emoji, tip      = _quick_action(base, sec, macro_regime)
-    s["AlertEmoji"] = emoji
-    s["AlertTip"]   = tip
+    try:
+        base = int(s.get("Score") or 0)   # guard against None / non-numeric Score
+        sec  = s.get("Sector", "Unknown")
+        s["MacroAdj"]   = _macro_adj_score(base, sec, macro_regime)
+        emoji, tip      = _quick_action(base, sec, macro_regime)
+        s["AlertEmoji"] = emoji
+        s["AlertTip"]   = tip
+    except Exception:
+        s.setdefault("MacroAdj",   int(s.get("Score") or 0))
+        s.setdefault("AlertEmoji", "⚠️")
+        s.setdefault("AlertTip",   "Score unavailable")
     ed_str = earnings_map.get(s.get("Ticker", ""))
     try:
         s["_earnings_days"] = (date.fromisoformat(ed_str[:10]) - today).days if ed_str else 9999
@@ -236,8 +237,8 @@ for s in scored:
 
 # ── Sort ──────────────────────────────────────────────────────────────────────
 sort_key = {
-    "Score (macro adj.)": lambda x: -x["MacroAdj"],
-    "Buffett Score":       lambda x: -int(x.get("Score", 0)),
+    "Score (macro adj.)": lambda x: -(x.get("MacroAdj") or 0),
+    "Buffett Score":       lambda x: -int(x.get("Score") or 0),
     "Ticker A–Z":          lambda x: x.get("Ticker", ""),
     "Sector":              lambda x: x.get("Sector", ""),
     "Earnings Date":       lambda x: x.get("_earnings_days", 9999),
@@ -245,10 +246,10 @@ sort_key = {
 scored.sort(key=sort_key)
 
 # ── Summary metrics ───────────────────────────────────────────────────────────
-avg_score  = sum(s.get("MacroAdj", 0) for s in scored) / len(scored)
-top_ticker = max(scored, key=lambda x: x.get("MacroAdj", 0))
-bot_ticker = min(scored, key=lambda x: x.get("MacroAdj", 0))
-alerts     = sum(1 for s in scored if s["AlertEmoji"] in ("🔴", "⚠️"))
+avg_score  = sum(s.get("MacroAdj") or 0 for s in scored) / len(scored)
+top_ticker = max(scored, key=lambda x: x.get("MacroAdj") or 0)
+bot_ticker = min(scored, key=lambda x: x.get("MacroAdj") or 0)
+alerts     = sum(1 for s in scored if s.get("AlertEmoji") in ("🔴", "⚠️"))
 upcoming_count = sum(
     1 for s in scored if 0 <= s.get("_earnings_days", 9999) <= 30
 )
@@ -256,7 +257,7 @@ upcoming_count = sum(
 m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("Tickers tracked",  len(scored))
 m2.metric("Avg score",        f"{avg_score:.0f} / 100")
-m3.metric("Top pick",         f"{top_ticker['Ticker']} ({top_ticker['MacroAdj']})")
+m3.metric("Top pick",         f"{top_ticker.get('Ticker', '?')} ({top_ticker.get('MacroAdj', 'N/A')})")
 m4.metric("Needs attention",  f"{alerts} ticker{'s' if alerts != 1 else ''}",
           delta=f"in {macro_regime}" if alerts else None, delta_color="inverse")
 m5.metric("Earnings ≤30d",    f"{upcoming_count} ticker{'s' if upcoming_count != 1 else ''}")
