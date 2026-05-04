@@ -134,10 +134,16 @@ def require_auth() -> dict:
     """
     Call once at the top of app.py. Handles OAuth callbacks, shows login
     form if not authenticated, and returns the user dict when authenticated.
+
+    After an OAuth link flow, redirects to the page stored in
+    _post_auth_redirect (e.g. Settings) instead of staying on root.
     """
     _handle_oauth_callback()
     user = get_session_user()
     if user:
+        redirect = st.session_state.pop("_post_auth_redirect", None)
+        if redirect:
+            st.switch_page(redirect)
         return user
     _render_login_page()
     st.stop()
@@ -199,19 +205,27 @@ def _handle_oauth_callback() -> None:
                     if (stored) {
                         localStorage.removeItem('p360_oauth_token');
                         var parsed = JSON.parse(stored);
-                        // Attach link_mode flag if it was set
+                        // Reattach link flags if still present (second rerun)
                         var lm = localStorage.getItem('p360_link_mode');
+                        var lu = localStorage.getItem('p360_link_user');
                         if (lm) { localStorage.removeItem('p360_link_mode'); parsed.link_mode = true; }
+                        if (lu) { localStorage.removeItem('p360_link_user'); parsed.link_user = lu; }
                         return parsed;
                     }
                 } catch(e) {}
                 // Read hash from parent frame
                 var hash = window.parent.location.hash;
                 if (hash && hash.indexOf('access_token') !== -1) {
-                    var p = new URLSearchParams(hash.substring(1));
-                    var lm = localStorage.getItem('p360_link_mode');
+                    var p    = new URLSearchParams(hash.substring(1));
+                    var lm   = localStorage.getItem('p360_link_mode');
+                    var lu   = localStorage.getItem('p360_link_user');
                     if (lm) localStorage.removeItem('p360_link_mode');
-                    var token = { access_token: p.get('access_token'), link_mode: lm === '1' };
+                    if (lu) localStorage.removeItem('p360_link_user');
+                    var token = {
+                        access_token: p.get('access_token'),
+                        link_mode:    lm === '1',
+                        link_user:    lu || null
+                    };
                     try { localStorage.setItem('p360_oauth_token', JSON.stringify(token)); } catch(e) {}
                     window.parent.history.replaceState(
                         {}, document.title,
@@ -228,19 +242,21 @@ def _handle_oauth_callback() -> None:
             if resp and resp.user:
                 google_email = resp.user.email
                 link_mode    = bool(token_data.get("link_mode"))
-                current_user = get_session_user()
+                link_user    = token_data.get("link_user")  # phone/email of existing account
 
-                if link_mode and current_user:
-                    # ── Link mode: associate Google email with existing account ──
-                    canonical = current_user.get("email") or current_user.get("phone")
-                    if canonical and google_email:
-                        # Store the Google email as the canonical email for this user
-                        save_phone_link(google_email, current_user.get("phone", ""))
-                        # If current user only had phone, update session email
-                        if not current_user.get("email"):
-                            current_user["email"] = google_email
-                            st.session_state[_SESSION_KEY] = current_user
+                if link_mode and link_user:
+                    # ── Link mode: link_user is the existing account's phone ──
+                    # link_user survived the redirect via localStorage (not session state)
+                    save_phone_link(google_email, link_user)
+                    # Create a merged session: email from Google + phone from link_user
+                    st.session_state[_SESSION_KEY] = {
+                        "email": google_email,
+                        "id":    str(resp.user.id),
+                        "phone": link_user,
+                    }
                     st.session_state["_google_link_success"] = google_email
+                    # Redirect back to Settings after rerun
+                    st.session_state["_post_auth_redirect"] = "pages/10_Settings.py"
                     st.rerun()
                 else:
                     # ── Normal login ──────────────────────────────────────────

@@ -241,11 +241,14 @@ elif _phone and not _email:
 
     with st.expander("🔵  Link Google account", expanded=False):
         st.caption("Sign in with Google will be linked to your phone number. Click below — you'll be redirected to Google and brought straight back.")
-        # onclick sets the link_mode flag in localStorage BEFORE navigating
+        # onclick stores link_mode AND the current user's phone in localStorage
+        # Both survive the Google redirect and tell the callback who to link to
+        _link_identifier = _phone or _email or ""
         st.markdown(
             f"""
             <a href="{_google_url}"
-               onclick="localStorage.setItem('p360_link_mode','1')"
+               onclick="localStorage.setItem('p360_link_mode','1');
+                        localStorage.setItem('p360_link_user','{_link_identifier}');"
                style="display:block;text-align:center;padding:10px 0;
                       background:#0a0a0a;color:#fff;border-radius:6px;
                       font-weight:600;font-size:0.9rem;text-decoration:none;
