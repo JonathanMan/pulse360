@@ -241,23 +241,28 @@ elif _phone and not _email:
 
     with st.expander("🔵  Link Google account", expanded=False):
         st.caption("Sign in with Google will be linked to your phone number. Click below — you'll be redirected to Google and brought straight back.")
-        # onclick stores link_mode AND the current user's phone in localStorage
-        # Both survive the Google redirect and tell the callback who to link to
+
         _link_identifier = _phone or _email or ""
-        st.markdown(
-            f"""
-            <a href="{_google_url}"
-               onclick="localStorage.setItem('p360_link_mode','1');
-                        localStorage.setItem('p360_link_user','{_link_identifier}');"
-               style="display:block;text-align:center;padding:10px 0;
-                      background:#0a0a0a;color:#fff;border-radius:6px;
-                      font-weight:600;font-size:0.9rem;text-decoration:none;
-                      margin-top:8px;">
-              🔵 &nbsp; Continue with Google
-            </a>
-            """,
-            unsafe_allow_html=True,
-        )
+
+        if st.button("🔵  Continue with Google", key="sett_google_link_btn", use_container_width=True):
+            st.session_state["_sett_google_link_go"] = True
+            st.rerun()
+
+        # On the rerun after button click, use st_javascript to:
+        # 1. Set localStorage flags (survives the redirect)
+        # 2. Navigate the PARENT window (not the iframe) to Google OAuth
+        if st.session_state.pop("_sett_google_link_go", False):
+            try:
+                from streamlit_javascript import st_javascript
+                st_javascript(
+                    f"""(() => {{
+                        localStorage.setItem('p360_link_mode', '1');
+                        localStorage.setItem('p360_link_user', '{_link_identifier}');
+                        window.parent.location.href = '{_google_url}';
+                    }})()"""
+                )
+            except Exception:
+                st.error("Could not initiate Google redirect. Please try again.")
 
     with st.expander("📧  Add email / password login", expanded=False):
         st.caption(
