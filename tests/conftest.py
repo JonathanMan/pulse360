@@ -62,6 +62,15 @@ def _make_streamlit_stub():
     st.columns = lambda *a, **kw: [_CM(), _CM(), _CM()]
     st.sidebar = _CM()
 
+    # st.Page stub — used by get_nav_pages(); tests inspect .title
+    class _Page:
+        def __init__(self, path, title="", icon="", default=False, **kw):
+            self.path    = path
+            self.title   = title
+            self.icon    = icon
+            self.default = default
+    st.Page = _Page
+
     return st
 
 

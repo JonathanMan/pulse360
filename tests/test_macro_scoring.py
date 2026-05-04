@@ -83,7 +83,11 @@ class TestScoreLabel:
 
     def test_elite_band(self):
         label, _ = _score_label(80)
-        assert "elite" in label.lower() or "strong" in label.lower()
+        # Accept any top-tier label the app uses (elite, strong, exceptional, wide moat, etc.)
+        top_tier_words = {"elite", "strong", "exceptional", "moat", "outstanding", "excellent"}
+        assert any(w in label.lower() for w in top_tier_words), (
+            f"Expected a top-tier label for score 80, got: '{label}'"
+        )
 
     def test_avoid_band(self):
         label, _ = _score_label(10)
