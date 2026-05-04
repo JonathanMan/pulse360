@@ -190,6 +190,13 @@ def _handle_oauth_callback() -> None:
     iframe's own — always empty).  The localStorage bridge survives the
     one Streamlit rerun that fires before Python reads the component value.
 
+    Popup mode (preferred):
+      The Google button opens a small popup. When the popup receives the OAuth
+      redirect it stores the token in localStorage and calls window.parent.close()
+      to close itself. The parent page detects the popup closing (via its poll
+      timer) and calls window.location.reload(), which then picks up the token
+      from localStorage on the next load — keeping the user on the original page.
+
     If p360_link_mode is set in localStorage (placed there by the Settings
     "Link Google account" button before redirecting), we treat the returning
     token as a link operation rather than a new login — the Google email is
@@ -207,7 +214,43 @@ def _handle_oauth_callback() -> None:
         from streamlit_javascript import st_javascript
         token_data = st_javascript(
             """(() => {
-                // Check bridge cache first (survives one extra rerun)
+                // ── Popup mode: detect if THIS window was opened as an OAuth popup ──
+                // window.parent is the Streamlit main frame; .opener is the window
+                // that called window.open() (i.e. the original Watchlist/Alerts tab).
+                try {
+                    var isPopup = !!(window.parent.opener);
+                    if (isPopup) {
+                        var popupHash = window.parent.location.hash;
+                        if (popupHash && popupHash.indexOf('access_token') !== -1) {
+                            var pp = new URLSearchParams(popupHash.substring(1));
+                            var tok = pp.get('access_token');
+                            if (tok) {
+                                var lm = localStorage.getItem('p360_link_mode');
+                                var lu = localStorage.getItem('p360_link_user');
+                                if (lm) localStorage.removeItem('p360_link_mode');
+                                if (lu) localStorage.removeItem('p360_link_user');
+                                var payload = {
+                                    access_token: tok,
+                                    link_mode: lm === '1',
+                                    link_user: lu || null
+                                };
+                                // Store token so parent picks it up on reload
+                                try { localStorage.setItem('p360_oauth_token', JSON.stringify(payload)); } catch(e) {}
+                                // Clean URL then close popup
+                                window.parent.history.replaceState({}, document.title, window.parent.location.pathname);
+                                setTimeout(function() { window.parent.close(); }, 350);
+                                return {popup_close: true};
+                            }
+                        }
+                        // Popup with no token (user cancelled) — just close
+                        if (window.parent.location.hash && window.parent.location.hash.length > 1) {
+                            // has some hash but no access_token — might be error, close anyway
+                        }
+                        return null;
+                    }
+                } catch(e) {}
+
+                // ── Normal flow: check bridge cache first (survives one extra rerun) ──
                 try {
                     var stored = localStorage.getItem('p360_oauth_token');
                     if (stored) {
@@ -221,7 +264,7 @@ def _handle_oauth_callback() -> None:
                         return parsed;
                     }
                 } catch(e) {}
-                // Read hash from parent frame
+                // Read hash from parent frame (fallback for non-popup redirect)
                 var hash = window.parent.location.hash;
                 if (hash && hash.indexOf('access_token') !== -1) {
                     var p    = new URLSearchParams(hash.substring(1));
@@ -245,6 +288,18 @@ def _handle_oauth_callback() -> None:
             })()""",
             key="oauth_cb",
         )
+
+        # Popup-close signal — this Streamlit instance is the popup itself.
+        # Show a minimal message and stop so Python doesn't try to log in here.
+        if token_data and isinstance(token_data, dict) and token_data.get("popup_close"):
+            st.markdown(
+                "<p style='text-align:center;padding:2rem;font-size:0.9rem;color:grey;'>"
+                "✓ Authenticated — closing…</p>",
+                unsafe_allow_html=True,
+            )
+            st.stop()
+            return
+
         if token_data and isinstance(token_data, dict) and token_data.get("access_token"):
             resp = get_client().auth.get_user(token_data["access_token"])
             if resp and resp.user:
@@ -295,6 +350,92 @@ def get_google_oauth_url() -> str:
     return _google_oauth_url()
 
 
+def _render_google_popup_button(oauth_url: str, btn_key: str = "default") -> None:
+    """
+    Render a styled Google sign-in button that opens OAuth in a popup window.
+
+    Flow:
+      1. User clicks → popup opens with Google auth URL
+      2. User authenticates in the popup
+      3. Popup receives #access_token=... redirect, stores token in localStorage,
+         closes itself (handled by _handle_oauth_callback popup_close branch)
+      4. Parent page detects popup closure, finds token in localStorage, reloads
+      5. Reload triggers _handle_oauth_callback which reads the token normally
+
+    Falls back to same-tab redirect if popups are blocked.
+    """
+    import json as _json
+    from components.pulse360_theme import BORDER, CARD_BG, TEXT_PRI
+
+    safe_url = _json.dumps(oauth_url)
+    fn_name  = f"p360Google_{btn_key}"
+
+    st.markdown(f"""
+<script>
+(function() {{
+    if (window.{fn_name}) return;   // already defined (avoid re-registering on rerun)
+    window.{fn_name} = function() {{
+        var url = {safe_url};
+        var w = 520, h = 660;
+        var left = Math.max(0, Math.round((screen.width  - w) / 2));
+        var top  = Math.max(0, Math.round((screen.height - h) / 2));
+        var feat = 'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
+                 + ',toolbar=no,menubar=no,location=no,scrollbars=yes,resizable=yes';
+        var popup = window.open(url, 'p360_google_auth', feat);
+        if (!popup || popup.closed) {{
+            // Popups blocked — degrade to same-tab redirect
+            window.location.href = url;
+            return;
+        }}
+        // Poll: when popup closes, check for token and reload parent
+        var poll = setInterval(function() {{
+            if (!popup || popup.closed) {{
+                clearInterval(poll);
+                try {{
+                    var stored = localStorage.getItem('p360_oauth_token');
+                    if (stored) {{
+                        window.location.reload();
+                    }}
+                }} catch(e) {{
+                    window.location.reload();
+                }}
+            }}
+        }}, 500);
+    }};
+}})();
+</script>
+<button
+    onclick="{fn_name}()"
+    style="
+        width: 100%;
+        padding: 10px 16px;
+        background: {CARD_BG};
+        border: 1px solid {BORDER};
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-family: 'Geist', sans-serif;
+        color: {TEXT_PRI};
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: background 0.15s;
+    "
+    onmouseover="this.style.opacity='0.85'"
+    onmouseout="this.style.opacity='1'"
+>
+    <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
+        <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+        <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+        <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+        <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+    </svg>
+    Continue with Google
+</button>
+""", unsafe_allow_html=True)
+
+
 def _render_login_page() -> None:
     st.markdown(f"""
 <style>
@@ -338,13 +479,8 @@ def _render_login_page() -> None:
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Google SSO ────────────────────────────────────────────────────────────
-    st.link_button(
-        "   Continue with Google",
-        _google_oauth_url(),
-        use_container_width=True,
-        icon="🔵",
-    )
+    # ── Google SSO (popup flow) ───────────────────────────────────────────────
+    _render_google_popup_button(_google_oauth_url(), btn_key="login_page")
     st.caption("New to Pulse360? Google sign-in creates your account automatically.")
 
     st.markdown('<div class="auth-divider">or sign in with</div>', unsafe_allow_html=True)
@@ -828,13 +964,8 @@ def render_login_gate(
         # ── OR CONTINUE WITH ──────────────────────────────────────────────────
         st.markdown('<div class="p360-gate-divider">or continue with</div>', unsafe_allow_html=True)
 
-        # Google SSO
-        st.link_button(
-            "   Continue with Google",
-            _google_oauth_url(),
-            use_container_width=True,
-            icon="🔵",
-        )
+        # Google SSO (popup flow — stays on current page after auth)
+        _render_google_popup_button(_google_oauth_url(), btn_key=f"gate_{_k}")
 
         # Email (collapsed by default — tertiary option)
         if not _show_email:
