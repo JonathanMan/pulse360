@@ -67,6 +67,7 @@ TEXT_MUT    = FG_MUTED
 # ── Google Fonts import ───────────────────────────────────────────────────────
 _FONT_IMPORT = """
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 """
 
 # ── Master CSS ────────────────────────────────────────────────────────────────
@@ -98,14 +99,7 @@ section.main, .main, .block-container {{
     background-color: {PAGE_BG} !important;
 }}
 
-/* ── Full-width layout — remove per-page max-width caps ──────────────────── */
-.main .block-container {{
-    max-width: 100% !important;
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
-}}
-
-/* ── Sidebar shell ───────────────────────────────────────────────────────── */
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
 [data-testid="stSidebar"],
 [data-testid="stSidebarContent"],
 [data-testid="stSidebarCollapsedControl"] {{
@@ -136,74 +130,46 @@ section.main, .main, .block-container {{
     font-weight: 600 !important;
 }}
 
-/* ── Nav — "NAVIGATION" eyebrow above the link list ─────────────────────── */
-[data-testid="stSidebarNav"]::before {{
-    content: "NAVIGATION";
-    display: block;
-    font-family: 'Geist Mono', monospace;
-    font-size: 0.62rem;
-    font-weight: 600;
-    color: {FG_MUTED};
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    padding: 1rem 1rem 0.5rem 1rem;
-}}
-
-/* ── Nav — section headers (Analysis / Account) ──────────────────────────── */
-[data-testid="stNavSectionHeader"] {{
-    font-family: 'Geist Mono', monospace !important;
-    font-size: 0.62rem !important;
-    font-weight: 600 !important;
-    color: {FG_MUTED} !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
-    padding: 0.75rem 1rem 0.25rem !important;
-    margin: 0 !important;
-}}
-[data-testid="stNavSectionHeader"] span {{
-    font-size: 0.62rem !important;
-    font-weight: 600 !important;
-    color: {FG_MUTED} !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
-    font-family: 'Geist Mono', monospace !important;
-}}
-
-/* ── Nav — individual links ──────────────────────────────────────────────── */
-[data-testid="stSidebarNavLink"] {{
-    padding: 5px 1rem !important;
-    border-radius: 0 !important;
-    color: {FG_SEC} !important;
-    font-size: 0.83rem !important;
-    font-weight: 400 !important;
-    transition: background 120ms ease, color 120ms ease !important;
-}}
-[data-testid="stSidebarNavLinkContainer"] {{
-    padding: 1px 0 !important;
-}}
-[data-testid="stSidebarNavLink"]:hover {{
-    background-color: {SUBTLE_BG} !important;
-    color: {FG_PRIMARY} !important;
-}}
-
-/* ── Nav — Material icon colour ─────────────────────────────────────────── */
-[data-testid="stSidebarNavLink"] [data-testid="stIconMaterial"] {{
-    color: {FG_MUTED} !important;
-    font-size: 1.1rem !important;
-}}
-
-/* ── Nav — active item ───────────────────────────────────────────────────── */
-[data-testid="stSidebarNavLink"][aria-current="page"],
-[data-testid="stSidebar"] [aria-current="page"],
-[data-testid="stSidebar"] [aria-selected="true"] {{
+/* Active nav item — left-border indicator */
+[data-testid="stSidebar"] [aria-selected="true"],
+[data-testid="stSidebar"] .st-emotion-cache-active-nav {{
     background-color: {SUBTLE_BG} !important;
     border-left: 2px solid {FG_PRIMARY} !important;
     color: {FG_PRIMARY} !important;
     font-weight: 600 !important;
     border-radius: 0 !important;
 }}
-[data-testid="stSidebarNavLink"][aria-current="page"] [data-testid="stIconMaterial"] {{
-    color: {FG_PRIMARY} !important;
+
+/* ── Fix: Streamlit nav "NAVIGATION" header + expand_more icon ───────────────
+   Streamlit adds a "NAVIGATION" label + a Material Icons collapse button at the
+   top of st.navigation() sidebars. The Geist font override breaks Material Icons
+   (which uses ligatures), causing "expand_more" to render as rotated literal text.
+   Fix: (1) restore Material Icons font on icon spans, (2) hide the redundant header.
+─────────────────────────────────────────────────────────────────────────────── */
+
+/* Restore Material Icons for any icon span Streamlit injects */
+.material-icons,
+[data-testid="stSidebar"] span[class*="Icon"],
+[data-testid="stSidebarNavCollapseButton"] span,
+[data-testid="stSidebarNavHeader"] span {{
+    font-family: 'Material Icons' !important;
+    font-feature-settings: normal !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+}}
+
+/* Hide the "NAVIGATION" label and collapse/expand button entirely —
+   sections already have their own headers; collapse adds no value here */
+[data-testid="stSidebarNavHeader"] {{
+    display: none !important;
+}}
+
+/* Also guard against any sidebar span getting a writing-mode transform */
+[data-testid="stSidebar"] span {{
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
 }}
 
 /* ── Body headings & text ─────────────────────────────────────────────────── */
@@ -386,16 +352,6 @@ h3 {{
     box-shadow: none !important;
     margin-bottom: 8px !important;
 }}
-[data-testid="stExpander"] details,
-[data-testid="stExpander"] details summary,
-[data-testid="stExpander"] > details {{
-    border-radius: 0 !important;
-}}
-details[data-testid],
-[data-testid="stExpander"] details {{
-    border-radius: 0 !important;
-    border-color: {BORDER} !important;
-}}
 [data-testid="stExpander"] summary,
 [data-testid="stExpander"] summary p {{
     color: {FG_PRIMARY} !important;
@@ -404,7 +360,6 @@ details[data-testid],
     text-transform: uppercase !important;
     letter-spacing: 0.14em !important;
     font-family: 'Geist Mono', monospace !important;
-    border-radius: 0 !important;
 }}
 
 /* ── Alerts ──────────────────────────────────────────────────────────────── */
@@ -473,69 +428,30 @@ hr {{
 /* ── Selection ───────────────────────────────────────────────────────────── */
 ::selection {{ background: {SUCCESS}; color: #fff; }}
 
-/* ── Expander details/summary elements (actual DOM nodes) ────────────────── */
-details {{
+/* ── Nuclear border-radius reset — every div in the app ─────────────────── */
+div, section, article, aside, nav, header, footer, main {{
     border-radius: 0 !important;
 }}
-details > summary {{
-    border-radius: 0 !important;
-}}
-
-/* ── Aggressive border-radius reset on Streamlit containers ──────────────── */
-[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stHorizontalBlock"] > div,
-[data-testid="column"] > div > div,
-[data-testid="stMetricLabel"],
-[data-testid="metric-container"],
-[data-testid="stAlert"],
-[data-testid="stExpander"],
-[data-testid="stForm"],
-[data-baseweb="card"],
-[data-baseweb="notification"],
-div[class*="stContainer"],
-div[class*="stColumn"],
-[data-testid="stSidebarNavLink"],
-[data-testid="stSidebarNavViewButton"] {{
-    border-radius: 0 !important;
+/* Restore pills only where explicitly set to 999px */
+[data-testid="stTabs"] [data-baseweb="tab-list"],
+[data-testid="stTabs"] [data-baseweb="tab"],
+[data-baseweb="badge"],
+[data-baseweb="tag"] {{
+    border-radius: 999px !important;
 }}
 
-/* ── st.container(border=True) — remove rounded corners ─────────────────── */
+/* ── st.container(border=True) — hairline border, no radius ─────────────── */
 [data-testid="stVerticalBlockBorderWrapper"] > div,
-[data-testid="stVerticalBlockBorderWrapper"] > div:first-child,
-[data-testid="stLayoutWrapper"] > [data-testid="stVerticalBlock"],
-[data-testid="stLayoutWrapper"] [data-testid="stVerticalBlock"].stVerticalBlock {{
+[data-testid="stVerticalBlockBorderWrapper"] {{
     border-radius: 0 !important;
     border-color: {BORDER} !important;
 }}
 
-/* ── Stale / warning pills to p360 style ────────────────────────────────── */
-[data-testid="stAlert"] [data-baseweb="notification"] {{
+/* ── Metric containers ────────────────────────────────────────────────────── */
+[data-testid="metric-container"],
+[data-testid="stMetric"] {{
     border-radius: 0 !important;
-    border-left-width: 2px !important;
-}}
-
-/* ── st.info / st.warning / st.error — remove rounded corners ────────────── */
-[data-testid="stNotification"],
-[data-testid="stNotification"] > div,
-[data-baseweb="notification"],
-[data-baseweb="notification"] > div,
-[data-testid="stAlert"] > div,
-[data-testid="stAlert"] > div > div {{
-    border-radius: 0 !important;
-}}
-
-/* ── DataFrames — remove rounded corners ─────────────────────────────────── */
-[data-testid="stDataFrame"],
-[data-testid="stDataFrame"] > div,
-[data-testid="stDataFrameResizable"] {{
-    border-radius: 0 !important;
-}}
-
-/* ── Markdown HTML — ensure inline divs aren't clipped by emotion wrappers ── */
-[data-testid="stMarkdownContainer"] > div {{
-    border-radius: 0 !important;
-    overflow: visible !important;
+    box-shadow: none !important;
 }}
 </style>
 """
