@@ -149,28 +149,29 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
     level = _LEVEL.get(profile_key, 0)
 
     main_pages = [
-        st.Page("pages/0_Dashboard.py",   title="Dashboard",           icon=":material/home:",         default=True),
-        st.Page("pages/4_Portfolio.py",   title="Investment Analyser",  icon=":material/folder_open:"),
-        st.Page("pages/5_Briefing.py",    title="AI Research Desk",     icon=":material/cognition:"),
-        st.Page("pages/7_Stock_Score.py", title="Buffett Score",         icon=":material/search:"),
-        st.Page("pages/11_Watchlist.py",  title="Watchlist",             icon=":material/star:"),
+        st.Page("pages/0_Dashboard.py",      title="Dashboard",           icon="📊", default=True),
+        st.Page("pages/13_Macro_Pulse.py",   title="Macro Pulse",         icon="🌐"),
+        st.Page("pages/4_Portfolio.py",      title="Investment Analyser", icon="🗂️"),
+        st.Page("pages/5_Briefing.py",       title="AI Research Desk",    icon="🔬"),
+        st.Page("pages/7_Stock_Score.py", title="Buffett Score",         icon="🔍"),
+        st.Page("pages/11_Watchlist.py",  title="Watchlist",             icon="⭐"),
     ]
     if level >= 1:
-        main_pages.append(st.Page("pages/8_Screener.py", title="Stock Screener",    icon=":material/filter_list:"))
-        main_pages.append(st.Page("pages/9_Heatmap.py",  title="Portfolio Heatmap", icon=":material/grid_view:"))
-    main_pages.append(st.Page("pages/6_Buffett.py", title="Buffett Indicator", icon=":material/balance:"))
+        main_pages.append(st.Page("pages/8_Screener.py", title="Stock Screener",   icon="🏆"))
+        main_pages.append(st.Page("pages/9_Heatmap.py",  title="Portfolio Heatmap", icon="📋"))
+    main_pages.append(st.Page("pages/6_Buffett.py", title="Buffett Indicator", icon="⚖️"))
 
     analysis_pages = [
-        st.Page("pages/2_Phase_Returns.py", title="What to Own & When", icon=":material/show_chart:"),
+        st.Page("pages/2_Phase_Returns.py", title="What to Own & When", icon="📈"),
     ]
     if level >= 1:
-        analysis_pages.append(st.Page("pages/3_Simulator.py", title="Stress Test",        icon=":material/tune:"))
+        analysis_pages.append(st.Page("pages/3_Simulator.py", title="Stress Test", icon="🎛️"))
     if level >= 2:
-        analysis_pages.append(st.Page("pages/1_Backtest.py",  title="Model Track Record", icon=":material/history:"))
+        analysis_pages.append(st.Page("pages/1_Backtest.py", title="Model Track Record", icon="📉"))
 
     settings_pages = [
-        st.Page("pages/12_Alerts.py",   title="Alerts",   icon=":material/notifications:"),
-        st.Page("pages/10_Settings.py", title="Settings", icon=":material/settings:"),
+        st.Page("pages/12_Alerts.py",   title="Alerts",   icon="🔔"),
+        st.Page("pages/10_Settings.py", title="Settings", icon="⚙️"),
     ]
 
     return {"": main_pages, "Analysis": analysis_pages, "Account": settings_pages}
