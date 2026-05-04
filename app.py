@@ -11,6 +11,92 @@ Deploy:       push to GitHub → connect to Streamlit Cloud → add secrets
 import streamlit as st
 from components.pulse360_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
 
+# ── Profile persistence helpers ────────────────────────────────────────────────
+_PROFILE_LS_KEY = "p360_profile"
+
+def _save_profile(profile: str) -> None:
+    """
+    Persist the chosen profile so returning users skip onboarding.
+    1. localStorage  — instant, device-local (works for all users)
+    2. Supabase user_metadata — cross-device, logged-in users only
+    """
+    # localStorage write (fire-and-forget; return value ignored)
+    try:
+        from streamlit_javascript import st_javascript
+        _ctr = st.session_state.get("_p360_save_ctr", 0) + 1
+        st.session_state["_p360_save_ctr"] = _ctr
+        st_javascript(
+            f"localStorage.setItem('{_PROFILE_LS_KEY}', '{profile}'); 1;",
+            key=f"_p360_save_{_ctr}",
+        )
+    except Exception:
+        pass
+
+    # Supabase user_metadata write (best-effort for logged-in users)
+    try:
+        from components.auth import get_session_user
+        from components.supabase_client import get_client
+        if get_session_user():
+            get_client().auth.update_user({"data": {_PROFILE_LS_KEY: profile}})
+    except Exception:
+        pass
+
+
+def _try_restore_profile() -> bool:
+    """
+    Attempt to restore a saved profile before showing the onboarding screen.
+
+    Call order (highest priority first):
+    1. Supabase user_metadata  — if the user is logged in (synchronous, cross-device)
+    2. localStorage             — guest or fallback (async, 2-render dance)
+
+    Returns True  if a profile was found and set (caller should st.rerun()).
+    Returns False if nothing was found yet OR we're still waiting for localStorage.
+
+    Side-effect: sets st.session_state["_p360_ls_checked"] = True once
+    localStorage has definitely returned null (no saved profile).
+    """
+    from components.user_profile import PROFILES as _PROFILES
+
+    # ── 1. Supabase (synchronous, only for logged-in users) ───────────────────
+    try:
+        from components.auth import get_session_user
+        from components.supabase_client import get_client
+        if get_session_user():
+            resp = get_client().auth.get_user()
+            if resp and resp.user:
+                meta = resp.user.user_metadata or {}
+                saved = meta.get(_PROFILE_LS_KEY)
+                if saved in _PROFILES:
+                    st.session_state["pulse360_profile"] = saved
+                    return True
+    except Exception:
+        pass
+
+    # ── 2. localStorage (async — returns 0 on first render) ──────────────────
+    if st.session_state.get("_p360_ls_checked"):
+        return False   # already confirmed nothing in localStorage
+
+    try:
+        from streamlit_javascript import st_javascript
+        raw = st_javascript(
+            f"localStorage.getItem('{_PROFILE_LS_KEY}')",
+            key="_p360_ls_read",
+        )
+        if isinstance(raw, str) and raw in _PROFILES:
+            st.session_state["pulse360_profile"] = raw
+            return True
+        if raw == 0:
+            # JS hasn't executed yet — returning False causes a brief blank frame;
+            # Streamlit will rerun naturally and raw will be the real value next time.
+            return False
+        # raw is None (JS returned null) — nothing saved
+        st.session_state["_p360_ls_checked"] = True
+    except Exception:
+        st.session_state["_p360_ls_checked"] = True
+
+    return False
+
 st.set_page_config(
     page_title="Pulse360",
     page_icon="📊",
@@ -199,6 +285,7 @@ def _render_onboarding() -> None:
 
         if st.button("Get Started →", type="primary", use_container_width=True):
             st.session_state["pulse360_profile"] = chosen
+            _save_profile(chosen)   # persist so returning users skip this screen
             for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(key, None)
             st.rerun()
@@ -258,6 +345,15 @@ from components.user_profile import get_nav_pages, get_profile, PROFILES  # noqa
 nav_sections = get_nav_pages()
 pg = st.navigation(nav_sections)
 
+# ── Restore saved profile (skips onboarding for returning users) ──────────────
+if "pulse360_profile" not in st.session_state:
+    if _try_restore_profile():
+        st.rerun()   # profile found — skip onboarding on next render
+    # If _try_restore_profile() returned False we either:
+    #  (a) are waiting for localStorage JS (raw == 0) — fall through to onboarding
+    #      which will flash briefly; a natural rerun resolves it, OR
+    #  (b) confirmed no saved profile — show onboarding intentionally
+
 # ── Run onboarding if no profile set (returns early, pg.run() is skipped) ─────
 if "pulse360_profile" not in st.session_state:
     _render_onboarding()
@@ -315,6 +411,7 @@ with st.sidebar:
     )
     if new_profile != profile_key:
         st.session_state["pulse360_profile"] = new_profile
+        _save_profile(new_profile)   # persist profile change
         for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
             st.session_state.pop(key, None)
         st.rerun()
