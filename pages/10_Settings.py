@@ -4,6 +4,7 @@ Pulse360 — Settings
 User-facing preferences page.
 
 Sections:
+  0. Account & Login    — identity, linked login methods, add phone/email
   1. Investor Profile   — switch between Beginner / Investor / Analyst with
                           rich feature-preview cards
   2. Dashboard defaults — default macro regime, compact mode toggle
@@ -16,8 +17,10 @@ from __future__ import annotations
 import streamlit as st
 
 from components.user_profile import PROFILES, feature_visible, get_profile, get_profile_key
-from components.profile_store import save_profile
-from components.supabase_client import get_user_email
+from components.auth import (
+    get_session_user, get_linked_phone_for_email, get_canonical_email_for_phone,
+    save_phone_link, _COUNTRY_CODES, _build_e164, _do_send_otp_raw,
+)
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.markdown("""
@@ -100,6 +103,163 @@ st.markdown("## ⚙️ Settings")
 st.caption("Customise how Pulse360 works for you. Changes take effect immediately.")
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# 0. ACCOUNT & LOGIN
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown('<div class="settings-section">Account &amp; Login</div>', unsafe_allow_html=True)
+
+_user = get_session_user()
+_email = (_user or {}).get("email")
+_phone = (_user or {}).get("phone")
+
+# Detect login method(s)
+_has_google = bool(_email and not (_user or {}).get("phone_primary"))
+_has_email  = bool(_email)
+_linked_phone = get_linked_phone_for_email(_email) if _email else _phone
+_linked_email = get_canonical_email_for_phone(_phone) if (_phone and not _email) else _email
+
+# ── Identity card ─────────────────────────────────────────────────────────────
+id_col, methods_col = st.columns([2, 1])
+
+with id_col:
+    display_name = _email or _phone or "Unknown"
+    st.markdown(
+        f"""
+        <div style="background:#f9f9f9;border:1px solid #ececec;border-radius:8px;
+                    padding:16px 18px;display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;border-radius:50%;background:#0a0a0a;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:1.1rem;color:#fff;font-weight:700;flex-shrink:0;">
+            {display_name[0].upper()}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;color:#0a0a0a;">
+              {display_name}
+            </div>
+            <div style="font-size:0.75rem;color:#6a6a6a;margin-top:2px;">
+              {"Email / Google account" if _email else "Phone account"}
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with methods_col:
+    st.markdown("**Active login methods**")
+    if _email:
+        st.markdown("✅ &nbsp;Email / Google", unsafe_allow_html=True)
+    if _linked_phone:
+        st.markdown(f"✅ &nbsp;Phone &nbsp;`{_linked_phone}`", unsafe_allow_html=True)
+    elif _phone:
+        st.markdown(f"✅ &nbsp;Phone &nbsp;`{_phone}`", unsafe_allow_html=True)
+
+st.markdown("")
+
+# ── Link phone (for email/Google users) ──────────────────────────────────────
+if _email and not _linked_phone:
+    with st.expander("📱  Add phone number login", expanded=False):
+        st.caption(
+            "Link your phone number so you can also sign in via SMS code. "
+            "Your account and data stay exactly the same."
+        )
+
+        _ph_sent  = st.session_state.get("_sett_ph_sent", False)
+        _ph_phone = st.session_state.get("_sett_ph_phone", "")
+
+        if not _ph_sent:
+            with st.form("sett_link_phone_form"):
+                c1, c2 = st.columns([2, 3])
+                with c1:
+                    _cc_idx = st.selectbox(
+                        "Country", range(len(_COUNTRY_CODES)),
+                        format_func=lambda i: _COUNTRY_CODES[i][1],
+                        key="sett_ph_cc", label_visibility="collapsed",
+                    )
+                with c2:
+                    _local = st.text_input(
+                        "Phone", placeholder="69038453",
+                        key="sett_ph_num", label_visibility="collapsed",
+                    )
+                _sent = st.form_submit_button("Send verification code", use_container_width=True)
+            if _sent:
+                _e164 = _build_e164(_COUNTRY_CODES[_cc_idx][0], _local.strip())
+                if len(_e164) >= 8:
+                    _do_send_otp_raw(_e164)
+                    st.session_state["_sett_ph_phone"] = _e164
+                    st.session_state["_sett_ph_sent"]  = True
+                    st.rerun()
+                else:
+                    st.error("Phone number looks too short.")
+        else:
+            st.markdown(f"Code sent to **{_ph_phone}**.")
+            with st.form("sett_link_verify_form"):
+                _otp = st.text_input("Enter 6-digit code", max_chars=6, key="sett_ph_otp")
+                _verify = st.form_submit_button("Verify & link", type="primary", use_container_width=True)
+            if _verify:
+                if _otp and len(_otp) == 6 and _otp.isdigit():
+                    try:
+                        resp = get_client().auth.verify_otp(
+                            {"phone": _ph_phone, "token": _otp, "type": "sms"}
+                        )
+                        if resp and resp.user:
+                            if save_phone_link(_email, _ph_phone):
+                                # Update session to reflect linked phone
+                                _u = st.session_state.get("sb_user", {})
+                                _u["phone"] = _ph_phone
+                                st.session_state["sb_user"] = _u
+                                st.session_state.pop("_sett_ph_sent", None)
+                                st.session_state.pop("_sett_ph_phone", None)
+                                st.success(f"✅ Phone `{_ph_phone}` linked to your account!")
+                                st.rerun()
+                            else:
+                                st.error("Verified but could not save link — please try again.")
+                        else:
+                            st.error("Verification failed.")
+                    except Exception as exc:
+                        msg = str(exc)
+                        if "invalid" in msg.lower() or "expired" in msg.lower():
+                            st.error("Incorrect or expired code.")
+                        else:
+                            st.error(f"Error: {msg}")
+                else:
+                    st.error("Please enter a valid 6-digit code.")
+
+            if st.button("← Change number", key="sett_ph_back"):
+                st.session_state.pop("_sett_ph_sent", None)
+                st.session_state.pop("_sett_ph_phone", None)
+                st.rerun()
+
+# ── Link email (for phone-only users) ────────────────────────────────────────
+elif _phone and not _email:
+    with st.expander("📧  Add email login", expanded=False):
+        st.caption(
+            "Link an email address so you can also sign in with email/password or Google. "
+            "Go to the login page and create an account with your email — "
+            "then come back here and enter it below to merge your accounts."
+        )
+        with st.form("sett_link_email_form"):
+            _new_email = st.text_input("Your email address", placeholder="you@example.com")
+            _link_it   = st.form_submit_button("Link email", type="primary", use_container_width=True)
+        if _link_it:
+            import re as _re
+            if _new_email and _re.match(r"[^@]+@[^@]+\.[^@]+", _new_email.strip()):
+                if save_phone_link(_new_email.strip(), _phone):
+                    _u = st.session_state.get("sb_user", {})
+                    _u["email"] = _new_email.strip()
+                    st.session_state["sb_user"] = _u
+                    st.success(f"✅ `{_new_email.strip()}` linked to your phone account!")
+                    st.rerun()
+                else:
+                    st.error("Could not save — please try again.")
+            else:
+                st.error("Please enter a valid email address.")
+
+elif _linked_phone or (_email and _phone):
+    st.success(f"✅ Both login methods active — you can sign in with email/Google or phone `{_linked_phone or _phone}`.")
+
+st.markdown("")
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 1. INVESTOR PROFILE
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown('<div class="settings-section">Investor Profile</div>', unsafe_allow_html=True)
@@ -151,7 +311,6 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             disabled=is_active,
         ):
             st.session_state["pulse360_profile"] = key
-            save_profile(get_user_email(), key)
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
             st.rerun()

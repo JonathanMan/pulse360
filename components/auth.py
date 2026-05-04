@@ -44,6 +44,68 @@ _COUNTRY_CODES = [
 ]
 
 
+# ── Phone link table helpers ───────────────────────────────────────────────────
+# user_phone_links table maps phone numbers to canonical email accounts,
+# enabling cross-method login (Google/email user adds phone, and vice versa).
+# SQL to create (run once in Supabase SQL editor):
+#   create table user_phone_links (
+#     id         uuid default gen_random_uuid() primary key,
+#     user_email text not null,
+#     phone      text not null unique,
+#     linked_at  timestamptz default now()
+#   );
+
+_LINKS_TABLE = "user_phone_links"
+
+
+def get_canonical_email_for_phone(phone: str) -> str | None:
+    """Return the canonical email linked to this phone number, or None."""
+    try:
+        resp = (
+            get_client()
+            .table(_LINKS_TABLE)
+            .select("user_email")
+            .eq("phone", phone)
+            .maybe_single()
+            .execute()
+        )
+        if resp and resp.data:
+            return resp.data.get("user_email")
+    except Exception:
+        pass
+    return None
+
+
+def get_linked_phone_for_email(email: str) -> str | None:
+    """Return the linked phone number for this email account, or None."""
+    try:
+        resp = (
+            get_client()
+            .table(_LINKS_TABLE)
+            .select("phone")
+            .eq("user_email", email)
+            .maybe_single()
+            .execute()
+        )
+        if resp and resp.data:
+            return resp.data.get("phone")
+    except Exception:
+        pass
+    return None
+
+
+def save_phone_link(email: str, phone: str) -> bool:
+    """Link a phone number to an email account. Returns True on success."""
+    try:
+        get_client().table(_LINKS_TABLE).upsert(
+            {"user_email": email, "phone": phone},
+            on_conflict="phone",
+        ).execute()
+        return True
+    except Exception:
+        return False
+
+
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def get_session_user() -> dict | None:
@@ -451,7 +513,11 @@ def _do_send_otp_raw(e164_phone: str, resend: bool = False) -> None:
 
 
 def _do_verify_otp(e164_phone: str, otp_code: str) -> None:
-    """Verify the SMS OTP code with Supabase."""
+    """
+    Verify the SMS OTP code with Supabase.
+    After verification, check user_phone_links to resolve a canonical email
+    account — so phone users get merged with their Google/email identity.
+    """
     if not otp_code or len(otp_code) != 6 or not otp_code.isdigit():
         st.error("Please enter the 6-digit code from your SMS.")
         return
@@ -461,8 +527,10 @@ def _do_verify_otp(e164_phone: str, otp_code: str) -> None:
         )
         if resp and resp.user:
             user = resp.user
+            # Check if this phone is linked to a canonical email account
+            canonical_email = get_canonical_email_for_phone(e164_phone)
             st.session_state[_SESSION_KEY] = {
-                "email": user.email or None,          # may be None for phone-only
+                "email": canonical_email or user.email or None,
                 "id":    str(user.id),
                 "phone": e164_phone,
             }
