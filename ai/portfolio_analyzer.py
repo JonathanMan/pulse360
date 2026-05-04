@@ -145,11 +145,63 @@ Word budget: aim for ~600 words. The disclaimer is appended automatically — do
 # Helper: build the macro context block injected into every prompt
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _macro_pulse_block(macro_signals: dict | None) -> str:
+    """Build the Macro Pulse expert-consensus section for AI prompts."""
+    if not macro_signals:
+        return ""
+    forecasters = macro_signals.get("forecasters", [])
+    if not forecasters:
+        return ""
+
+    counts: dict[str, int] = {"Risk on": 0, "Caution": 0, "Risk off": 0}
+    for f in forecasters:
+        sig = f.get("signal", "Caution")
+        if sig in counts:
+            counts[sig] += 1
+    total = len(forecasters)
+
+    if counts["Risk off"] > counts["Risk on"] and counts["Risk off"] > counts["Caution"]:
+        verdict = "Bearish lean — majority signaling caution or risk off"
+    elif counts["Risk on"] > counts["Risk off"] and counts["Risk on"] > counts["Caution"]:
+        verdict = "Bullish lean — majority constructive on equities"
+    else:
+        verdict = "Mixed — bulls and bears nearly split"
+
+    last_updated = macro_signals.get("last_updated", "unknown")
+
+    # Notable dissents: perma-bulls going risk-off or perma-bears going risk-on are meaningful
+    notable = []
+    for f in forecasters:
+        bias = f.get("bias", "")
+        sig  = f.get("signal", "")
+        if bias == "Perma-bull" and sig == "Risk off":
+            notable.append(f"{f['name']} (perma-bull → Risk off ⚠️)")
+        elif bias == "Perma-bear" and sig == "Risk on":
+            notable.append(f"{f['name']} (perma-bear → Risk on ⚠️)")
+    notable_text = (
+        f"\n  Notable signal reversals: {', '.join(notable)}" if notable else ""
+    )
+
+    lines = [
+        f"\nMACRO PULSE — EXPERT FORECASTER CONSENSUS (as of {last_updated}):",
+        f"  Split ({total} forecasters): "
+        f"{counts['Risk on']} Risk on / {counts['Caution']} Caution / {counts['Risk off']} Risk off",
+        f"  Verdict: {verdict}{notable_text}",
+        "  Individual signals:",
+    ]
+    for f in forecasters:
+        bias_note = f" [{f['bias']}]" if f.get("bias") else ""
+        lines.append(f"    • {f['name']}{bias_note}: {f['signal']} — {f['summary'][:120]}…")
+
+    return "\n".join(lines) + "\n"
+
+
 def _macro_context_block(
     cycle_phase: str,
     recession_probability: float,
     traffic_light: str,
     feature_summary: list[dict],
+    macro_signals: dict | None = None,
 ) -> str:
     tl_label = {
         "green":  "LOW (<25%)",
@@ -164,6 +216,8 @@ def _macro_context_block(
         for f in top_drivers
     )
 
+    pulse_block = _macro_pulse_block(macro_signals)
+
     return f"""
 CURRENT PULSE360 DASHBOARD STATE:
   Cycle Phase:           {cycle_phase}
@@ -171,7 +225,7 @@ CURRENT PULSE360 DASHBOARD STATE:
 
 Top model drivers:
 {drivers_text}
-"""
+{pulse_block}"""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -185,6 +239,7 @@ def stream_portfolio_from_screenshot(
     recession_probability: float,
     traffic_light: str,
     feature_summary: list[dict],
+    macro_signals: dict | None = None,
 ) -> Generator[str, None, None]:
     """
     Accept a broker portfolio screenshot, extract positions via Claude vision,
@@ -197,13 +252,14 @@ def stream_portfolio_from_screenshot(
         recession_probability: 0–100 float
         traffic_light:     "green" | "yellow" | "red"
         feature_summary:   Top features from recession model (list of dicts)
+        macro_signals:     Macro Pulse forecaster signals dict (optional)
 
     Yields:
         Text chunks from Claude Sonnet.
     """
     image_b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     macro_block = _macro_context_block(
-        cycle_phase, recession_probability, traffic_light, feature_summary
+        cycle_phase, recession_probability, traffic_light, feature_summary, macro_signals
     )
 
     user_content = [
@@ -258,6 +314,7 @@ def stream_portfolio_from_positions(
     recession_probability: float,
     traffic_light: str,
     feature_summary: list[dict],
+    macro_signals: dict | None = None,
 ) -> Generator[str, None, None]:
     """
     Accept a structured list of positions (parsed from CSV or manual entry)
@@ -273,7 +330,7 @@ def stream_portfolio_from_positions(
         Text chunks from Claude Sonnet.
     """
     macro_block = _macro_context_block(
-        cycle_phase, recession_probability, traffic_light, feature_summary
+        cycle_phase, recession_probability, traffic_light, feature_summary, macro_signals
     )
 
     # Build positions table
@@ -366,6 +423,7 @@ def stream_portfolio_chat(
     cycle_phase: str,
     recession_probability: float,
     traffic_light: str,
+    macro_signals: dict | None = None,
 ) -> Generator[str, None, None]:
     """
     Stream a follow-up chat response about the portfolio analysis.
@@ -377,6 +435,7 @@ def stream_portfolio_chat(
         cycle_phase:    Current cycle phase
         recession_probability: 0–100 float
         traffic_light:  "green" | "yellow" | "red"
+        macro_signals:  Macro Pulse forecaster signals dict (optional)
 
     Yields:
         Text chunks from Claude Haiku.
@@ -385,11 +444,14 @@ def stream_portfolio_chat(
         traffic_light, traffic_light.upper()
     )
 
+    pulse_block = _macro_pulse_block(macro_signals)
+
     system = (
         f"{_PORTFOLIO_CHAT_SYSTEM}\n\n"
         f"CURRENT MACRO STATE:\n"
         f"  Cycle Phase: {cycle_phase}\n"
-        f"  Recession Probability: {recession_probability:.1f}% ({tl_label} risk)\n\n"
+        f"  Recession Probability: {recession_probability:.1f}% ({tl_label} risk)\n"
+        f"{pulse_block}\n"
         f"ANALYSIS:\n{analysis_text}"
     )
 

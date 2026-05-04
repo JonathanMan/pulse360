@@ -30,7 +30,7 @@ from ai.portfolio_analyzer import (
 
 # ── Page config & styles ──────────────────────────────────────────────────────
 
-from components.pulse360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, SUBTLE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
+from components.pulse360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
 inject_theme()
 st.markdown(f"""
 <style>
@@ -38,13 +38,13 @@ st.markdown(f"""
     /* Upload zone styling */
     div[data-testid="stFileUploader"] {{
         border: 2px dashed {BORDER} !important;
-        border-radius: 0 !important;
+        border-radius: 12px !important;
         padding: 8px !important;
         background: {PAGE_BG} !important;
     }}
     div[data-testid="stFileUploader"]:hover {{
         border-color: {BLUE} !important;
-        background: {SUBTLE_BG} !important;
+        background: #e8f1fb !important;
     }}
     .upload-tip {{
         font-size: 0.85rem;
@@ -55,7 +55,7 @@ st.markdown(f"""
     .macro-badge {{
         display: inline-block;
         padding: 3px 10px;
-        border-radius: 999px;
+        border-radius: 6px;
         font-size: 0.8rem;
         font-weight: 600;
         margin-right: 8px;
@@ -66,7 +66,7 @@ st.markdown(f"""
     .analysis-box {{
         background: {CARD_BG};
         border: 1px solid {BORDER};
-        border-radius: 0;
+        border-radius: 10px;
         padding: 20px 24px;
         margin-top: 16px;
         line-height: 1.7;
@@ -75,13 +75,13 @@ st.markdown(f"""
     .portfolio-chat {{
         background: {PAGE_BG};
         border: 1px solid {BORDER};
-        border-radius: 0;
+        border-radius: 10px;
         padding: 16px 20px;
         margin-top: 24px;
     }}
     .chat-msg-user {{
-        background: {SUBTLE_BG};
-        border-radius: 0;
+        background: #e8f1fb;
+        border-radius: 8px;
         padding: 10px 14px;
         margin: 8px 0;
         color: {TEXT_PRI};
@@ -90,7 +90,7 @@ st.markdown(f"""
     .chat-msg-ai {{
         background: {CARD_BG};
         border-left: 3px solid {BLUE};
-        border-radius: 0;
+        border-radius: 0 8px 8px 0;
         padding: 10px 14px;
         margin: 8px 0;
         color: {TEXT_PRI};
@@ -242,6 +242,7 @@ def render_portfolio_chat(analysis_key: str) -> None:
                 cycle_phase           = cycle_phase,
                 recession_probability = recession_probability,
                 traffic_light         = traffic_light,
+                macro_signals         = macro_signals,
             ):
                 response += chunk
                 placeholder.markdown(
@@ -269,6 +270,7 @@ cycle_phase           = st.session_state.get("cycle_phase",           "Mid Expan
 recession_probability = st.session_state.get("recession_probability",  25.0)
 traffic_light         = st.session_state.get("traffic_light",          "green")
 feature_summary       = st.session_state.get("feature_summary",        [])
+macro_signals         = st.session_state.get("macro_signals",          None)
 
 tl_class = f"macro-{traffic_light}"
 tl_label = {
@@ -276,6 +278,27 @@ tl_label = {
     "yellow": f"🟡 {recession_probability:.0f}% recession risk — Elevated",
     "red":    f"🔴 {recession_probability:.0f}% recession risk — High",
 }.get(traffic_light, f"{recession_probability:.0f}% recession risk")
+
+# ── Derive Macro Pulse consensus for display ──────────────────────────────────
+_mp_counts   = {"Risk on": 0, "Caution": 0, "Risk off": 0}
+_mp_verdict  = ""
+_mp_updated  = ""
+if macro_signals:
+    for _f in macro_signals.get("forecasters", []):
+        _s = _f.get("signal", "Caution")
+        if _s in _mp_counts:
+            _mp_counts[_s] += 1
+    _ro, _ca, _rx = _mp_counts["Risk on"], _mp_counts["Caution"], _mp_counts["Risk off"]
+    if _rx > _ro and _rx > _ca:
+        _mp_verdict = "Bearish lean"
+        _mp_badge_cls = "macro-red"
+    elif _ro > _rx and _ro > _ca:
+        _mp_verdict = "Bullish lean"
+        _mp_badge_cls = "macro-green"
+    else:
+        _mp_verdict = "Mixed signals"
+        _mp_badge_cls = "macro-yellow"
+    _mp_updated = macro_signals.get("last_updated", "")
 
 # ── Page header ───────────────────────────────────────────────────────────────
 
@@ -288,10 +311,22 @@ st.markdown(
 
 # ── Macro context banner ──────────────────────────────────────────────────────
 
+_pulse_html = ""
+if macro_signals and _mp_verdict:
+    _ro, _ca, _rx = _mp_counts["Risk on"], _mp_counts["Caution"], _mp_counts["Risk off"]
+    _upd_txt = f" · as of {_mp_updated}" if _mp_updated else ""
+    _pulse_html = (
+        f'&nbsp;&nbsp;'
+        f'<span class="macro-badge {_mp_badge_cls}" style="margin-left:6px;">'
+        f'Expert consensus: {_mp_verdict} ({_ro}/{_ca}/{_rx})'
+        f'</span>'
+        f'<span style="color:#6a6a6a;font-size:0.8rem;">{_upd_txt}</span>'
+    )
+
 st.markdown(
     f'<span class="macro-badge {tl_class}">{tl_label}</span>'
-    f'<span style="color:#6a6a6a; font-size:0.85rem;">Cycle phase: <b style="color:#0a0a0a">{cycle_phase}</b> '
-    f'· Analysis is contextualised to current Pulse360 model state</span>',
+    f'<span style="color:#6a6a6a; font-size:0.85rem;">Cycle phase: <b style="color:#0a0a0a">{cycle_phase}</b></span>'
+    f'{_pulse_html}',
     unsafe_allow_html=True,
 )
 
@@ -392,6 +427,7 @@ For funds: drop a brochure or factsheet page — Claude will extract holdings, s
                     recession_probability = recession_probability,
                     traffic_light         = traffic_light,
                     feature_summary       = feature_summary,
+                    macro_signals         = macro_signals,
                 ):
                     full_text += chunk
                     placeholder.markdown(_fix_dollars(full_text) + "▌")
@@ -559,6 +595,7 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
                 recession_probability = recession_probability,
                 traffic_light         = traffic_light,
                 feature_summary       = feature_summary,
+                macro_signals         = macro_signals,
             ):
                 full_text += chunk
                 placeholder.markdown(_fix_dollars(full_text) + "▌")
