@@ -248,21 +248,21 @@ elif _phone and not _email:
             st.session_state["_sett_google_link_go"] = True
             st.rerun()
 
-        # On the rerun after button click, use st_javascript to:
-        # 1. Set localStorage flags (survives the redirect)
-        # 2. Navigate the PARENT window (not the iframe) to Google OAuth
+        # On the rerun after button click, inject a script component that:
+        # 1. Sets localStorage flags (survive the Google redirect)
+        # 2. Navigates window.parent (the real browser window, not the iframe)
         if st.session_state.pop("_sett_google_link_go", False):
-            try:
-                from streamlit_javascript import st_javascript
-                st_javascript(
-                    f"""(() => {{
-                        localStorage.setItem('p360_link_mode', '1');
-                        localStorage.setItem('p360_link_user', '{_link_identifier}');
-                        window.parent.location.href = '{_google_url}';
-                    }})()"""
-                )
-            except Exception:
-                st.error("Could not initiate Google redirect. Please try again.")
+            import streamlit.components.v1 as _components
+            _components.html(
+                f"""
+                <script>
+                    localStorage.setItem('p360_link_mode', '1');
+                    localStorage.setItem('p360_link_user', '{_link_identifier}');
+                    window.parent.location.href = '{_google_url}';
+                </script>
+                """,
+                height=0,
+            )
 
     with st.expander("📧  Add email / password login", expanded=False):
         st.caption(
