@@ -338,12 +338,17 @@ def _render_onboarding() -> None:
 
 
 # ── OAuth callback handler — MUST run on every page load ──────────────────────
-# When the Google OAuth popup redirects back to the app, this Streamlit instance
-# IS the popup. _handle_oauth_callback() detects window.top.opener is set,
-# stores the token in localStorage, and calls st.stop() (popup_close branch).
-# Without this call here, the popup just loads the full app and never closes.
-from components.auth import _handle_oauth_callback  # noqa: E402
+# Standard same-tab redirect flow: after Google auth, Supabase bounces back to
+# the app root with #access_token=... in the URL. This call reads the token,
+# sets the session, and (if a return_page was stored) switches to that page so
+# the user lands back where they clicked "Continue with Google".
+from components.auth import _handle_oauth_callback, get_session_user  # noqa: E402
 _handle_oauth_callback()
+
+# Redirect to the originating page (Watchlist, Alerts, etc.) after auth
+_post_auth_dest = st.session_state.pop("_post_auth_redirect", None)
+if _post_auth_dest and get_session_user():
+    st.switch_page(_post_auth_dest)
 
 # ── Build navigation FIRST — must happen before any st.stop() ─────────────────
 # st.navigation() must be called before onboarding's early-return, otherwise

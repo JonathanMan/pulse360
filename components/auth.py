@@ -214,69 +214,39 @@ def _handle_oauth_callback() -> None:
         from streamlit_javascript import st_javascript
         token_data = st_javascript(
             """(() => {
-                // ── Popup mode detection ──────────────────────────────────────────
-                // We CANNOT use window.opener — Google's auth page sets
-                // Cross-Origin-Opener-Policy: same-origin which clears window.opener
-                // before the popup returns to our app.
-                //
-                // Instead, the button sets localStorage.p360_popup_nonce before
-                // calling window.open(). The popup reads that flag here. Both the
-                // opener tab and the popup share the same localStorage (same origin).
-                try {
-                    var topWin  = window.top || window.parent || window;
-                    var nonce   = localStorage.getItem('p360_popup_nonce');
-                    var topHash = topWin.location.hash || '';
-                    if (nonce && topHash.indexOf('access_token') !== -1) {
-                        localStorage.removeItem('p360_popup_nonce');   // consume flag
-                        var pp = new URLSearchParams(topHash.substring(1));
-                        var tok = pp.get('access_token');
-                        if (tok) {
-                            var lm = localStorage.getItem('p360_link_mode');
-                            var lu = localStorage.getItem('p360_link_user');
-                            if (lm) localStorage.removeItem('p360_link_mode');
-                            if (lu) localStorage.removeItem('p360_link_user');
-                            var payload = {
-                                access_token: tok,
-                                link_mode: lm === '1',
-                                link_user: lu || null
-                            };
-                            // Store token so parent tab picks it up on reload
-                            localStorage.setItem('p360_oauth_token', JSON.stringify(payload));
-                            // Clean hash then close popup (window.close() still works
-                            // even after COOP breaks the opener reference)
-                            topWin.history.replaceState({}, document.title, topWin.location.pathname);
-                            setTimeout(function() { topWin.close(); }, 350);
-                            return {popup_close: true};
-                        }
-                    }
-                } catch(e) {}
+                // No popup mode — same-tab redirect flow only.
 
-                // ── Normal flow: check bridge cache first (survives one extra rerun) ──
+                // ── Check bridge cache (survives one extra rerun) ─────────────────
                 try {
                     var stored = localStorage.getItem('p360_oauth_token');
                     if (stored) {
                         localStorage.removeItem('p360_oauth_token');
                         var parsed = JSON.parse(stored);
-                        // Reattach link flags if still present (second rerun)
                         var lm = localStorage.getItem('p360_link_mode');
                         var lu = localStorage.getItem('p360_link_user');
                         if (lm) { localStorage.removeItem('p360_link_mode'); parsed.link_mode = true; }
                         if (lu) { localStorage.removeItem('p360_link_user'); parsed.link_user = lu; }
+                        // Pick up the return-to page stored by the sign-in button
+                        var rt = localStorage.getItem('p360_return_to');
+                        if (rt) { localStorage.removeItem('p360_return_to'); parsed.return_to = rt; }
                         return parsed;
                     }
                 } catch(e) {}
-                // Read hash from parent frame (fallback for non-popup redirect)
+                // ── Read token from URL hash (same-tab redirect just landed) ─────
                 var hash = window.parent.location.hash;
                 if (hash && hash.indexOf('access_token') !== -1) {
                     var p    = new URLSearchParams(hash.substring(1));
                     var lm   = localStorage.getItem('p360_link_mode');
                     var lu   = localStorage.getItem('p360_link_user');
+                    var rt   = localStorage.getItem('p360_return_to');
                     if (lm) localStorage.removeItem('p360_link_mode');
                     if (lu) localStorage.removeItem('p360_link_user');
+                    if (rt) localStorage.removeItem('p360_return_to');
                     var token = {
                         access_token: p.get('access_token'),
                         link_mode:    lm === '1',
-                        link_user:    lu || null
+                        link_user:    lu || null,
+                        return_to:    rt  || null
                     };
                     try { localStorage.setItem('p360_oauth_token', JSON.stringify(token)); } catch(e) {}
                     window.parent.history.replaceState(
@@ -289,17 +259,6 @@ def _handle_oauth_callback() -> None:
             })()""",
             key="oauth_cb",
         )
-
-        # Popup-close signal — this Streamlit instance is the popup itself.
-        # Show a minimal message and stop so Python doesn't try to log in here.
-        if token_data and isinstance(token_data, dict) and token_data.get("popup_close"):
-            st.markdown(
-                "<p style='text-align:center;padding:2rem;font-size:0.9rem;color:grey;'>"
-                "✓ Authenticated — closing…</p>",
-                unsafe_allow_html=True,
-            )
-            st.stop()
-            return
 
         if token_data and isinstance(token_data, dict) and token_data.get("access_token"):
             resp = get_client().auth.get_user(token_data["access_token"])
@@ -334,6 +293,10 @@ def _handle_oauth_callback() -> None:
                         log_login("google")
                     except Exception:
                         pass
+                    # Return to the page the user was on before signing in
+                    return_to = token_data.get("return_to")
+                    if return_to:
+                        st.session_state["_post_auth_redirect"] = return_to
                     st.rerun()
     except Exception:
         pass
@@ -351,30 +314,26 @@ def get_google_oauth_url() -> str:
     return _google_oauth_url()
 
 
-def _render_google_popup_button(oauth_url: str, btn_key: str = "default") -> None:
+def _render_google_signin_button(oauth_url: str, btn_key: str = "default", return_page: str | None = None) -> None:
     """
-    Render a styled Google sign-in button that opens OAuth in a popup window.
-
-    Uses st.components.v1.html() — a sandboxed same-origin iframe where scripts
-    execute normally, onclick works, and localStorage + window.parent are accessible.
+    Render a Google sign-in button that does a standard same-tab OAuth redirect.
 
     Flow:
-      1. User clicks → popup opens with Google auth URL (via window.top.open)
-      2. User authenticates in the popup
-      3. Popup Streamlit app detects window.top.opener is set (popup mode),
-         stores token in localStorage, closes itself
-      4. This component's poll timer sees the popup closed, finds the token
-         in localStorage, calls window.top.location.reload()
-      5. Reload triggers _handle_oauth_callback which reads the token normally,
-         keeping the user on the original page (Watchlist, Alerts, etc.)
+      1. User clicks → button stores return_page in localStorage, then navigates
+         the current tab to the Google auth URL
+      2. User authenticates with Google
+      3. Supabase redirects back to _REDIRECT_URL (app root) with #access_token=...
+      4. _handle_oauth_callback() in app.py reads the token and the stored return_page
+      5. app.py calls st.switch_page(return_page) to land the user back where they started
 
-    Falls back to same-tab redirect if popups are blocked.
+    No popups, no new tabs, no browser blocking issues.
     """
     import json as _json
     import streamlit.components.v1 as components
     from components.pulse360_theme import BORDER, CARD_BG, TEXT_PRI
 
-    safe_url = _json.dumps(oauth_url)
+    safe_url    = _json.dumps(oauth_url)
+    safe_return = _json.dumps(return_page or "")
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -383,26 +342,18 @@ def _render_google_popup_button(oauth_url: str, btn_key: str = "default") -> Non
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{ background: transparent; }}
   .gbtn {{
-    width: 100%;
-    padding: 10px 16px;
-    background: {CARD_BG};
-    border: 1px solid {BORDER};
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: {TEXT_PRI};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: opacity 0.15s;
+    width: 100%; padding: 10px 16px;
+    background: {CARD_BG}; border: 1px solid {BORDER};
+    border-radius: 8px; cursor: pointer;
+    font-size: 0.875rem; font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: {TEXT_PRI}; display: flex; align-items: center;
+    justify-content: center; gap: 10px; transition: opacity 0.15s;
   }}
   .gbtn:hover {{ opacity: 0.8; }}
 </style>
 </head>
 <body>
-<button class="gbtn" onclick="openAuth()">
+<button class="gbtn" onclick="signInGoogle()">
   <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
     <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
     <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
@@ -412,44 +363,16 @@ def _render_google_popup_button(oauth_url: str, btn_key: str = "default") -> Non
   Continue with Google
 </button>
 <script>
-function openAuth() {{
-  var url = {safe_url};
-  var topWin = window.top || window.parent || window;
-  var w = 520, h = 660;
-  var left = Math.max(0, Math.round((screen.width - w) / 2));
-  var top  = Math.max(0, Math.round((screen.height - h) / 2));
-  var feat = 'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
-           + ',toolbar=no,menubar=no,scrollbars=yes,resizable=yes';
-
-  // Set nonce BEFORE opening — the popup reads this to identify itself.
-  // window.opener is unreliable: Google sets Cross-Origin-Opener-Policy: same-origin
-  // which clears window.opener before the popup returns to our app.
-  // localStorage is shared across the same origin regardless of COOP.
-  try {{ localStorage.setItem('p360_popup_nonce', Date.now().toString()); }} catch(e) {{}}
-
-  var popup = topWin.open(url, 'p360_google_auth', feat);
-  if (!popup) {{
-    try {{ localStorage.removeItem('p360_popup_nonce'); }} catch(e) {{}}
-    topWin.location.href = url;   // fallback: same-tab redirect
-    return;
+function signInGoogle() {{
+  var url        = {safe_url};
+  var returnPage = {safe_return};
+  var topWin     = window.top || window.parent || window;
+  // Store the page to return to after auth completes
+  if (returnPage) {{
+    try {{ localStorage.setItem('p360_return_to', returnPage); }} catch(e) {{}}
   }}
-
-  // Poll localStorage for token — primary signal that auth completed.
-  // Don't rely on popup.closed: COOP may also break that reference.
-  var attempts = 0;
-  var poll = setInterval(function() {{
-    attempts++;
-    try {{
-      var stored = localStorage.getItem('p360_oauth_token');
-      if (stored) {{
-        clearInterval(poll);
-        try {{ if (!popup.closed) popup.close(); }} catch(e) {{}}
-        topWin.location.reload();
-        return;
-      }}
-    }} catch(e) {{}}
-    if (attempts > 600) clearInterval(poll);   // stop after 5 min
-  }}, 500);
+  // Standard same-tab redirect — no popups, no new tabs
+  topWin.location.href = url;
 }}
 </script>
 </body>
@@ -501,8 +424,8 @@ def _render_login_page() -> None:
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Google SSO (popup flow) ───────────────────────────────────────────────
-    _render_google_popup_button(_google_oauth_url(), btn_key="login_page")
+    # ── Google SSO ────────────────────────────────────────────────────────────
+    _render_google_signin_button(_google_oauth_url(), btn_key="login_page")
     st.caption("New to Pulse360? Google sign-in creates your account automatically.")
 
     st.markdown('<div class="auth-divider">or sign in with</div>', unsafe_allow_html=True)
@@ -782,6 +705,7 @@ def render_login_gate(
     title: str = "Sign in to continue",
     body: str = "Create a free account — it only takes a moment.",
     feature_bullets: list | None = None,
+    return_page: str | None = None,
 ) -> bool:
     """
     Render a polished inline sign-in card for pages that require authentication.
@@ -986,8 +910,8 @@ def render_login_gate(
         # ── OR CONTINUE WITH ──────────────────────────────────────────────────
         st.markdown('<div class="p360-gate-divider">or continue with</div>', unsafe_allow_html=True)
 
-        # Google SSO (popup flow — stays on current page after auth)
-        _render_google_popup_button(_google_oauth_url(), btn_key=f"gate_{_k}")
+        # Google SSO — same-tab redirect, returns to this page after auth
+        _render_google_signin_button(_google_oauth_url(), btn_key=f"gate_{_k}", return_page=return_page)
 
         # Email (collapsed by default — tertiary option)
         if not _show_email:

@@ -128,6 +128,7 @@ if not render_login_gate(
         "Earnings Radar — know what's reporting in the next 45 days",
         "Action alerts when a stock's macro fit changes",
     ],
+    return_page="pages/11_Watchlist.py",
 ):
     st.stop()
 

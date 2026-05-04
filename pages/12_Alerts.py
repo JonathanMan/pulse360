@@ -51,6 +51,7 @@ if not render_login_gate(
         "Dashboard banners fire automatically when a threshold is crossed",
         "Optional email notifications",
     ],
+    return_page="pages/12_Alerts.py",
 ):
     st.stop()
 
