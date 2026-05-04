@@ -9,36 +9,7 @@ Deploy:       push to GitHub → connect to Streamlit Cloud → add secrets
 """
 
 import streamlit as st
-from components.pulse360_theme import (
-    inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG,
-    FG_PRIMARY, FG_SEC, FG_MUTED, SUCCESS, DANGER,
-)
-from components.auth import require_auth, render_logout_button
-from components.profile_store import load_profile, save_profile
-from components.analytics import log_page_view, is_admin
-
-
-@st.cache_data(ttl=300, show_spinner=False)
-def _fetch_wl_prices(tickers: tuple) -> dict:
-    """Fetch latest price + day % change for each ticker. Cached 5 min."""
-    if not tickers:
-        return {}
-    import yfinance as yf
-    result = {}
-    try:
-        ts = yf.Tickers(" ".join(tickers))
-        for t in tickers:
-            try:
-                info = ts.tickers[t].fast_info
-                price = info.last_price
-                prev  = info.previous_close
-                chg   = ((price - prev) / prev * 100) if (price and prev) else None
-                result[t] = {"price": price, "chg_pct": chg}
-            except Exception:
-                result[t] = {"price": None, "chg_pct": None}
-    except Exception:
-        result = {t: {"price": None, "chg_pct": None} for t in tickers}
-    return result
+from components.pulse360_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
 
 st.set_page_config(
     page_title="Pulse360",
@@ -102,20 +73,23 @@ def _render_onboarding() -> None:
 
     # ── Full nav structure: (icon, label, min_level, section) ─────────────────
     _NAV_ITEMS = [
-        # Main section
-        ("📊", "Dashboard",           0, ""),
-        ("🗂️", "Investment Analyser", 0, ""),
-        ("🔬", "AI Research Desk",    0, ""),
-        ("🔍", "Buffett Score",       0, ""),
-        ("⭐", "Watchlist",           0, ""),
-        ("🏆", "Stock Screener",      1, ""),
-        ("📋", "Portfolio Heatmap",   1, ""),
-        ("⚖️", "Buffett Indicator",   0, ""),
-        # Analysis section
+        # Macro Context
+        ("📊", "Dashboard",           0, "Macro Context"),
+        ("🌐", "Macro Pulse",         0, "Macro Context"),
+        # My Portfolio
+        ("🗂️", "Investment Analyser", 0, "My Portfolio"),
+        ("⭐", "Watchlist",           0, "My Portfolio"),
+        ("🏆", "Stock Screener",      1, "My Portfolio"),
+        ("📋", "Portfolio Heatmap",   1, "My Portfolio"),
+        # Research
+        ("🔍", "Stock Research",      0, "Research"),
+        ("🔬", "AI Research Desk",    0, "Research"),
+        ("⚖️", "Market Valuation",    0, "Research"),
+        # Analysis
         ("📈", "What to Own & When",  0, "Analysis"),
         ("🎛️", "Stress Test",         1, "Analysis"),
         ("📉", "Model Track Record",  2, "Analysis"),
-        # Account section
+        # Account
         ("⚙️", "Settings",            0, "Account"),
     ]
 
@@ -225,8 +199,6 @@ def _render_onboarding() -> None:
 
         if st.button("Get Started →", type="primary", use_container_width=True):
             st.session_state["pulse360_profile"] = chosen
-            from components.supabase_client import get_user_email as _get_email_ob
-            save_profile(_get_email_ob(), chosen)
             for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(key, None)
             st.rerun()
@@ -276,16 +248,6 @@ def _render_onboarding() -> None:
     st.stop()
 
 
-# ── Auth gate — must pass before any page renders ─────────────────────────────
-require_auth()
-
-# ── Restore saved profile from Supabase (first load per session only) ─────────
-if "pulse360_profile" not in st.session_state:
-    from components.supabase_client import get_user_email as _get_email_boot
-    _saved_profile = load_profile(_get_email_boot())
-    if _saved_profile:
-        st.session_state["pulse360_profile"] = _saved_profile
-
 # ── Run onboarding if no profile set ──────────────────────────────────────────
 if "pulse360_profile" not in st.session_state:
     _render_onboarding()
@@ -294,70 +256,180 @@ if "pulse360_profile" not in st.session_state:
 from components.user_profile import get_nav_pages, get_profile, PROFILES  # noqa: E402
 
 nav_sections = get_nav_pages()
-if is_admin():
-    nav_sections["Account"].append(
-        st.Page("pages/13_Admin.py", title="Analytics", icon=":material/monitoring:")
-    )
 pg = st.navigation(nav_sections)
-
-# ── Log page view (once per navigation, deduped in session) ───────────────────
-log_page_view(pg.title)
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     profile = get_profile()
     profile_key = st.session_state.get("pulse360_profile", "Beginner")
 
-    # ── Watchlist mini-preview (top of sidebar, below nav) ───────────────────
-    # Read from session_state cache — avoids calling st_javascript inside the
-    # sidebar (which triggers a double-render rerun cycle).
-    from components.supabase_client import get_user_email as _get_email
-    _raw_wl = st.session_state.get(f"_watchlist_{_get_email()}", [])
-    _wl = [t for t in _raw_wl if t] if isinstance(_raw_wl, list) else []
+    # Profile badge + switcher
+    st.markdown(f"""
+<style>
+  .pb-wrap {{
+    margin-bottom: 0.8rem;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: {CARD_BG};
+    border: 1px solid {BORDER};
+  }}
+  .pb-label {{
+    font-size: 0.68rem;
+    color: {TEXT_MUT};
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 4px;
+  }}
+  .pb-name {{
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: {profile["colour"]};
+  }}
+  .pb-desc {{
+    font-size: 0.75rem;
+    color: {TEXT_SEC};
+    margin-top: 3px;
+    line-height: 1.3;
+  }}
+</style>
+<div class="pb-wrap">
+  <div class="pb-label">Your profile</div>
+  <div class="pb-name">{profile["icon"]}  {profile["label"]}</div>
+  <div class="pb-desc">{profile["description"]}</div>
+</div>
+""", unsafe_allow_html=True)
 
-    if _wl:
-        _prices = _fetch_wl_prices(tuple(_wl))
-        rows_html = ""
-        for _t in _wl[:8]:
-            _d     = _prices.get(_t, {})
-            _price = _d.get("price")
-            _chg   = _d.get("chg_pct")
-            _price_str = f"{_price:,.2f}" if _price else "—"
-            if _chg is not None:
-                _chg_color = SUCCESS if _chg >= 0 else DANGER
-                _chg_str   = f"{_chg:+.2f}%"
-            else:
-                _chg_color = FG_MUTED
-                _chg_str   = "—"
-            rows_html += (
-f'<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid {BORDER};">'
-f'<span style="font-family:\'Geist Mono\',monospace;font-size:0.78rem;font-weight:600;color:{FG_PRIMARY};">{_t}</span>'
-f'<span style="font-family:\'Geist Mono\',monospace;font-size:0.75rem;color:{FG_SEC};">{_price_str}</span>'
-f'<span class="wl-chg" style="font-family:\'Geist Mono\',monospace;font-size:0.75rem;font-weight:600;color:{_chg_color};min-width:54px;text-align:right;">{_chg_str}</span>'
-f'</div>'
-            )
+    # Profile switcher (compact selectbox)
+    new_profile = st.selectbox(
+        "Switch profile",
+        options=list(PROFILES.keys()),
+        format_func=lambda k: f"{PROFILES[k]['icon']} {PROFILES[k]['label']}",
+        index=list(PROFILES.keys()).index(profile_key),
+        label_visibility="collapsed",
+        key="sidebar_profile_switch",
+    )
+    if new_profile != profile_key:
+        st.session_state["pulse360_profile"] = new_profile
+        for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
+            st.session_state.pop(key, None)
+        st.rerun()
+
+    # Nav guide (only show entries relevant to current profile)
+    level = profile["level"]
+
+    guide_items = [
+        ("📊", "Dashboard",          "Live recession risk, cycle phase & macro deep-dive.", 0),
+        ("🗂️", "Investment Analyser", "Upload your portfolio or a fund brochure for a macro-aware breakdown.", 0),
+        ("🔬", "AI Research Desk",    "On-demand AI research — macro snapshot, M&A, short squeezes & more.", 0),
+        ("🔍", "Buffett Score",       "Is a stock high quality and fairly priced? Buffett/Munger framework.", 0),
+        ("🏆", "Stock Screener",      "Rank ~80 large-caps by Buffett score. Apply a macro cycle overlay.", 1),
+        ("📋", "Portfolio Heatmap",   "Paste your tickers — stress-test across 5 macro regimes instantly.", 1),
+        ("⚖️", "Buffett Indicator",   "Is the overall stock market cheap or expensive vs the economy?", 0),
+    ]
+    analysis_items = [
+        ("📈", "What to Own & When",  "Stocks, bonds, gold, oil — what performs best in each cycle phase?", 0),
+        ("🎛️", "Stress Test",         "Dial up a 'what if' scenario and see how recession risk changes.", 1),
+        ("📉", "Model Track Record",  "Did this model catch 2001, 2008, and 2020 in time?", 2),
+    ]
+
+    items_html = ""
+    for icon, title, desc, min_level in guide_items:
+        if level >= min_level:
+            items_html += f"""
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">{icon} {title}</div>
+      <div class="nav-guide-desc">{desc}</div>
+    </div>
+  </div>"""
+
+    items_html += '<div class="nav-guide-section">Analysis</div>'
+    for icon, title, desc, min_level in analysis_items:
+        if level >= min_level:
+            items_html += f"""
+  <div class="nav-guide-item">
+    <div class="nav-guide-text">
+      <div class="nav-guide-title">{icon} {title}</div>
+      <div class="nav-guide-desc">{desc}</div>
+    </div>
+  </div>"""
+
+    # Locked items hint
+    locked = (
+        [t for _, t, _, ml in guide_items if ml > level]
+        + [t for _, t, _, ml in analysis_items if ml > level]
+    )
+    locked_html = ""
+    if locked:
+        locked_html = f"""
+<div style="margin-top:14px; padding:8px 10px; border-radius:6px;
+            background:{PAGE_BG}; border:1px dashed {BORDER};">
+  <div style="font-size:0.7rem; color:{TEXT_SEC}; margin-bottom:4px;">
+    Unlock more by switching profile:
+  </div>
+  <div style="font-size:0.72rem; color:{TEXT_MUT};">
+    {'  ·  '.join(locked)}
+  </div>
+</div>"""
+
+    st.markdown(f"""
+<style>
+  .nav-guide {{ margin-top:1rem; padding-top:0.8rem; border-top:1px solid {BORDER}; }}
+  .nav-guide-item {{ display:flex; gap:8px; margin-bottom:10px; align-items:flex-start; }}
+  .nav-guide-text {{ line-height:1.35; }}
+  .nav-guide-title {{ font-size:0.82rem; font-weight:600; color:{TEXT_PRI}; }}
+  .nav-guide-desc {{
+    font-size:0.78rem; color:{TEXT_SEC};
+    border-left:2px solid {BORDER};
+    padding-left:7px; margin-top:3px; font-style:italic;
+  }}
+  .nav-guide-section {{
+    font-size:0.72rem; font-weight:700; color:{TEXT_SEC};
+    text-transform:uppercase; letter-spacing:.05em; margin:12px 0 6px 0;
+  }}
+</style>
+<div class="nav-guide">
+{items_html}
+</div>
+{locked_html}
+""", unsafe_allow_html=True)
+
+    # ── Watchlist mini-preview ─────────────────────────────────────────────────
+    st.markdown("---")
+    try:
+        from components.watchlist_store import load_watchlist as _load_wl
+        _wl = _load_wl()
+        _wl_count = len(_wl) if _wl and _wl != 0 else 0
+    except Exception:
+        _wl_count = 0
+        _wl = []
+
+    if _wl_count > 0:
         st.markdown(
-f'<div style="border:1px solid {BORDER};background:{CARD_BG};padding:10px 12px 6px 12px;margin-bottom:0.75rem;">'
-f'<div style="font-family:\'Geist Mono\',monospace;font-size:0.62rem;font-weight:600;color:{FG_MUTED};letter-spacing:0.14em;text-transform:uppercase;padding-bottom:4px;">Watchlist</div>'
-f'{rows_html}'
-f'</div>',
-unsafe_allow_html=True)
+            f'<div style="font-size:0.7rem;font-weight:700;color:{TEXT_SEC};'
+            f'text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">'
+            f'⭐ Watchlist ({_wl_count})</div>',
+            unsafe_allow_html=True,
+        )
+        # Show up to 5 tickers as compact pills
+        preview_tickers = _wl[:5]
+        pills_html = "".join(
+            f'<span style="display:inline-block;background:#e8f1fb;border:1px solid {BORDER};'
+            f'border-radius:6px;padding:2px 8px;font-size:0.72rem;color:{BLUE};'
+            f'font-weight:600;margin:2px 3px 2px 0;">{t}</span>'
+            for t in preview_tickers
+        )
+        if _wl_count > 5:
+            pills_html += (
+                f'<span style="font-size:0.7rem;color:{TEXT_MUT};"> +{_wl_count - 5} more</span>'
+            )
+        st.markdown(pills_html, unsafe_allow_html=True)
     else:
         st.markdown(
-            f'<div style="border:1px solid {BORDER};background:{CARD_BG};padding:10px 12px;margin-bottom:0.75rem;">'
-            f'<div style="font-family:\'Geist Mono\',monospace;font-size:0.62rem;font-weight:600;color:{FG_MUTED};letter-spacing:0.14em;text-transform:uppercase;padding-bottom:6px;">Watchlist</div>'
-            f'<div style="font-family:\'Geist Mono\',monospace;font-size:0.72rem;color:{FG_MUTED};letter-spacing:0.04em;">No tickers yet'
-            f' — <a href="/Watchlist" target="_self" style="color:{FG_PRIMARY};">add from Watchlist</a></div>'
-            f'</div>',
+            f'<div style="font-size:0.75rem;color:{TEXT_MUT};">⭐ Watchlist empty</div>',
             unsafe_allow_html=True,
         )
 
-
-
-
-
-    st.markdown(f'<div style="border-top:1px solid {BORDER};margin:12px 0 8px 0;"></div>', unsafe_allow_html=True)
-    render_logout_button()
 
 # ── Alert engine — check rules on every page load ─────────────────────────────
 # We only run the check when the dashboard has already cached live values in
