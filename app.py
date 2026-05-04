@@ -245,18 +245,23 @@ def _render_onboarding() -> None:
 </div>
 """, unsafe_allow_html=True)
 
-    st.stop()
+    # Do NOT call st.stop() here — navigation must already be set up above.
+    # We just return; pg.run() is never reached so the page stays blank.
+    return
 
 
-# ── Run onboarding if no profile set ──────────────────────────────────────────
-if "pulse360_profile" not in st.session_state:
-    _render_onboarding()
-
-# ── Build dynamic navigation ───────────────────────────────────────────────────
+# ── Build navigation FIRST — must happen before any st.stop() ─────────────────
+# st.navigation() must be called before onboarding's early-return, otherwise
+# Streamlit falls back to auto-discovery and shows a flat unsectioned sidebar.
 from components.user_profile import get_nav_pages, get_profile, PROFILES  # noqa: E402
 
 nav_sections = get_nav_pages()
 pg = st.navigation(nav_sections)
+
+# ── Run onboarding if no profile set (returns early, pg.run() is skipped) ─────
+if "pulse360_profile" not in st.session_state:
+    _render_onboarding()
+    # _render_onboarding() returns here; pg.run() below is never reached.
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
