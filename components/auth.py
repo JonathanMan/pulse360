@@ -36,20 +36,11 @@ _REDIRECT_URL     = "https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app"
 _OTP_PHONE_KEY    = "_p360_otp_phone"   # stores E.164 number while waiting for OTP
 _OTP_SENT_KEY     = "_p360_otp_sent"    # bool — True after send_otp succeeds
 
-# Common country codes for dropdown
+# Supported country codes
 _COUNTRY_CODES = [
-    ("+1",   "🇺🇸 +1  (US / CA)"),
-    ("+44",  "🇬🇧 +44 (UK)"),
-    ("+61",  "🇦🇺 +61 (AU)"),
-    ("+64",  "🇳🇿 +64 (NZ)"),
-    ("+27",  "🇿🇦 +27 (ZA)"),
-    ("+353", "🇮🇪 +353 (IE)"),
-    ("+49",  "🇩🇪 +49 (DE)"),
-    ("+33",  "🇫🇷 +33 (FR)"),
-    ("+31",  "🇳🇱 +31 (NL)"),
-    ("+65",  "🇸🇬 +65 (SG)"),
-    ("+971", "🇦🇪 +971 (AE)"),
-    ("+91",  "🇮🇳 +91 (IN)"),
+    ("+852", "🇭🇰 +852 (HK)"),
+    ("+1",   "🇺🇸 +1   (US)"),
+    ("+44",  "🇬🇧 +44  (UK)"),
 ]
 
 
