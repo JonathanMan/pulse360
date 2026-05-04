@@ -318,17 +318,24 @@ def _render_google_signin_button(oauth_url: str, btn_key: str = "default", retur
     """
     Render a Google sign-in button that does a standard same-tab OAuth redirect.
 
-    Key insight: st.components.v1.html() iframes are sandboxed without
-    allow-top-navigation, so any window.top.location.href = ... inside them
-    is silently blocked. Instead we:
+    Why NOT st.link_button:
+      Streamlit's st.link_button always adds target="_blank" for external URLs,
+      which opens Google auth in a new tab — not what we want.
+
+    Why NOT st.components.v1.html() with JS:
+      Those iframes are sandboxed without allow-top-navigation, so
+      window.top.location.href = url is silently blocked.
+
+    Solution:
       1. Use st_javascript to write return_page to localStorage (iframes CAN
-         access same-origin localStorage even when sandboxed)
-      2. Use st.link_button for the actual navigation — it renders a plain <a>
-         tag in the main Streamlit frame, so navigation works fine
+         access same-origin localStorage even when sandboxed).
+      2. Use st.markdown(unsafe_allow_html=True) to render a plain <a> tag
+         WITHOUT target="_blank". This lives in the main Streamlit document
+         (not a sandboxed iframe), so clicking it navigates the current tab.
 
     Flow:
       1. Page loads → st_javascript immediately writes return_page to localStorage
-      2. User clicks the link button → navigates to Google auth in same tab
+      2. User clicks the <a> tag → navigates to Google auth in the SAME tab
       3. After auth, Supabase redirects to _REDIRECT_URL with #access_token=...
       4. _handle_oauth_callback() reads the token + stored return_page
       5. app.py calls st.switch_page(return_page) → user lands back where they started
@@ -348,14 +355,29 @@ def _render_google_signin_button(oauth_url: str, btn_key: str = "default", retur
         except Exception:
             pass
 
-    # st.link_button renders a plain <a> tag in the main Streamlit frame —
-    # not in a sandboxed iframe — so it can navigate the page normally.
-    st.link_button(
-        "   Continue with Google",
-        oauth_url,
-        use_container_width=True,
-        icon="🔵",
-    )
+    # Render a plain <a> tag via st.markdown — no target="_blank", so it
+    # navigates the current tab.  Styled to look like a button.
+    from html import escape as _esc
+    safe_url = _esc(oauth_url)
+    st.markdown(f"""
+<a href="{safe_url}"
+   style="display:flex;align-items:center;justify-content:center;gap:10px;
+          width:100%;padding:10px 16px;
+          background:#ffffff;border:1px solid #d0d5dd;border-radius:8px;
+          color:#1a1a1a;font-size:0.92rem;font-weight:600;
+          text-decoration:none;box-sizing:border-box;
+          transition:background 0.15s,border-color 0.15s;"
+   onmouseover="this.style.background='#f5f8ff';this.style.borderColor='#4285f4';"
+   onmouseout="this.style.background='#ffffff';this.style.borderColor='#d0d5dd';">
+  <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+    <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
+    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+  </svg>
+  Continue with Google
+</a>
+""", unsafe_allow_html=True)
 
 
 def _render_login_page() -> None:
