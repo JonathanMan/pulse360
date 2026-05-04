@@ -436,7 +436,7 @@ st.markdown(_thead + rows_html + "</tbody></table></div>", unsafe_allow_html=Tru
 st.markdown("#### Manage tickers")
 remove_cols = st.columns(min(len(scored), 8))
 for idx, s in enumerate(scored):
-    ticker = s["Ticker"]
+    ticker = s.get("Ticker", "?")
     with remove_cols[idx % len(remove_cols)]:
         score_val = s.get("MacroAdj", s.get("Score", 0))
         color = _score_color(int(score_val))
