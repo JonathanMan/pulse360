@@ -194,7 +194,15 @@ def _handle_oauth_callback() -> None:
     "Link Google account" button before redirecting), we treat the returning
     token as a link operation rather than a new login — the Google email is
     saved to user_phone_links and the existing session is preserved.
+
+    NOTE: the guard below skips this entirely for authenticated users. This is
+    intentional — it prevents st_javascript from returning a stale cached token
+    on subsequent reruns and creating an infinite loop. The link-mode flow is
+    safe because Google's redirect always creates a fresh WebSocket session,
+    so get_session_user() is None when we return from OAuth even for logged-in users.
     """
+    if get_session_user():
+        return
     try:
         from streamlit_javascript import st_javascript
         token_data = st_javascript(
