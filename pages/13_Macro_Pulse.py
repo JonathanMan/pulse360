@@ -22,6 +22,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Tom Lee",
             "specialty": "Equity market & sentiment cycles",
+            "bias": "Perma-bull",
             "signal": "Risk on",
             "summary": (
                 "Lee sees strong earnings growth, resilient consumer spending, and improving sentiment "
@@ -32,6 +33,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Ed Yardeni",
             "specialty": "Corporate earnings & productivity growth",
+            "bias": "Perma-bull",
             "signal": "Risk on",
             "summary": (
                 "Yardeni argues that U.S. corporate productivity gains — driven by AI and technology — "
@@ -42,6 +44,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Jeremy Siegel",
             "specialty": "Long-run equity returns",
+            "bias": "Perma-bull",
             "signal": "Risk on",
             "summary": (
                 "Siegel's long-run thesis holds: equities beat every other asset class over time, and "
@@ -52,6 +55,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Campbell Harvey",
             "specialty": "Yield curve indicator",
+            "bias": "Neutral",
             "signal": "Risk on",
             "summary": (
                 "Harvey's yield curve has re-steepened, which historically marks the window where equities "
@@ -61,6 +65,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Warren Buffett",
             "specialty": "Long-term value & market valuation",
+            "bias": "Neutral",
             "signal": "Caution",
             "summary": (
                 "Berkshire's cash pile has hit record highs and Buffett has slowed buybacks — his clearest "
@@ -71,6 +76,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Nouriel Roubini",
             "specialty": "Systemic crisis detection",
+            "bias": "Perma-bear",
             "signal": "Caution",
             "summary": (
                 "Debt levels and stagflation risk are elevated, but not yet a 2008 scenario. Roubini warns "
@@ -80,6 +86,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Jeremy Grantham",
             "specialty": "Bubble identification",
+            "bias": "Perma-bear",
             "signal": "Risk off",
             "summary": (
                 "Valuations remain historically extreme. Grantham sees a third bubble in 25 years still "
@@ -89,6 +96,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Michael Burry",
             "specialty": "Contrarian deep value",
+            "bias": "Contrarian",
             "signal": "Risk off",
             "summary": (
                 "Burry has flagged index concentration and passive investment flows as a systemic risk. "
@@ -98,6 +106,7 @@ DEFAULT_SIGNALS = {
         {
             "name": "Stanley Druckenmiller",
             "specialty": "Macro timing & liquidity",
+            "bias": "Flexible",
             "signal": "Risk off",
             "summary": (
                 "Druckenmiller is watching Fed policy and liquidity cycles closely. He's reduced equity "
@@ -137,13 +146,31 @@ def compute_consensus(forecasters):
     return counts
 
 
+BIAS_STYLES = {
+    "Perma-bull":  {"color": "#2a6ebb", "bg": "#e8f1fb"},
+    "Perma-bear":  {"color": "#a32d2d", "bg": "#faeaea"},
+    "Neutral":     {"color": "#5f5e5a", "bg": "#f0f0ee"},
+    "Contrarian":  {"color": "#7a4d00", "bg": "#fdf0dc"},
+    "Flexible":    {"color": "#3a5f3a", "bg": "#e8f5e8"},
+}
+
+
 def build_card_html(f):
     s = SIGNAL_STYLES.get(f["signal"], SIGNAL_STYLES["Caution"])
+    bias = f.get("bias", "")
+    bs = BIAS_STYLES.get(bias, {"color": "#888", "bg": "#f0f0f0"})
+    bias_html = (
+        f'<span class="bias-tag" style="color:{bs["color"]};background:{bs["bg"]};">'
+        f'{bias}</span>'
+    ) if bias else ""
     return f"""
     <div class="fcard">
       <div class="fcard-top">
         <div>
-          <p class="fname">{f['name']}</p>
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+            <p class="fname" style="margin:0;">{f['name']}</p>
+            {bias_html}
+          </div>
           <p class="fspecialty">{f['specialty']}</p>
         </div>
         <span class="signal-badge" style="background:{s['bg']};color:{s['text']};">{f['signal']}</span>
@@ -225,6 +252,8 @@ def build_full_html(signals):
         border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }}
       .fread {{ font-size: 13px; color: #5f5e5a; line-height: 1.55; margin: 0;
         border-left: 2px solid rgba(0,0,0,0.15); padding-left: 10px; }}
+      .bias-tag {{ font-size: 10px; font-weight: 500; padding: 2px 7px;
+        border-radius: 20px; white-space: nowrap; letter-spacing: 0.02em; }}
     </style>
 
     <div class="mp-wrap">
@@ -291,11 +320,19 @@ Return ONLY valid JSON in this exact format:
     {
       "name": "Full Name",
       "specialty": "Their specialty",
+      "bias": "Perma-bull|Perma-bear|Neutral|Contrarian|Flexible",
       "signal": "Risk on|Caution|Risk off",
       "summary": "Two plain-English sentences about their current view."
     }
   ]
 }
+
+Bias values (keep consistent — these reflect long-run reputation, not current signal):
+- Tom Lee, Ed Yardeni, Jeremy Siegel → "Perma-bull"
+- Nouriel Roubini, Jeremy Grantham → "Perma-bear"
+- Warren Buffett, Campbell Harvey → "Neutral"
+- Michael Burry → "Contrarian"
+- Stanley Druckenmiller → "Flexible"
 
 Order the forecasters: Risk on first, then Caution, then Risk off.
 Do not fabricate views — if no recent source is found, use last known position and note the date in the summary.
