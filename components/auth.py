@@ -611,3 +611,111 @@ def _do_verify_otp(e164_phone: str, otp_code: str) -> None:
             st.error("Too many attempts — please wait before trying again.")
         else:
             st.error(f"Verification failed: {msg}")
+
+
+# ── Guest mode helpers ─────────────────────────────────────────────────────────
+
+def is_guest() -> bool:
+    """Return True if the user is NOT logged in."""
+    return get_session_user() is None
+
+
+def render_login_gate(
+    title: str = "Sign in to continue",
+    body: str = "Create a free account — it only takes a moment.",
+    feature_bullets: list | None = None,
+) -> bool:
+    """
+    Render an inline sign-in card for pages that require authentication.
+
+    Returns True  — user is logged in, caller should proceed normally.
+    Returns False — user is a guest; gate card has been rendered, caller should st.stop().
+
+    Usage::
+
+        if not render_login_gate(
+            title="Sign in to use Watchlist",
+            body="Track your stocks with macro-adjusted scoring.",
+            feature_bullets=["Save up to 50 tickers", "Macro regime overlay"],
+        ):
+            st.stop()
+    """
+    if not is_guest():
+        return True
+
+    from components.pulse360_theme import (
+        BLUE, BORDER, CARD_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT,
+    )
+
+    bullets_html = ""
+    if feature_bullets:
+        items = "".join(
+            f'<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">'
+            f'<span style="color:{BLUE};font-size:0.82rem;margin-top:1px;">✓</span>'
+            f'<span style="font-size:0.84rem;color:{TEXT_SEC};line-height:1.4;">{b}</span>'
+            f'</div>'
+            for b in feature_bullets
+        )
+        bullets_html = f'<div style="margin:12px 0 4px 0;text-align:left;">{items}</div>'
+
+    st.markdown(f"""
+<style>
+  .p360-gate {{
+    max-width: 440px;
+    margin: 2.5rem auto 1.5rem auto;
+    background: {CARD_BG};
+    border: 1px solid {BORDER};
+    border-radius: 14px;
+    padding: 32px 32px 20px 32px;
+    text-align: center;
+  }}
+  .p360-gate-icon  {{ font-size: 2rem; margin-bottom: 10px; }}
+  .p360-gate-title {{ font-size: 1.1rem; font-weight: 700; color: {TEXT_PRI}; margin-bottom: 6px; }}
+  .p360-gate-body  {{ font-size: 0.86rem; color: {TEXT_SEC}; line-height: 1.5; }}
+</style>
+<div class="p360-gate">
+  <div class="p360-gate-icon">🔒</div>
+  <div class="p360-gate-title">{title}</div>
+  <div class="p360-gate-body">{body}</div>
+  {bullets_html}
+</div>
+""", unsafe_allow_html=True)
+
+    # Compact sign-in form below the gate card
+    _l, mid, _r = st.columns([1, 2, 1])
+    with mid:
+        st.link_button(
+            "   Continue with Google",
+            _google_oauth_url(),
+            use_container_width=True,
+            icon="🔵",
+        )
+        st.markdown(
+            f'<div style="text-align:center;font-size:0.75rem;color:{TEXT_MUT};'
+            f'margin:8px 0 10px 0;">or sign in with email</div>',
+            unsafe_allow_html=True,
+        )
+        # Use a short hash of the title as a unique form key
+        _fkey = "gate_" + str(abs(hash(title)) % 99999)
+        with st.form(_fkey, clear_on_submit=False):
+            _email = st.text_input(
+                "Email", placeholder="you@example.com",
+                label_visibility="collapsed", key=_fkey + "_e",
+            )
+            _pw = st.text_input(
+                "Password", type="password", placeholder="Password",
+                label_visibility="collapsed", key=_fkey + "_p",
+            )
+            if st.form_submit_button("Sign in", type="primary", use_container_width=True):
+                _do_sign_in(_email.strip(), _pw)
+
+        st.markdown(
+            f'<div style="text-align:center;font-size:0.72rem;color:{TEXT_MUT};margin-top:6px;">'
+            f'New to Pulse360? '
+            f'<a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app" '
+            f'style="color:{BLUE};">Create a free account →</a>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    return False

@@ -3,9 +3,6 @@ import anthropic
 import json
 from datetime import date
 
-from components.auth import require_auth
-require_auth()
-
 # Constrain to a readable width (app.py uses layout="wide")
 st.markdown(
     "<style>.main .block-container{max-width:860px;padding-top:1.2rem;}</style>",

@@ -29,7 +29,16 @@ st.markdown("""
 <style>
     .main .block-container { max-width: 860px; padding-top: 1.2rem; }
 
-    /* Profile cards */
+    /* Profile cards — equal height via flex column */
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        display: flex;
+        flex-direction: column;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"] {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
     .sp-card {
         border: 1px solid #2a2a4a;
         border-radius: 12px;
@@ -38,6 +47,9 @@ st.markdown("""
         background: #0e0e1a;
         transition: border-color .2s, background .2s;
         cursor: pointer;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
     }
     .sp-card.active {
         border-color: #6c63ff;
@@ -109,187 +121,201 @@ st.caption("Customise how Pulse360 works for you. Changes take effect immediatel
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown('<div class="settings-section">Account &amp; Login</div>', unsafe_allow_html=True)
 
-_user = get_session_user()
-_email = (_user or {}).get("email")
-_phone = (_user or {}).get("phone")
+_user         = get_session_user()
+_email        = (_user or {}).get("email")
+_phone        = (_user or {}).get("phone")
 
-# Detect login method(s)
-_has_google = bool(_email and not (_user or {}).get("phone_primary"))
-_has_email  = bool(_email)
+# Detect login method(s) — safe when _user is None
+_has_google   = bool(_email and not (_user or {}).get("phone_primary"))
+_has_email    = bool(_email)
 _linked_phone = get_linked_phone_for_email(_email) if _email else _phone
 _linked_email = get_canonical_email_for_phone(_phone) if (_phone and not _email) else _email
 
-# ── Identity card ─────────────────────────────────────────────────────────────
-id_col, methods_col = st.columns([2, 1])
-
-with id_col:
-    display_name = _email or _phone or "Unknown"
-    st.markdown(
-        f"""
-        <div style="background:#f9f9f9;border:1px solid #ececec;border-radius:8px;
-                    padding:16px 18px;display:flex;align-items:center;gap:14px;">
-          <div style="width:42px;height:42px;border-radius:50%;background:#0a0a0a;
-                      display:flex;align-items:center;justify-content:center;
-                      font-size:1.1rem;color:#fff;font-weight:700;flex-shrink:0;">
-            {display_name[0].upper()}
-          </div>
-          <div>
-            <div style="font-weight:700;font-size:0.95rem;color:#0a0a0a;">
-              {display_name}
-            </div>
-            <div style="font-size:0.75rem;color:#6a6a6a;margin-top:2px;">
-              {"Email / Google account" if _email else "Phone account"}
-            </div>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+if not _user:
+    from components.auth import render_login_gate  # noqa: E402
+    render_login_gate(
+        title="Sign in to manage your account",
+        body="Create a free account to save preferences, link login methods, and manage alerts.",
+        feature_bullets=[
+            "Link Google, email, and phone login methods",
+            "Persistent preferences across devices",
+        ],
     )
+    # Gate rendered — skip account details, continue to Investor Profile below
 
-with methods_col:
-    st.markdown("**Active login methods**")
-    if _email:
-        st.markdown("✅ &nbsp;Email / Google", unsafe_allow_html=True)
-    if _linked_phone:
-        st.markdown(f"✅ &nbsp;Phone &nbsp;`{_linked_phone}`", unsafe_allow_html=True)
-    elif _phone:
-        st.markdown(f"✅ &nbsp;Phone &nbsp;`{_phone}`", unsafe_allow_html=True)
+if _user:
 
-st.markdown("")
+    # ── Identity card ─────────────────────────────────────────────────────────────
+    id_col, methods_col = st.columns([2, 1])
 
-# ── Link phone (for email/Google users) ──────────────────────────────────────
-if _email and not _linked_phone:
-    with st.expander("📱  Add phone number login", expanded=False):
-        st.caption(
-            "Link your phone number so you can also sign in via SMS code. "
-            "Your account and data stay exactly the same."
+    with id_col:
+        display_name = _email or _phone or "Unknown"
+        st.markdown(
+            f"""
+            <div style="background:#f9f9f9;border:1px solid #ececec;border-radius:8px;
+                        padding:16px 18px;display:flex;align-items:center;gap:14px;">
+              <div style="width:42px;height:42px;border-radius:50%;background:#0a0a0a;
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:1.1rem;color:#fff;font-weight:700;flex-shrink:0;">
+                {display_name[0].upper()}
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:0.95rem;color:#0a0a0a;">
+                  {display_name}
+                </div>
+                <div style="font-size:0.75rem;color:#6a6a6a;margin-top:2px;">
+                  {"Email / Google account" if _email else "Phone account"}
+                </div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-        _ph_sent  = st.session_state.get("_sett_ph_sent", False)
-        _ph_phone = st.session_state.get("_sett_ph_phone", "")
+    with methods_col:
+        st.markdown("**Active login methods**")
+        if _email:
+            st.markdown("✅ &nbsp;Email / Google", unsafe_allow_html=True)
+        if _linked_phone:
+            st.markdown(f"✅ &nbsp;Phone &nbsp;`{_linked_phone}`", unsafe_allow_html=True)
+        elif _phone:
+            st.markdown(f"✅ &nbsp;Phone &nbsp;`{_phone}`", unsafe_allow_html=True)
 
-        if not _ph_sent:
-            with st.form("sett_link_phone_form"):
-                c1, c2 = st.columns([2, 3])
-                with c1:
-                    _cc_idx = st.selectbox(
-                        "Country", range(len(_COUNTRY_CODES)),
-                        format_func=lambda i: _COUNTRY_CODES[i][1],
-                        key="sett_ph_cc", label_visibility="collapsed",
-                    )
-                with c2:
-                    _local = st.text_input(
-                        "Phone", placeholder="69038453",
-                        key="sett_ph_num", label_visibility="collapsed",
-                    )
-                _sent = st.form_submit_button("Send verification code", use_container_width=True)
-            if _sent:
-                _e164 = _build_e164(_COUNTRY_CODES[_cc_idx][0], _local.strip())
-                if len(_e164) >= 8:
-                    _do_send_otp_raw(_e164)
-                    st.session_state["_sett_ph_phone"] = _e164
-                    st.session_state["_sett_ph_sent"]  = True
-                    st.rerun()
-                else:
-                    st.error("Phone number looks too short.")
-        else:
-            st.markdown(f"Code sent to **{_ph_phone}**.")
-            with st.form("sett_link_verify_form"):
-                _otp = st.text_input("Enter 6-digit code", max_chars=6, key="sett_ph_otp")
-                _verify = st.form_submit_button("Verify & link", type="primary", use_container_width=True)
-            if _verify:
-                if _otp and len(_otp) == 6 and _otp.isdigit():
-                    try:
-                        resp = get_client().auth.verify_otp(
-                            {"phone": _ph_phone, "token": _otp, "type": "sms"}
-                        )
-                        if resp and resp.user:
-                            if save_phone_link(_email, _ph_phone):
-                                # Update session to reflect linked phone
-                                _u = st.session_state.get("sb_user", {})
-                                _u["phone"] = _ph_phone
-                                st.session_state["sb_user"] = _u
-                                st.session_state.pop("_sett_ph_sent", None)
-                                st.session_state.pop("_sett_ph_phone", None)
-                                st.success(f"✅ Phone `{_ph_phone}` linked to your account!")
-                                st.rerun()
-                            else:
-                                st.error("Verified but could not save link — please try again.")
-                        else:
-                            st.error("Verification failed.")
-                    except Exception as exc:
-                        msg = str(exc)
-                        if "invalid" in msg.lower() or "expired" in msg.lower():
-                            st.error("Incorrect or expired code.")
-                        else:
-                            st.error(f"Error: {msg}")
-                else:
-                    st.error("Please enter a valid 6-digit code.")
+    st.markdown("")
 
-            if st.button("← Change number", key="sett_ph_back"):
-                st.session_state.pop("_sett_ph_sent", None)
-                st.session_state.pop("_sett_ph_phone", None)
-                st.rerun()
-
-# ── Link Google / email (for phone-only users) ───────────────────────────────
-elif _phone and not _email:
-    # Show Google link success banner if returning from OAuth link flow
-    if st.session_state.pop("_google_link_success", None):
-        st.success("✅ Google account linked! You can now sign in with Google or phone.")
-
-    _google_url = get_google_oauth_url()
-
-    with st.expander("🔵  Link Google account", expanded=False):
-        st.caption("Sign in with Google will be linked to your phone number. Click below — you'll be redirected to Google and brought straight back.")
-
-        _link_identifier = _phone or _email or ""
-
-        if st.button("🔵  Continue with Google", key="sett_google_link_btn", use_container_width=True):
-            st.session_state["_sett_google_link_go"] = True
-            st.rerun()
-
-        # On the rerun after button click, inject a script component that:
-        # 1. Sets localStorage flags (survive the Google redirect)
-        # 2. Navigates window.parent (the real browser window, not the iframe)
-        if st.session_state.pop("_sett_google_link_go", False):
-            import streamlit.components.v1 as _components
-            _components.html(
-                f"""
-                <script>
-                    localStorage.setItem('p360_link_mode', '1');
-                    localStorage.setItem('p360_link_user', '{_link_identifier}');
-                    window.parent.location.href = '{_google_url}';
-                </script>
-                """,
-                height=0,
+    # ── Link phone (for email/Google users) ──────────────────────────────────────
+    if _email and not _linked_phone:
+        with st.expander("📱  Add phone number login", expanded=False):
+            st.caption(
+                "Link your phone number so you can also sign in via SMS code. "
+                "Your account and data stay exactly the same."
             )
 
-    with st.expander("📧  Add email / password login", expanded=False):
-        st.caption(
-            "First create an account on the login page using your email, "
-            "then enter it below to merge it with your phone account."
-        )
-        with st.form("sett_link_email_form"):
-            _new_email = st.text_input("Your email address", placeholder="you@example.com")
-            _link_it   = st.form_submit_button("Link email", type="primary", use_container_width=True)
-        if _link_it:
-            import re as _re
-            if _new_email and _re.match(r"[^@]+@[^@]+\.[^@]+", _new_email.strip()):
-                if save_phone_link(_new_email.strip(), _phone):
-                    _u = st.session_state.get("sb_user", {})
-                    _u["email"] = _new_email.strip()
-                    st.session_state["sb_user"] = _u
-                    st.success(f"✅ `{_new_email.strip()}` linked to your phone account!")
-                    st.rerun()
-                else:
-                    st.error("Could not save — please try again.")
+            _ph_sent  = st.session_state.get("_sett_ph_sent", False)
+            _ph_phone = st.session_state.get("_sett_ph_phone", "")
+
+            if not _ph_sent:
+                with st.form("sett_link_phone_form"):
+                    c1, c2 = st.columns([2, 3])
+                    with c1:
+                        _cc_idx = st.selectbox(
+                            "Country", range(len(_COUNTRY_CODES)),
+                            format_func=lambda i: _COUNTRY_CODES[i][1],
+                            key="sett_ph_cc", label_visibility="collapsed",
+                        )
+                    with c2:
+                        _local = st.text_input(
+                            "Phone", placeholder="69038453",
+                            key="sett_ph_num", label_visibility="collapsed",
+                        )
+                    _sent = st.form_submit_button("Send verification code", use_container_width=True)
+                if _sent:
+                    _e164 = _build_e164(_COUNTRY_CODES[_cc_idx][0], _local.strip())
+                    if len(_e164) >= 8:
+                        _do_send_otp_raw(_e164)
+                        st.session_state["_sett_ph_phone"] = _e164
+                        st.session_state["_sett_ph_sent"]  = True
+                        st.rerun()
+                    else:
+                        st.error("Phone number looks too short.")
             else:
-                st.error("Please enter a valid email address.")
+                st.markdown(f"Code sent to **{_ph_phone}**.")
+                with st.form("sett_link_verify_form"):
+                    _otp = st.text_input("Enter 6-digit code", max_chars=6, key="sett_ph_otp")
+                    _verify = st.form_submit_button("Verify & link", type="primary", use_container_width=True)
+                if _verify:
+                    if _otp and len(_otp) == 6 and _otp.isdigit():
+                        try:
+                            resp = get_client().auth.verify_otp(
+                                {"phone": _ph_phone, "token": _otp, "type": "sms"}
+                            )
+                            if resp and resp.user:
+                                if save_phone_link(_email, _ph_phone):
+                                    # Update session to reflect linked phone
+                                    _u = st.session_state.get("sb_user", {})
+                                    _u["phone"] = _ph_phone
+                                    st.session_state["sb_user"] = _u
+                                    st.session_state.pop("_sett_ph_sent", None)
+                                    st.session_state.pop("_sett_ph_phone", None)
+                                    st.success(f"✅ Phone `{_ph_phone}` linked to your account!")
+                                    st.rerun()
+                                else:
+                                    st.error("Verified but could not save link — please try again.")
+                            else:
+                                st.error("Verification failed.")
+                        except Exception as exc:
+                            msg = str(exc)
+                            if "invalid" in msg.lower() or "expired" in msg.lower():
+                                st.error("Incorrect or expired code.")
+                            else:
+                                st.error(f"Error: {msg}")
+                    else:
+                        st.error("Please enter a valid 6-digit code.")
 
-elif _linked_phone or (_email and _phone):
-    st.success(f"✅ Both login methods active — you can sign in with email/Google or phone `{_linked_phone or _phone}`.")
+                if st.button("← Change number", key="sett_ph_back"):
+                    st.session_state.pop("_sett_ph_sent", None)
+                    st.session_state.pop("_sett_ph_phone", None)
+                    st.rerun()
 
-st.markdown("")
+    # ── Link Google / email (for phone-only users) ───────────────────────────────
+    elif _phone and not _email:
+        # Show Google link success banner if returning from OAuth link flow
+        if st.session_state.pop("_google_link_success", None):
+            st.success("✅ Google account linked! You can now sign in with Google or phone.")
+
+        _google_url = get_google_oauth_url()
+
+        with st.expander("🔵  Link Google account", expanded=False):
+            st.caption("Sign in with Google will be linked to your phone number. Click below — you'll be redirected to Google and brought straight back.")
+
+            _link_identifier = _phone or _email or ""
+
+            if st.button("🔵  Continue with Google", key="sett_google_link_btn", use_container_width=True):
+                st.session_state["_sett_google_link_go"] = True
+                st.rerun()
+
+            # On the rerun after button click, inject a script component that:
+            # 1. Sets localStorage flags (survive the Google redirect)
+            # 2. Navigates window.parent (the real browser window, not the iframe)
+            if st.session_state.pop("_sett_google_link_go", False):
+                import streamlit.components.v1 as _components
+                _components.html(
+                    f"""
+                    <script>
+                        localStorage.setItem('p360_link_mode', '1');
+                        localStorage.setItem('p360_link_user', '{_link_identifier}');
+                        window.parent.location.href = '{_google_url}';
+                    </script>
+                    """,
+                    height=0,
+                )
+
+        with st.expander("📧  Add email / password login", expanded=False):
+            st.caption(
+                "First create an account on the login page using your email, "
+                "then enter it below to merge it with your phone account."
+            )
+            with st.form("sett_link_email_form"):
+                _new_email = st.text_input("Your email address", placeholder="you@example.com")
+                _link_it   = st.form_submit_button("Link email", type="primary", use_container_width=True)
+            if _link_it:
+                import re as _re
+                if _new_email and _re.match(r"[^@]+@[^@]+\.[^@]+", _new_email.strip()):
+                    if save_phone_link(_new_email.strip(), _phone):
+                        _u = st.session_state.get("sb_user", {})
+                        _u["email"] = _new_email.strip()
+                        st.session_state["sb_user"] = _u
+                        st.success(f"✅ `{_new_email.strip()}` linked to your phone account!")
+                        st.rerun()
+                    else:
+                        st.error("Could not save — please try again.")
+                else:
+                    st.error("Please enter a valid email address.")
+
+    elif _linked_phone or (_email and _phone):
+        st.success(f"✅ Both login methods active — you can sign in with email/Google or phone `{_linked_phone or _phone}`.")
+
+    st.markdown("")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. INVESTOR PROFILE
@@ -346,6 +372,27 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
             st.rerun()
+
+# Equalise card heights via JS — measures after render and sets min-height on all
+# .sp-card elements so the row looks uniform regardless of content length.
+import streamlit.components.v1 as _cv1
+_cv1.html("""
+<script>
+(function() {
+    function eq() {
+        var cards = window.parent.document.querySelectorAll('.sp-card');
+        if (!cards.length) return;
+        var maxH = 0;
+        cards.forEach(function(c) { c.style.minHeight = ''; });
+        cards.forEach(function(c) { maxH = Math.max(maxH, c.offsetHeight); });
+        cards.forEach(function(c) { c.style.minHeight = maxH + 'px'; });
+    }
+    setTimeout(eq, 150);
+    setTimeout(eq, 600);
+    setTimeout(eq, 1400);
+})();
+</script>
+""", height=0)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 2. DASHBOARD DEFAULTS

@@ -117,6 +117,20 @@ st.caption(
     "Watchlist is saved to your browser and persists across sessions."
 )
 
+# ── Guest gate ────────────────────────────────────────────────────────────────
+from components.auth import render_login_gate  # noqa: E402
+if not render_login_gate(
+    title="Sign in to use Watchlist",
+    body="Track stocks you care about with live Buffett scores, macro regime overlays, and earnings alerts.",
+    feature_bullets=[
+        "Save up to 50 tickers — persists across sessions",
+        "Macro-adjusted scores for the current cycle phase",
+        "Earnings Radar — know what's reporting in the next 45 days",
+        "Action alerts when a stock's macro fit changes",
+    ],
+):
+    st.stop()
+
 # ── Add ticker form ────────────────────────────────────────────────────────────
 with st.form("add_ticker_form", clear_on_submit=True):
     add_col, btn_col = st.columns([4, 1])
