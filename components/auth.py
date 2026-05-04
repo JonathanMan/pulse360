@@ -626,94 +626,244 @@ def render_login_gate(
     feature_bullets: list | None = None,
 ) -> bool:
     """
-    Render an inline sign-in card for pages that require authentication.
+    Render a polished inline sign-in card for pages that require authentication.
+    Phone OTP is the primary method; Google SSO and email are secondary options.
 
     Returns True  — user is logged in, caller should proceed normally.
-    Returns False — user is a guest; gate card has been rendered, caller should st.stop().
-
-    Usage::
-
-        if not render_login_gate(
-            title="Sign in to use Watchlist",
-            body="Track your stocks with macro-adjusted scoring.",
-            feature_bullets=["Save up to 50 tickers", "Macro regime overlay"],
-        ):
-            st.stop()
+    Returns False — user is a guest; gate card rendered, caller should st.stop().
     """
     if not is_guest():
         return True
 
     from components.pulse360_theme import (
-        BLUE, BORDER, CARD_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT,
+        BLUE, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT,
     )
 
-    bullets_html = ""
-    if feature_bullets:
-        items = "".join(
-            f'<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">'
-            f'<span style="color:{BLUE};font-size:0.82rem;margin-top:1px;">✓</span>'
-            f'<span style="font-size:0.84rem;color:{TEXT_SEC};line-height:1.4;">{b}</span>'
-            f'</div>'
-            for b in feature_bullets
-        )
-        bullets_html = f'<div style="margin:12px 0 4px 0;text-align:left;">{items}</div>'
+    # Unique keys per gate so multiple gates can coexist on a page
+    _k   = str(abs(hash(title)) % 99999)
+    _otp_sent  = st.session_state.get(f"_gate_otp_sent_{_k}", False)
+    _otp_phone = st.session_state.get(f"_gate_otp_phone_{_k}", "")
+    _show_email = st.session_state.get(f"_gate_show_email_{_k}", False)
 
+    # ── Shared CSS ─────────────────────────────────────────────────────────────
     st.markdown(f"""
 <style>
-  .p360-gate {{
-    max-width: 440px;
-    margin: 2.5rem auto 1.5rem auto;
+/* Gate card wrapper */
+.p360-gate-wrap {{
+    max-width: 480px;
+    margin: 2rem auto;
     background: {CARD_BG};
     border: 1px solid {BORDER};
     border-radius: 14px;
-    padding: 32px 32px 20px 32px;
+    padding: 40px 40px 32px 40px;
+}}
+/* Header */
+.p360-gate-eyebrow {{
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: {TEXT_MUT};
+    margin-bottom: 10px;
+}}
+.p360-gate-heading {{
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: {TEXT_PRI};
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    margin-bottom: 8px;
+}}
+.p360-gate-sub {{
+    font-size: 0.86rem;
+    color: {TEXT_SEC};
+    line-height: 1.5;
+    margin-bottom: 6px;
+}}
+/* Feature bullets */
+.p360-gate-bullet {{
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 5px;
+}}
+.p360-gate-bullet-check {{
+    color: #27ae60;
+    font-size: 0.8rem;
+    margin-top: 2px;
+    flex-shrink: 0;
+}}
+.p360-gate-bullet-text {{
+    font-size: 0.82rem;
+    color: {TEXT_SEC};
+    line-height: 1.4;
+}}
+/* Divider */
+.p360-gate-divider {{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0;
+    color: {TEXT_MUT};
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}}
+.p360-gate-divider::before, .p360-gate-divider::after {{
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: {BORDER};
+}}
+/* Terms footer */
+.p360-gate-terms {{
+    font-size: 0.69rem;
+    color: {TEXT_MUT};
     text-align: center;
-  }}
-  .p360-gate-icon  {{ font-size: 2rem; margin-bottom: 10px; }}
-  .p360-gate-title {{ font-size: 1.1rem; font-weight: 700; color: {TEXT_PRI}; margin-bottom: 6px; }}
-  .p360-gate-body  {{ font-size: 0.86rem; color: {TEXT_SEC}; line-height: 1.5; }}
+    margin-top: 20px;
+    line-height: 1.5;
+}}
+.p360-gate-terms a {{
+    color: {TEXT_SEC};
+    text-decoration: underline;
+}}
+/* Phone label */
+.p360-phone-label {{
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: {TEXT_MUT};
+    margin-bottom: 6px;
+    margin-top: 16px;
+}}
 </style>
-<div class="p360-gate">
-  <div class="p360-gate-icon">🔒</div>
-  <div class="p360-gate-title">{title}</div>
-  <div class="p360-gate-body">{body}</div>
-  {bullets_html}
+""", unsafe_allow_html=True)
+
+    # ── Card header ────────────────────────────────────────────────────────────
+    _l, mid, _r = st.columns([1, 8, 1])
+    with mid:
+        # Build bullets HTML
+        bullets_html = ""
+        if feature_bullets:
+            bullets_html = "".join(
+                f'<div class="p360-gate-bullet">'
+                f'<span class="p360-gate-bullet-check">✓</span>'
+                f'<span class="p360-gate-bullet-text">{b}</span>'
+                f'</div>'
+                for b in feature_bullets
+            )
+
+        st.markdown(f"""
+<div class="p360-gate-wrap">
+  <div class="p360-gate-eyebrow">Sign in</div>
+  <div class="p360-gate-heading">{title}</div>
+  <div class="p360-gate-sub">{body}</div>
+  {f'<div style="margin: 14px 0 0 0;">{bullets_html}</div>' if bullets_html else ''}
 </div>
 """, unsafe_allow_html=True)
 
-    # Compact sign-in form below the gate card
-    _l, mid, _r = st.columns([1, 2, 1])
-    with mid:
+    # ── Form column ────────────────────────────────────────────────────────────
+    _l2, form_col, _r2 = st.columns([1, 8, 1])
+    with form_col:
+
+        # ── Phone OTP (primary method) ─────────────────────────────────────────
+        st.markdown('<div class="p360-phone-label">Phone number</div>', unsafe_allow_html=True)
+
+        if not _otp_sent:
+            # Step 1 — enter number
+            with st.form(f"gate_phone_send_{_k}", clear_on_submit=False):
+                _cc_col, _num_col = st.columns([2, 3])
+                with _cc_col:
+                    _cc_idx = st.selectbox(
+                        "Country",
+                        options=range(len(_COUNTRY_CODES)),
+                        format_func=lambda i: _COUNTRY_CODES[i][1],
+                        key=f"gate_cc_{_k}",
+                        label_visibility="collapsed",
+                    )
+                with _num_col:
+                    _local = st.text_input(
+                        "Phone",
+                        placeholder="(555) 000-0000",
+                        key=f"gate_ph_{_k}",
+                        label_visibility="collapsed",
+                    )
+                if st.form_submit_button("Send code", type="primary", use_container_width=True):
+                    _cc = _COUNTRY_CODES[_cc_idx][0]
+                    _e164 = _build_e164(_cc, _local.strip())
+                    if len(_e164) >= 8:
+                        try:
+                            get_client().auth.sign_in_with_otp({"phone": _e164})
+                            st.session_state[f"_gate_otp_phone_{_k}"] = _e164
+                            st.session_state[f"_gate_otp_sent_{_k}"]  = True
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(f"Could not send code: {exc}")
+                    else:
+                        st.error("Phone number looks too short.")
+        else:
+            # Step 2 — enter OTP
+            st.markdown(
+                f'<p style="font-size:0.82rem;color:{TEXT_SEC};margin-bottom:8px;">'
+                f'Code sent to <strong>{_otp_phone}</strong>. Check your messages.</p>',
+                unsafe_allow_html=True,
+            )
+            with st.form(f"gate_phone_verify_{_k}", clear_on_submit=False):
+                _otp_code = st.text_input(
+                    "Code", placeholder="123456", max_chars=6,
+                    key=f"gate_otp_{_k}", label_visibility="collapsed",
+                )
+                if st.form_submit_button("Verify & sign in", type="primary", use_container_width=True):
+                    _do_verify_otp(_otp_phone, _otp_code.strip())
+
+            _bc, _ = st.columns([1, 2])
+            with _bc:
+                if st.button("← Change number", key=f"gate_back_{_k}", use_container_width=True):
+                    st.session_state.pop(f"_gate_otp_sent_{_k}", None)
+                    st.session_state.pop(f"_gate_otp_phone_{_k}", None)
+                    st.rerun()
+
+        # ── OR CONTINUE WITH ──────────────────────────────────────────────────
+        st.markdown('<div class="p360-gate-divider">or continue with</div>', unsafe_allow_html=True)
+
+        # Google SSO
         st.link_button(
             "   Continue with Google",
             _google_oauth_url(),
             use_container_width=True,
             icon="🔵",
         )
-        st.markdown(
-            f'<div style="text-align:center;font-size:0.75rem;color:{TEXT_MUT};'
-            f'margin:8px 0 10px 0;">or sign in with email</div>',
-            unsafe_allow_html=True,
-        )
-        # Use a short hash of the title as a unique form key
-        _fkey = "gate_" + str(abs(hash(title)) % 99999)
-        with st.form(_fkey, clear_on_submit=False):
-            _email = st.text_input(
-                "Email", placeholder="you@example.com",
-                label_visibility="collapsed", key=_fkey + "_e",
-            )
-            _pw = st.text_input(
-                "Password", type="password", placeholder="Password",
-                label_visibility="collapsed", key=_fkey + "_p",
-            )
-            if st.form_submit_button("Sign in", type="primary", use_container_width=True):
-                _do_sign_in(_email.strip(), _pw)
 
+        # Email (collapsed by default — tertiary option)
+        if not _show_email:
+            if st.button(
+                "Sign in with email / password",
+                key=f"gate_toggle_email_{_k}",
+                use_container_width=True,
+            ):
+                st.session_state[f"_gate_show_email_{_k}"] = True
+                st.rerun()
+        else:
+            with st.form(f"gate_email_{_k}", clear_on_submit=False):
+                _email = st.text_input(
+                    "Email", placeholder="you@example.com",
+                    label_visibility="collapsed", key=f"gate_em_{_k}",
+                )
+                _pw = st.text_input(
+                    "Password", type="password", placeholder="Password",
+                    label_visibility="collapsed", key=f"gate_pw_{_k}",
+                )
+                if st.form_submit_button("Sign in", type="primary", use_container_width=True):
+                    _do_sign_in(_email.strip(), _pw)
+
+        # Terms footer
         st.markdown(
-            f'<div style="text-align:center;font-size:0.72rem;color:{TEXT_MUT};margin-top:6px;">'
-            f'New to Pulse360? '
-            f'<a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app" '
-            f'style="color:{BLUE};">Create a free account →</a>'
+            f'<div class="p360-gate-terms">'
+            f'By continuing you agree to Pulse360\'s '
+            f'<a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app">Terms of Service</a>'
+            f' and <a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app">Privacy Policy</a>.'
             f'</div>',
             unsafe_allow_html=True,
         )
