@@ -316,82 +316,92 @@ def get_google_oauth_url() -> str:
 
 def _render_google_signin_button(oauth_url: str, btn_key: str = "default", return_page: str | None = None) -> None:
     """
-    Render a Google sign-in button that navigates the current tab to OAuth.
+    Render a Google sign-in button that navigates the CURRENT TAB to OAuth.
 
     Why every other approach fails:
-      • st.link_button     → always adds target="_blank" for external URLs
-      • st.markdown <a>    → Streamlit's React frontend intercepts external link
-                             clicks and forces them into a new tab
-      • st.components.v1.html() JS → iframe sandbox lacks allow-top-navigation;
-                             window.top.location.href silently blocked
+      • st.link_button          → always renders target="_blank"
+      • st.markdown <a>         → Streamlit's React frontend intercepts ALL
+                                   external link clicks and forces a new tab
+      • st_javascript window.top → programmatic navigation loses user-activation
+                                   context (click → Python rerun → JS is no
+                                   longer a direct user gesture) so
+                                   allow-top-navigation-by-user-activation blocks it
 
     What works:
-      • st_javascript runs in a same-origin iframe (confirmed: localStorage works).
-        Same-origin means window.top IS accessible — allow-top-navigation is only
-        needed for cross-origin iframes.  We therefore set window.top.location.href
-        from st_javascript after the user clicks a native Streamlit button.
+      A direct user click on <a href="..." target="_top"> inside a
+      st.components.v1.html() iframe.  Streamlit's component sandbox includes
+      "allow-top-navigation-by-user-activation".  A real mouse-click on an
+      anchor tag IS a user activation, so the browser honours target="_top"
+      and navigates the top-level frame.  The onclick handler can simultaneously
+      write return_page to localStorage (same-origin access is allowed too).
 
     Flow:
-      1. User clicks the native st.button → Python sets a session_state flag, reruns
-      2. On rerun, st_javascript fires: writes return_page to localStorage, then
-         sets window.top.location.href = oauth_url → same-tab navigation
-      3. After Google auth, Supabase redirects to _REDIRECT_URL with #access_token=...
+      1. Page renders the component iframe containing the styled <a> button
+      2. User clicks it → onclick stores return_page in localStorage
+                        → target="_top" navigates the entire Streamlit app to
+                           Google OAuth (same tab, no popup)
+      3. Google auth → Supabase redirects to _REDIRECT_URL with #access_token=...
       4. _handle_oauth_callback() reads token + return_page from localStorage
-      5. app.py calls st.switch_page(return_page) → user lands back where they started
+      5. app.py calls st.switch_page(return_page) → lands back where they started
     """
     import json as _json
+    from html import escape as _esc
 
-    _nav_key = f"_p360_oauth_nav_{btn_key}"
+    safe_url   = _esc(oauth_url)
+    # Build the onclick JS: write return_page then let href/target do the navigation
+    onclick_js = ""
+    if return_page:
+        onclick_js = f"localStorage.setItem('p360_return_to',{_json.dumps(return_page)});"
 
-    # ── Step 2: fire navigation JS when button was just clicked ──────────────
-    if st.session_state.get(_nav_key):
-        # Clear flag now — if JS navigation fails for any reason the button
-        # will simply reappear on the next render without looping.
-        st.session_state.pop(_nav_key, None)
-
-        return_to_js = (
-            f"localStorage.setItem('p360_return_to', {_json.dumps(return_page)});"
-            if return_page else ""
-        )
-        try:
-            from streamlit_javascript import st_javascript as _stjs
-            _stjs(
-                # window.top is accessible from same-origin iframes.
-                # This navigates the entire Streamlit page (not just the iframe).
-                f"{return_to_js} window.top.location.href = {_json.dumps(oauth_url)}; 1;",
-                key=f"_p360_nav_{btn_key}",
-            )
-        except Exception:
-            pass
-        # Don't render the button while navigation is in-flight
-        return
-
-    # ── Step 1: render button ─────────────────────────────────────────────────
-    # Styled to match a Google sign-in button.
-    st.markdown(f"""
+    st.components.v1.html(f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
 <style>
-  .p360-google-btn-{btn_key} {{
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; padding: 10px 16px;
-    background: #ffffff; border: 1.5px solid #d0d5dd; border-radius: 8px;
-    color: #1a1a1a; font-size: 0.92rem; font-weight: 600;
-    cursor: pointer; transition: background 0.15s, border-color 0.15s;
-    font-family: inherit;
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+  a {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    background: #ffffff;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
+    color: #1a1a1a;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
   }}
-  .p360-google-btn-{btn_key}:hover {{
-    background: #f5f8ff; border-color: #4285f4;
+  a:hover {{
+    background: #f0f4ff;
+    border-color: #4285f4;
+  }}
+  a:active {{
+    background: #e8eeff;
   }}
 </style>
-""", unsafe_allow_html=True)
-
-    if st.button(
-        "Continue with Google",
-        key=f"_p360_gbtn_{btn_key}",
-        use_container_width=True,
-        icon="🔵",
-    ):
-        st.session_state[_nav_key] = True
-        st.rerun()
+</head>
+<body>
+<a href="{safe_url}"
+   target="_top"
+   onclick="{onclick_js}">
+  <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+    <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
+    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+  </svg>
+  Continue with Google
+</a>
+</body>
+</html>
+""", height=52, scrolling=False)
 
 
 def _render_login_page() -> None:
