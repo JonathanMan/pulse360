@@ -215,12 +215,15 @@ def _handle_oauth_callback() -> None:
         token_data = st_javascript(
             """(() => {
                 // ── Popup mode: detect if THIS window was opened as an OAuth popup ──
-                // window.parent is the Streamlit main frame; .opener is the window
-                // that called window.open() (i.e. the original Watchlist/Alerts tab).
+                // window.top is the topmost browser window (the popup tab itself).
+                // window.top.opener is the original tab that called window.open().
+                // We use window.top rather than window.parent because st_javascript
+                // runs inside a component iframe, adding an extra iframe layer.
                 try {
-                    var isPopup = !!(window.parent.opener);
+                    var topWin   = window.top || window.parent || window;
+                    var isPopup  = !!(topWin.opener);
                     if (isPopup) {
-                        var popupHash = window.parent.location.hash;
+                        var popupHash = topWin.location.hash;
                         if (popupHash && popupHash.indexOf('access_token') !== -1) {
                             var pp = new URLSearchParams(popupHash.substring(1));
                             var tok = pp.get('access_token');
@@ -234,17 +237,13 @@ def _handle_oauth_callback() -> None:
                                     link_mode: lm === '1',
                                     link_user: lu || null
                                 };
-                                // Store token so parent picks it up on reload
+                                // Store token in localStorage (shared with opener — same origin)
                                 try { localStorage.setItem('p360_oauth_token', JSON.stringify(payload)); } catch(e) {}
-                                // Clean URL then close popup
-                                window.parent.history.replaceState({}, document.title, window.parent.location.pathname);
-                                setTimeout(function() { window.parent.close(); }, 350);
+                                // Clean hash, then close the popup window
+                                topWin.history.replaceState({}, document.title, topWin.location.pathname);
+                                setTimeout(function() { topWin.close(); }, 350);
                                 return {popup_close: true};
                             }
-                        }
-                        // Popup with no token (user cancelled) — just close
-                        if (window.parent.location.hash && window.parent.location.hash.length > 1) {
-                            // has some hash but no access_token — might be error, close anyway
                         }
                         return null;
                     }
@@ -354,86 +353,94 @@ def _render_google_popup_button(oauth_url: str, btn_key: str = "default") -> Non
     """
     Render a styled Google sign-in button that opens OAuth in a popup window.
 
+    Uses st.components.v1.html() — a sandboxed same-origin iframe where scripts
+    execute normally, onclick works, and localStorage + window.parent are accessible.
+
     Flow:
-      1. User clicks → popup opens with Google auth URL
+      1. User clicks → popup opens with Google auth URL (via window.top.open)
       2. User authenticates in the popup
-      3. Popup receives #access_token=... redirect, stores token in localStorage,
-         closes itself (handled by _handle_oauth_callback popup_close branch)
-      4. Parent page detects popup closure, finds token in localStorage, reloads
-      5. Reload triggers _handle_oauth_callback which reads the token normally
+      3. Popup Streamlit app detects window.top.opener is set (popup mode),
+         stores token in localStorage, closes itself
+      4. This component's poll timer sees the popup closed, finds the token
+         in localStorage, calls window.top.location.reload()
+      5. Reload triggers _handle_oauth_callback which reads the token normally,
+         keeping the user on the original page (Watchlist, Alerts, etc.)
 
     Falls back to same-tab redirect if popups are blocked.
     """
     import json as _json
+    import streamlit.components.v1 as components
     from components.pulse360_theme import BORDER, CARD_BG, TEXT_PRI
 
     safe_url = _json.dumps(oauth_url)
-    fn_name  = f"p360Google_{btn_key}"
 
-    st.markdown(f"""
-<script>
-(function() {{
-    if (window.{fn_name}) return;   // already defined (avoid re-registering on rerun)
-    window.{fn_name} = function() {{
-        var url = {safe_url};
-        var w = 520, h = 660;
-        var left = Math.max(0, Math.round((screen.width  - w) / 2));
-        var top  = Math.max(0, Math.round((screen.height - h) / 2));
-        var feat = 'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
-                 + ',toolbar=no,menubar=no,location=no,scrollbars=yes,resizable=yes';
-        var popup = window.open(url, 'p360_google_auth', feat);
-        if (!popup || popup.closed) {{
-            // Popups blocked — degrade to same-tab redirect
-            window.location.href = url;
-            return;
-        }}
-        // Poll: when popup closes, check for token and reload parent
-        var poll = setInterval(function() {{
-            if (!popup || popup.closed) {{
-                clearInterval(poll);
-                try {{
-                    var stored = localStorage.getItem('p360_oauth_token');
-                    if (stored) {{
-                        window.location.reload();
-                    }}
-                }} catch(e) {{
-                    window.location.reload();
-                }}
-            }}
-        }}, 500);
-    }};
-}})();
-</script>
-<button
-    onclick="{fn_name}()"
-    style="
-        width: 100%;
-        padding: 10px 16px;
-        background: {CARD_BG};
-        border: 1px solid {BORDER};
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.875rem;
-        font-family: 'Geist', sans-serif;
-        color: {TEXT_PRI};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        transition: background 0.15s;
-    "
-    onmouseover="this.style.opacity='0.85'"
-    onmouseout="this.style.opacity='1'"
->
-    <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
-        <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
-        <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
-        <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
-        <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
-    </svg>
-    Continue with Google
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{ background: transparent; }}
+  .gbtn {{
+    width: 100%;
+    padding: 10px 16px;
+    background: {CARD_BG};
+    border: 1px solid {BORDER};
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: {TEXT_PRI};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: opacity 0.15s;
+  }}
+  .gbtn:hover {{ opacity: 0.8; }}
+</style>
+</head>
+<body>
+<button class="gbtn" onclick="openAuth()">
+  <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
+    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+  </svg>
+  Continue with Google
 </button>
-""", unsafe_allow_html=True)
+<script>
+function openAuth() {{
+  var url = {safe_url};
+  var w = 520, h = 660;
+  var left = Math.max(0, Math.round((screen.width - w) / 2));
+  var top  = Math.max(0, Math.round((screen.height - h) / 2));
+  var feat = 'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
+           + ',toolbar=no,menubar=no,scrollbars=yes,resizable=yes';
+  // Open from the top-level window (not the component iframe)
+  var topWin = window.top || window.parent || window;
+  var popup  = topWin.open(url, 'p360_google_auth', feat);
+  if (!popup || popup.closed) {{
+    // Popups blocked — fall back to same-tab redirect
+    topWin.location.href = url;
+    return;
+  }}
+  // Poll: when popup closes, reload parent if a token appeared
+  var poll = setInterval(function() {{
+    if (!popup || popup.closed) {{
+      clearInterval(poll);
+      try {{
+        var stored = localStorage.getItem('p360_oauth_token');
+        if (stored) {{ topWin.location.reload(); }}
+      }} catch(e) {{ topWin.location.reload(); }}
+    }}
+  }}, 500);
+}}
+</script>
+</body>
+</html>"""
+
+    components.html(html, height=52)
 
 
 def _render_login_page() -> None:
