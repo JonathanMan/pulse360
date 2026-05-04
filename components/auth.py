@@ -214,38 +214,40 @@ def _handle_oauth_callback() -> None:
         from streamlit_javascript import st_javascript
         token_data = st_javascript(
             """(() => {
-                // ── Popup mode: detect if THIS window was opened as an OAuth popup ──
-                // window.top is the topmost browser window (the popup tab itself).
-                // window.top.opener is the original tab that called window.open().
-                // We use window.top rather than window.parent because st_javascript
-                // runs inside a component iframe, adding an extra iframe layer.
+                // ── Popup mode detection ──────────────────────────────────────────
+                // We CANNOT use window.opener — Google's auth page sets
+                // Cross-Origin-Opener-Policy: same-origin which clears window.opener
+                // before the popup returns to our app.
+                //
+                // Instead, the button sets localStorage.p360_popup_nonce before
+                // calling window.open(). The popup reads that flag here. Both the
+                // opener tab and the popup share the same localStorage (same origin).
                 try {
-                    var topWin   = window.top || window.parent || window;
-                    var isPopup  = !!(topWin.opener);
-                    if (isPopup) {
-                        var popupHash = topWin.location.hash;
-                        if (popupHash && popupHash.indexOf('access_token') !== -1) {
-                            var pp = new URLSearchParams(popupHash.substring(1));
-                            var tok = pp.get('access_token');
-                            if (tok) {
-                                var lm = localStorage.getItem('p360_link_mode');
-                                var lu = localStorage.getItem('p360_link_user');
-                                if (lm) localStorage.removeItem('p360_link_mode');
-                                if (lu) localStorage.removeItem('p360_link_user');
-                                var payload = {
-                                    access_token: tok,
-                                    link_mode: lm === '1',
-                                    link_user: lu || null
-                                };
-                                // Store token in localStorage (shared with opener — same origin)
-                                try { localStorage.setItem('p360_oauth_token', JSON.stringify(payload)); } catch(e) {}
-                                // Clean hash, then close the popup window
-                                topWin.history.replaceState({}, document.title, topWin.location.pathname);
-                                setTimeout(function() { topWin.close(); }, 350);
-                                return {popup_close: true};
-                            }
+                    var topWin  = window.top || window.parent || window;
+                    var nonce   = localStorage.getItem('p360_popup_nonce');
+                    var topHash = topWin.location.hash || '';
+                    if (nonce && topHash.indexOf('access_token') !== -1) {
+                        localStorage.removeItem('p360_popup_nonce');   // consume flag
+                        var pp = new URLSearchParams(topHash.substring(1));
+                        var tok = pp.get('access_token');
+                        if (tok) {
+                            var lm = localStorage.getItem('p360_link_mode');
+                            var lu = localStorage.getItem('p360_link_user');
+                            if (lm) localStorage.removeItem('p360_link_mode');
+                            if (lu) localStorage.removeItem('p360_link_user');
+                            var payload = {
+                                access_token: tok,
+                                link_mode: lm === '1',
+                                link_user: lu || null
+                            };
+                            // Store token so parent tab picks it up on reload
+                            localStorage.setItem('p360_oauth_token', JSON.stringify(payload));
+                            // Clean hash then close popup (window.close() still works
+                            // even after COOP breaks the opener reference)
+                            topWin.history.replaceState({}, document.title, topWin.location.pathname);
+                            setTimeout(function() { topWin.close(); }, 350);
+                            return {popup_close: true};
                         }
-                        return null;
                     }
                 } catch(e) {}
 
@@ -412,28 +414,41 @@ def _render_google_popup_button(oauth_url: str, btn_key: str = "default") -> Non
 <script>
 function openAuth() {{
   var url = {safe_url};
+  var topWin = window.top || window.parent || window;
   var w = 520, h = 660;
   var left = Math.max(0, Math.round((screen.width - w) / 2));
   var top  = Math.max(0, Math.round((screen.height - h) / 2));
   var feat = 'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
            + ',toolbar=no,menubar=no,scrollbars=yes,resizable=yes';
-  // Open from the top-level window (not the component iframe)
-  var topWin = window.top || window.parent || window;
-  var popup  = topWin.open(url, 'p360_google_auth', feat);
-  if (!popup || popup.closed) {{
-    // Popups blocked — fall back to same-tab redirect
-    topWin.location.href = url;
+
+  // Set nonce BEFORE opening — the popup reads this to identify itself.
+  // window.opener is unreliable: Google sets Cross-Origin-Opener-Policy: same-origin
+  // which clears window.opener before the popup returns to our app.
+  // localStorage is shared across the same origin regardless of COOP.
+  try {{ localStorage.setItem('p360_popup_nonce', Date.now().toString()); }} catch(e) {{}}
+
+  var popup = topWin.open(url, 'p360_google_auth', feat);
+  if (!popup) {{
+    try {{ localStorage.removeItem('p360_popup_nonce'); }} catch(e) {{}}
+    topWin.location.href = url;   // fallback: same-tab redirect
     return;
   }}
-  // Poll: when popup closes, reload parent if a token appeared
+
+  // Poll localStorage for token — primary signal that auth completed.
+  // Don't rely on popup.closed: COOP may also break that reference.
+  var attempts = 0;
   var poll = setInterval(function() {{
-    if (!popup || popup.closed) {{
-      clearInterval(poll);
-      try {{
-        var stored = localStorage.getItem('p360_oauth_token');
-        if (stored) {{ topWin.location.reload(); }}
-      }} catch(e) {{ topWin.location.reload(); }}
-    }}
+    attempts++;
+    try {{
+      var stored = localStorage.getItem('p360_oauth_token');
+      if (stored) {{
+        clearInterval(poll);
+        try {{ if (!popup.closed) popup.close(); }} catch(e) {{}}
+        topWin.location.reload();
+        return;
+      }}
+    }} catch(e) {{}}
+    if (attempts > 600) clearInterval(poll);   // stop after 5 min
   }}, 500);
 }}
 </script>
