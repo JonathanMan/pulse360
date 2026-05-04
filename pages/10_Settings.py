@@ -20,7 +20,9 @@ from components.user_profile import PROFILES, feature_visible, get_profile, get_
 from components.auth import (
     get_session_user, get_linked_phone_for_email, get_canonical_email_for_phone,
     save_phone_link, _COUNTRY_CODES, _build_e164, _do_send_otp_raw,
+    get_google_oauth_url,
 )
+from components.supabase_client import get_client
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.markdown("""
@@ -229,13 +231,35 @@ if _email and not _linked_phone:
                 st.session_state.pop("_sett_ph_phone", None)
                 st.rerun()
 
-# ── Link email (for phone-only users) ────────────────────────────────────────
+# ── Link Google / email (for phone-only users) ───────────────────────────────
 elif _phone and not _email:
-    with st.expander("📧  Add email login", expanded=False):
+    # Show Google link success banner if returning from OAuth link flow
+    if st.session_state.pop("_google_link_success", None):
+        st.success("✅ Google account linked! You can now sign in with Google or phone.")
+
+    _google_url = get_google_oauth_url()
+
+    with st.expander("🔵  Link Google account", expanded=False):
+        st.caption("Sign in with Google will be linked to your phone number. Click below — you'll be redirected to Google and brought straight back.")
+        # onclick sets the link_mode flag in localStorage BEFORE navigating
+        st.markdown(
+            f"""
+            <a href="{_google_url}"
+               onclick="localStorage.setItem('p360_link_mode','1')"
+               style="display:block;text-align:center;padding:10px 0;
+                      background:#0a0a0a;color:#fff;border-radius:6px;
+                      font-weight:600;font-size:0.9rem;text-decoration:none;
+                      margin-top:8px;">
+              🔵 &nbsp; Continue with Google
+            </a>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with st.expander("📧  Add email / password login", expanded=False):
         st.caption(
-            "Link an email address so you can also sign in with email/password or Google. "
-            "Go to the login page and create an account with your email — "
-            "then come back here and enter it below to merge your accounts."
+            "First create an account on the login page using your email, "
+            "then enter it below to merge it with your phone account."
         )
         with st.form("sett_link_email_form"):
             _new_email = st.text_input("Your email address", placeholder="you@example.com")

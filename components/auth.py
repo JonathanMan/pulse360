@@ -183,24 +183,35 @@ def _handle_oauth_callback() -> None:
     window.parent.location.hash (not window.location.hash, which is the
     iframe's own — always empty).  The localStorage bridge survives the
     one Streamlit rerun that fires before Python reads the component value.
+
+    If p360_link_mode is set in localStorage (placed there by the Settings
+    "Link Google account" button before redirecting), we treat the returning
+    token as a link operation rather than a new login — the Google email is
+    saved to user_phone_links and the existing session is preserved.
     """
-    if get_session_user():
-        return
     try:
         from streamlit_javascript import st_javascript
         token_data = st_javascript(
             """(() => {
+                // Check bridge cache first (survives one extra rerun)
                 try {
                     var stored = localStorage.getItem('p360_oauth_token');
                     if (stored) {
                         localStorage.removeItem('p360_oauth_token');
-                        return JSON.parse(stored);
+                        var parsed = JSON.parse(stored);
+                        // Attach link_mode flag if it was set
+                        var lm = localStorage.getItem('p360_link_mode');
+                        if (lm) { localStorage.removeItem('p360_link_mode'); parsed.link_mode = true; }
+                        return parsed;
                     }
                 } catch(e) {}
+                // Read hash from parent frame
                 var hash = window.parent.location.hash;
                 if (hash && hash.indexOf('access_token') !== -1) {
                     var p = new URLSearchParams(hash.substring(1));
-                    var token = { access_token: p.get('access_token') };
+                    var lm = localStorage.getItem('p360_link_mode');
+                    if (lm) localStorage.removeItem('p360_link_mode');
+                    var token = { access_token: p.get('access_token'), link_mode: lm === '1' };
                     try { localStorage.setItem('p360_oauth_token', JSON.stringify(token)); } catch(e) {}
                     window.parent.history.replaceState(
                         {}, document.title,
@@ -215,17 +226,35 @@ def _handle_oauth_callback() -> None:
         if token_data and isinstance(token_data, dict) and token_data.get("access_token"):
             resp = get_client().auth.get_user(token_data["access_token"])
             if resp and resp.user:
-                st.session_state[_SESSION_KEY] = {
-                    "email": resp.user.email,
-                    "id":    str(resp.user.id),
-                    "phone": getattr(resp.user, "phone", None) or None,
-                }
-                try:
-                    from components.analytics import log_login
-                    log_login("google")
-                except Exception:
-                    pass
-                st.rerun()
+                google_email = resp.user.email
+                link_mode    = bool(token_data.get("link_mode"))
+                current_user = get_session_user()
+
+                if link_mode and current_user:
+                    # ── Link mode: associate Google email with existing account ──
+                    canonical = current_user.get("email") or current_user.get("phone")
+                    if canonical and google_email:
+                        # Store the Google email as the canonical email for this user
+                        save_phone_link(google_email, current_user.get("phone", ""))
+                        # If current user only had phone, update session email
+                        if not current_user.get("email"):
+                            current_user["email"] = google_email
+                            st.session_state[_SESSION_KEY] = current_user
+                    st.session_state["_google_link_success"] = google_email
+                    st.rerun()
+                else:
+                    # ── Normal login ──────────────────────────────────────────
+                    st.session_state[_SESSION_KEY] = {
+                        "email": google_email,
+                        "id":    str(resp.user.id),
+                        "phone": getattr(resp.user, "phone", None) or None,
+                    }
+                    try:
+                        from components.analytics import log_login
+                        log_login("google")
+                    except Exception:
+                        pass
+                    st.rerun()
     except Exception:
         pass
 
@@ -235,6 +264,11 @@ def _handle_oauth_callback() -> None:
 def _google_oauth_url() -> str:
     params = urlencode({"provider": "google", "redirect_to": _REDIRECT_URL})
     return f"{st.secrets['SUPABASE_URL']}/auth/v1/authorize?{params}"
+
+
+def get_google_oauth_url() -> str:
+    """Public accessor for the Google OAuth URL (used by Settings link button)."""
+    return _google_oauth_url()
 
 
 def _render_login_page() -> None:
