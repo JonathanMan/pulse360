@@ -345,18 +345,21 @@ def _render_onboarding() -> None:
 from components.auth import _handle_oauth_callback, get_session_user  # noqa: E402
 _handle_oauth_callback()
 
-# Redirect to the originating page (Watchlist, Alerts, etc.) after auth
-_post_auth_dest = st.session_state.pop("_post_auth_redirect", None)
-if _post_auth_dest and get_session_user():
-    st.switch_page(_post_auth_dest)
-
 # ── Build navigation FIRST — must happen before any st.stop() ─────────────────
 # st.navigation() must be called before onboarding's early-return, otherwise
 # Streamlit falls back to auto-discovery and shows a flat unsectioned sidebar.
+# It must also come before any st.switch_page() call for the same reason.
 from components.user_profile import get_nav_pages, get_profile, PROFILES  # noqa: E402
 
 nav_sections = get_nav_pages()
 pg = st.navigation(nav_sections)
+
+# Redirect to the originating page (Watchlist, Alerts, etc.) after auth.
+# Placed AFTER st.navigation() — switching pages before navigation is set up
+# causes Streamlit to fall back to auto-discovery (flat sidebar).
+_post_auth_dest = st.session_state.pop("_post_auth_redirect", None)
+if _post_auth_dest and get_session_user():
+    st.switch_page(_post_auth_dest)
 
 # ── Restore saved profile (skips onboarding for returning users) ──────────────
 if "pulse360_profile" not in st.session_state:

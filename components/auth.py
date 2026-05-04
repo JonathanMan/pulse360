@@ -318,67 +318,44 @@ def _render_google_signin_button(oauth_url: str, btn_key: str = "default", retur
     """
     Render a Google sign-in button that does a standard same-tab OAuth redirect.
 
-    Flow:
-      1. User clicks → button stores return_page in localStorage, then navigates
-         the current tab to the Google auth URL
-      2. User authenticates with Google
-      3. Supabase redirects back to _REDIRECT_URL (app root) with #access_token=...
-      4. _handle_oauth_callback() in app.py reads the token and the stored return_page
-      5. app.py calls st.switch_page(return_page) to land the user back where they started
+    Key insight: st.components.v1.html() iframes are sandboxed without
+    allow-top-navigation, so any window.top.location.href = ... inside them
+    is silently blocked. Instead we:
+      1. Use st_javascript to write return_page to localStorage (iframes CAN
+         access same-origin localStorage even when sandboxed)
+      2. Use st.link_button for the actual navigation — it renders a plain <a>
+         tag in the main Streamlit frame, so navigation works fine
 
-    No popups, no new tabs, no browser blocking issues.
+    Flow:
+      1. Page loads → st_javascript immediately writes return_page to localStorage
+      2. User clicks the link button → navigates to Google auth in same tab
+      3. After auth, Supabase redirects to _REDIRECT_URL with #access_token=...
+      4. _handle_oauth_callback() reads the token + stored return_page
+      5. app.py calls st.switch_page(return_page) → user lands back where they started
     """
     import json as _json
-    import streamlit.components.v1 as components
-    from components.pulse360_theme import BORDER, CARD_BG, TEXT_PRI
 
-    safe_url    = _json.dumps(oauth_url)
-    safe_return = _json.dumps(return_page or "")
+    # Write return_page to localStorage NOW (before the user clicks).
+    # st_javascript executes in the browser as soon as the component iframe
+    # initialises — which is before any user interaction is possible.
+    if return_page:
+        try:
+            from streamlit_javascript import st_javascript as _stjs
+            _stjs(
+                f"localStorage.setItem('p360_return_to', {_json.dumps(return_page)}); 1;",
+                key=f"_p360_rp_{btn_key}",
+            )
+        except Exception:
+            pass
 
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-<style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ background: transparent; }}
-  .gbtn {{
-    width: 100%; padding: 10px 16px;
-    background: {CARD_BG}; border: 1px solid {BORDER};
-    border-radius: 8px; cursor: pointer;
-    font-size: 0.875rem; font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: {TEXT_PRI}; display: flex; align-items: center;
-    justify-content: center; gap: 10px; transition: opacity 0.15s;
-  }}
-  .gbtn:hover {{ opacity: 0.8; }}
-</style>
-</head>
-<body>
-<button class="gbtn" onclick="signInGoogle()">
-  <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
-    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
-    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
-    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
-    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
-  </svg>
-  Continue with Google
-</button>
-<script>
-function signInGoogle() {{
-  var url        = {safe_url};
-  var returnPage = {safe_return};
-  var topWin     = window.top || window.parent || window;
-  // Store the page to return to after auth completes
-  if (returnPage) {{
-    try {{ localStorage.setItem('p360_return_to', returnPage); }} catch(e) {{}}
-  }}
-  // Standard same-tab redirect — no popups, no new tabs
-  topWin.location.href = url;
-}}
-</script>
-</body>
-</html>"""
-
-    components.html(html, height=52)
+    # st.link_button renders a plain <a> tag in the main Streamlit frame —
+    # not in a sandboxed iframe — so it can navigate the page normally.
+    st.link_button(
+        "   Continue with Google",
+        oauth_url,
+        use_container_width=True,
+        icon="🔵",
+    )
 
 
 def _render_login_page() -> None:
