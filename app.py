@@ -337,6 +337,14 @@ def _render_onboarding() -> None:
     return
 
 
+# ── OAuth callback handler — MUST run on every page load ──────────────────────
+# When the Google OAuth popup redirects back to the app, this Streamlit instance
+# IS the popup. _handle_oauth_callback() detects window.top.opener is set,
+# stores the token in localStorage, and calls st.stop() (popup_close branch).
+# Without this call here, the popup just loads the full app and never closes.
+from components.auth import _handle_oauth_callback  # noqa: E402
+_handle_oauth_callback()
+
 # ── Build navigation FIRST — must happen before any st.stop() ─────────────────
 # st.navigation() must be called before onboarding's early-return, otherwise
 # Streamlit falls back to auto-discovery and shows a flat unsectioned sidebar.
