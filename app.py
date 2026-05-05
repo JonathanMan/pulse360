@@ -98,7 +98,7 @@ def _try_restore_profile() -> bool:
     return False
 
 st.set_page_config(
-    page_title="Pulse360",
+    page_title="Pie360",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -236,9 +236,12 @@ def _render_onboarding() -> None:
 <div style="text-align:center; padding: 2rem 0 1.2rem 0;">
   <div style="font-size:2.8rem; margin-bottom:0.3rem;">📊</div>
   <h1 style="font-size:2.2rem; font-weight:800; color:{TEXT_PRI}; margin:0;">
-    Welcome to Pulse360
+    Welcome to Pie360
   </h1>
-  <p style="color:{TEXT_SEC}; font-size:1rem; margin-top:0.5rem;">
+  <p style="font-size:1.1rem; font-weight:600; color:{TEXT_PRI}; margin-top:0.4rem; margin-bottom:0.2rem; letter-spacing:0.02em;">
+    Slice through the noise
+  </p>
+  <p style="color:{TEXT_SEC}; font-size:1rem; margin-top:0.3rem;">
     AI-Powered Economic Cycle Dashboard &nbsp;·&nbsp; Real-time Business Cycle Monitoring
   </p>
 </div>
@@ -251,7 +254,7 @@ def _render_onboarding() -> None:
     # ── Left: profile question ─────────────────────────────────────────────────
     with left_col:
         st.markdown("#### How would you describe yourself as an investor?")
-        st.caption("Pulse360 adapts to your level. You can change this any time from ⚙️ Settings.")
+        st.caption("Pie360 adapts to your level. You can change this any time from ⚙️ Settings.")
 
         chosen = st.radio(
             "Profile",

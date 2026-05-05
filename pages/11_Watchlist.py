@@ -146,10 +146,26 @@ with st.form("add_ticker_form", clear_on_submit=True):
             "➕ Add", type="primary", use_container_width=True
         )
 
+# Known ETFs / indices that can't be Buffett-scored — warn the user immediately
+_KNOWN_ETFS = {
+    "SPY", "QQQ", "IWM", "DIA", "VTI", "VOO", "VEA", "VWO", "EEM", "GLD",
+    "SLV", "TLT", "IEF", "HYG", "LQD", "XLK", "XLF", "XLV", "XLE", "XLI",
+    "XLP", "XLY", "XLU", "XLB", "XLRE", "ARKK", "ARKW", "ARKG", "ARKF",
+    "BTC", "ETH", "BTC-USD", "ETH-USD",
+    "SPX", "NDX", "RUT", "DOW",
+}
+
 if submitted and new_ticker:
     for raw in new_ticker.split(","):
         t = raw.strip().upper()
         if t:
+            if t in _KNOWN_ETFS:
+                st.warning(
+                    f"**{t}** is an ETF or index — the Buffett scoring model "
+                    "requires individual stocks with fundamental data (P/E, earnings, FCF). "
+                    f"**{t}** will be added but will show as unscorable.",
+                    icon="⚠️",
+                )
             if add_to_watchlist(t):
                 st.success(f"**{t}** added to watchlist.", icon="⭐")
             else:
@@ -228,7 +244,8 @@ with st.spinner(f"Scoring {len(watchlist)} ticker(s)…"):
 if failed:
     st.warning(
         f"Could not score: **{', '.join(failed)}** — "
-        "check the ticker symbols or try refreshing.",
+        "ETFs, indices, and crypto are not supported (no Buffett fundamentals). "
+        "Individual stocks only. Use the ✕ buttons below to remove unsupported tickers.",
         icon="⚠️",
     )
 
@@ -450,19 +467,49 @@ _thead = (
     f'<th style="padding:{row_pad};text-align:left;">Verdict</th>'
     f'</tr></thead><tbody>'
 )
+# Append greyed-out rows for tickers that couldn't be scored (ETFs, bad symbols)
+if failed:
+    for tkr in failed:
+        colspan_cells = "".join(
+            f'<td style="color:#aaa;font-size:0.75rem;text-align:center;'
+            f'padding:{row_pad};">—</td>'
+            for _ in range(14)
+        )
+        rows_html += (
+            f'<tr style="border-bottom:1px solid #ececec;opacity:0.55;">'
+            f'<td style="color:#999;font-weight:700;padding:{row_pad};font-size:{row_font};">'
+            f'{tkr}</td>'
+            f'<td style="color:#bbb;padding:{row_pad};font-size:{row_font};" colspan="2">'
+            f'<em>Not scorable (ETF / index / invalid ticker)</em></td>'
+            f'{colspan_cells}'
+            f'</tr>'
+        )
+
 st.markdown(_thead + rows_html + "</tbody></table></div>", unsafe_allow_html=True)
 
 # ── Per-ticker remove buttons ──────────────────────────────────────────────────
 st.markdown("#### Manage tickers")
+<<<<<<< Updated upstream
 remove_cols = st.columns(min(len(scored), 8))
 for idx, s in enumerate(scored):
     ticker = s.get("Ticker", "?")
+=======
+all_tickers_for_manage = [s.get("Ticker", "?") for s in scored] + failed
+remove_cols = st.columns(min(len(all_tickers_for_manage), 8))
+for idx, ticker in enumerate(all_tickers_for_manage):
+    s = next((x for x in scored if x.get("Ticker") == ticker), None)
+>>>>>>> Stashed changes
     with remove_cols[idx % len(remove_cols)]:
-        score_val = s.get("MacroAdj", s.get("Score", 0))
-        color = _score_color(int(score_val))
+        if s:
+            score_val = s.get("MacroAdj", s.get("Score", 0))
+            color     = _score_color(int(score_val))
+            label     = str(score_val)
+        else:
+            color = "#aaa"
+            label = "N/A"
         st.markdown(
             f'<div style="text-align:center;font-size:0.7rem;color:{color};">'
-            f'{ticker}<br><strong>{score_val}</strong></div>',
+            f'{ticker}<br><strong>{label}</strong></div>',
             unsafe_allow_html=True,
         )
         if st.button("✕", key=f"rm_{ticker}", use_container_width=True,
