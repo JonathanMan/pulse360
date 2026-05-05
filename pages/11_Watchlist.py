@@ -489,16 +489,10 @@ st.markdown(_thead + rows_html + "</tbody></table></div>", unsafe_allow_html=Tru
 
 # ── Per-ticker remove buttons ──────────────────────────────────────────────────
 st.markdown("#### Manage tickers")
-<<<<<<< Updated upstream
-remove_cols = st.columns(min(len(scored), 8))
-for idx, s in enumerate(scored):
-    ticker = s.get("Ticker", "?")
-=======
 all_tickers_for_manage = [s.get("Ticker", "?") for s in scored] + failed
 remove_cols = st.columns(min(len(all_tickers_for_manage), 8))
 for idx, ticker in enumerate(all_tickers_for_manage):
     s = next((x for x in scored if x.get("Ticker") == ticker), None)
->>>>>>> Stashed changes
     with remove_cols[idx % len(remove_cols)]:
         if s:
             score_val = s.get("MacroAdj", s.get("Score", 0))
