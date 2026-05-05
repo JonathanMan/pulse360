@@ -32,6 +32,13 @@ from components.pulse360_theme import (
 _SESSION_KEY      = "sb_user"
 _REDIRECT_URL     = "https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app"
 
+# ── Feature flag: Google OAuth ─────────────────────────────────────────────────
+# Set to False to hide all Google sign-in buttons across the app.
+# The underlying OAuth callback handler (_handle_oauth_callback) still runs so
+# that any in-flight sessions complete normally, but no new Google flows are
+# initiated from the UI.
+_GOOGLE_ENABLED = False
+
 # Session state keys for phone OTP 2-step flow
 _OTP_PHONE_KEY    = "_p360_otp_phone"   # stores E.164 number while waiting for OTP
 _OTP_SENT_KEY     = "_p360_otp_sent"    # bool — True after send_otp succeeds
@@ -384,11 +391,11 @@ def _render_login_page() -> None:
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Google SSO ────────────────────────────────────────────────────────────
-    _render_google_signin_button(_google_oauth_url(), btn_key="login_page")
-    st.caption("New to Pulse360? Google sign-in creates your account automatically.")
-
-    st.markdown('<div class="auth-divider">or sign in with</div>', unsafe_allow_html=True)
+    # ── Google SSO (hidden while OAuth new-tab flow is under review) ─────────
+    if _GOOGLE_ENABLED:
+        _render_google_signin_button(_google_oauth_url(), btn_key="login_page")
+        st.caption("New to Pulse360? Google sign-in creates your account automatically.")
+        st.markdown('<div class="auth-divider">or sign in with</div>', unsafe_allow_html=True)
 
     # ── Email / Phone tabs ────────────────────────────────────────────────────
     tab_email, tab_phone = st.tabs(["📧  Email", "📱  Phone"])
@@ -867,75 +874,64 @@ def render_login_gate(
                     st.session_state.pop(f"_gate_otp_phone_{_k}", None)
                     st.rerun()
 
-        # ── OR CONTINUE WITH ──────────────────────────────────────────────────
-        st.markdown('<div class="p360-gate-divider">or continue with</div>', unsafe_allow_html=True)
-
-        # Google SSO — opens in a new tab (Streamlit cannot navigate the current tab
-        # to an external URL; see _render_google_signin_button docstring).
-        _render_google_signin_button(_google_oauth_url(), btn_key=f"gate_{_k}")
-
-        # ── Complete Google sign-in ────────────────────────────────────────────
-        # After completing Google auth in the new tab, the user returns here and
-        # clicks this button. We read the access token that _handle_oauth_callback()
-        # wrote to localStorage in the new tab and establish the session here.
-        st.caption("After signing in with Google, come back here and click below.")
-        _cg_key = f"_p360_cg_{_k}"
-        if st.session_state.get(_cg_key):
-            # ── Phase 2: st_javascript value is now ready (2-render dance) ────
-            st.session_state.pop(_cg_key, None)
-            try:
-                from streamlit_javascript import st_javascript as _stjs
-                import json as _json
-                _shared = _stjs(
-                    "localStorage.getItem('p360_auth_shared') || ''",
-                    key=f"_p360_cg_ls_{_k}",
-                )
-                if _shared and _shared != 0 and _shared != "":
-                    # Token found — establish session
-                    try:
-                        _stjs("localStorage.removeItem('p360_auth_shared'); 1;",
-                              key=f"_p360_cg_clr_{_k}")
-                    except Exception:
-                        pass
-                    _td = _json.loads(_shared) if isinstance(_shared, str) else _shared
-                    _at = (_td.get("at") or _td.get("access_token") or "") if isinstance(_td, dict) else ""
-                    if _at:
-                        _resp = get_client().auth.get_user(_at)
-                        if _resp and _resp.user:
-                            st.session_state[_SESSION_KEY] = {
-                                "email": _resp.user.email,
-                                "id":    str(_resp.user.id),
-                                "phone": getattr(_resp.user, "phone", None) or None,
-                            }
-                            try:
-                                from components.analytics import log_login
-                                log_login("google")
-                            except Exception:
-                                pass
-                            if return_page:
-                                st.session_state["_post_auth_redirect"] = return_page
-                            st.rerun()
+        # ── Google SSO (hidden while new-tab OAuth flow is under review) ────────
+        if _GOOGLE_ENABLED:
+            st.markdown('<div class="p360-gate-divider">or continue with</div>', unsafe_allow_html=True)
+            _render_google_signin_button(_google_oauth_url(), btn_key=f"gate_{_k}")
+            st.caption("After signing in with Google, come back here and click below.")
+            _cg_key = f"_p360_cg_{_k}"
+            if st.session_state.get(_cg_key):
+                st.session_state.pop(_cg_key, None)
+                try:
+                    from streamlit_javascript import st_javascript as _stjs
+                    import json as _json
+                    _shared = _stjs(
+                        "localStorage.getItem('p360_auth_shared') || ''",
+                        key=f"_p360_cg_ls_{_k}",
+                    )
+                    if _shared and _shared != 0 and _shared != "":
+                        try:
+                            _stjs("localStorage.removeItem('p360_auth_shared'); 1;",
+                                  key=f"_p360_cg_clr_{_k}")
+                        except Exception:
+                            pass
+                        _td = _json.loads(_shared) if isinstance(_shared, str) else _shared
+                        _at = (_td.get("at") or _td.get("access_token") or "") if isinstance(_td, dict) else ""
+                        if _at:
+                            _resp = get_client().auth.get_user(_at)
+                            if _resp and _resp.user:
+                                st.session_state[_SESSION_KEY] = {
+                                    "email": _resp.user.email,
+                                    "id":    str(_resp.user.id),
+                                    "phone": getattr(_resp.user, "phone", None) or None,
+                                }
+                                try:
+                                    from components.analytics import log_login
+                                    log_login("google")
+                                except Exception:
+                                    pass
+                                if return_page:
+                                    st.session_state["_post_auth_redirect"] = return_page
+                                st.rerun()
+                            else:
+                                st.error("Sign-in token invalid. Please try again.")
                         else:
-                            st.error("Sign-in token invalid. Please try again.")
+                            st.warning("No Google sign-in found. Please complete the Google sign-in first.")
+                    elif _shared == 0:
+                        st.session_state[_cg_key] = True
+                        st.rerun()
                     else:
                         st.warning("No Google sign-in found. Please complete the Google sign-in first.")
-                elif _shared == 0:
-                    # st_javascript not ready yet — rerun to get value
+                except Exception:
+                    st.warning("Could not check sign-in. Please try again.")
+            else:
+                if st.button(
+                    "✓  I've signed in with Google",
+                    key=f"_p360_cg_btn_{_k}",
+                    use_container_width=True,
+                ):
                     st.session_state[_cg_key] = True
                     st.rerun()
-                else:
-                    st.warning("No Google sign-in found. Please complete the Google sign-in first.")
-            except Exception:
-                st.warning("Could not check sign-in. Please try again.")
-        else:
-            if st.button(
-                "✓  I've signed in with Google",
-                key=f"_p360_cg_btn_{_k}",
-                use_container_width=True,
-            ):
-                # Phase 1: set flag + rerun so st_javascript renders and returns value
-                st.session_state[_cg_key] = True
-                st.rerun()
 
         # Email (collapsed by default — tertiary option)
         if not _show_email:

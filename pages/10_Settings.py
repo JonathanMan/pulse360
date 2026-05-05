@@ -259,36 +259,12 @@ if _user:
 
     # ── Link Google / email (for phone-only users) ───────────────────────────────
     elif _phone and not _email:
-        # Show Google link success banner if returning from OAuth link flow
-        if st.session_state.pop("_google_link_success", None):
-            st.success("✅ Google account linked! You can now sign in with Google or phone.")
-
-        _google_url = get_google_oauth_url()
-
-        with st.expander("🔵  Link Google account", expanded=False):
-            st.caption("Sign in with Google will be linked to your phone number. Click below — you'll be redirected to Google and brought straight back.")
-
-            _link_identifier = _phone or _email or ""
-
-            if st.button("🔵  Continue with Google", key="sett_google_link_btn", use_container_width=True):
-                st.session_state["_sett_google_link_go"] = True
-                st.rerun()
-
-            # On the rerun after button click, inject a script component that:
-            # 1. Sets localStorage flags (survive the Google redirect)
-            # 2. Navigates window.parent (the real browser window, not the iframe)
-            if st.session_state.pop("_sett_google_link_go", False):
-                import streamlit.components.v1 as _components
-                _components.html(
-                    f"""
-                    <script>
-                        localStorage.setItem('p360_link_mode', '1');
-                        localStorage.setItem('p360_link_user', '{_link_identifier}');
-                        window.parent.location.href = '{_google_url}';
-                    </script>
-                    """,
-                    height=0,
-                )
+        # Google link option hidden while new-tab OAuth flow is under review.
+        # Uncomment when _GOOGLE_ENABLED is flipped back to True in auth.py.
+        # if st.session_state.pop("_google_link_success", None):
+        #     st.success("✅ Google account linked! You can now sign in with Google or phone.")
+        # with st.expander("🔵  Link Google account", expanded=False):
+        #     ...
 
         with st.expander("📧  Add email / password login", expanded=False):
             st.caption(
