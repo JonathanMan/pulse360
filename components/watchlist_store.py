@@ -138,9 +138,17 @@ def add_to_watchlist(ticker: str) -> bool:
     """
     Add *ticker* to the watchlist.  Returns True if added, False if already present.
     Caps the list at _MAX_TICKERS.
+
+    Reads directly from session_state (never calls load_watchlist / _js_read) to
+    avoid a StreamlitDuplicateElementKey error: the page-level load_watchlist()
+    call already registered the 'wl_read' key; calling it again inside a form
+    submission handler would try to register the same key a second time.
     """
     ticker = ticker.upper().strip()
-    current = load_watchlist()
+    # Direct session_state access — bypasses _js_read() entirely
+    current = st.session_state.get("_watchlist_cache")
+    if not isinstance(current, list):
+        current = []
     if ticker in current:
         return False
     if len(current) >= _MAX_TICKERS:
@@ -155,9 +163,13 @@ def add_to_watchlist(ticker: str) -> bool:
 def remove_from_watchlist(ticker: str) -> bool:
     """
     Remove *ticker* from the watchlist.  Returns True if removed, False if not found.
+
+    Same session_state-direct pattern as add_to_watchlist — avoids duplicate key.
     """
     ticker = ticker.upper().strip()
-    current = load_watchlist()
+    current = st.session_state.get("_watchlist_cache")
+    if not isinstance(current, list):
+        return False
     if ticker not in current:
         return False
     updated = [t for t in current if t != ticker]
@@ -167,8 +179,15 @@ def remove_from_watchlist(ticker: str) -> bool:
 
 
 def in_watchlist(ticker: str) -> bool:
-    """Return True if *ticker* is in the current watchlist."""
-    return ticker.upper().strip() in load_watchlist()
+    """Return True if *ticker* is in the current watchlist.
+
+    Reads session_state directly — never calls _js_read() — to stay safe
+    inside form submission handlers where 'wl_read' is already registered.
+    """
+    current = st.session_state.get("_watchlist_cache")
+    if not isinstance(current, list):
+        return False
+    return ticker.upper().strip() in current
 
 
 def clear_watchlist() -> None:
