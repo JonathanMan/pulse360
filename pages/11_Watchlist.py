@@ -154,7 +154,12 @@ if submitted and new_ticker:
                 st.success(f"**{t}** added to watchlist.", icon="⭐")
             else:
                 st.info(f"**{t}** is already in your watchlist.")
-    st.rerun()
+    # Do NOT call st.rerun() here.
+    # Calling st.rerun() immediately after _js_write() creates a race condition
+    # where the browser may not have had time to execute the localStorage.setItem()
+    # JS before the new render arrives, causing the write to be silently lost.
+    # The session_state cache is already updated by add_to_watchlist(), so the
+    # watchlist table below will render with the new ticker on this same pass.
 
 # ── Load watchlist ─────────────────────────────────────────────────────────────
 watchlist = load_watchlist()
