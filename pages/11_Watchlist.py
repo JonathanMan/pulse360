@@ -519,6 +519,44 @@ with clr_col:
         clear_watchlist()
         st.rerun()
 
+# ── How scores work ───────────────────────────────────────────────────────────
+st.markdown("---")
+with st.expander("📖 How scores work", expanded=False):
+    st.markdown("""
+**The Buffett Score** is a 0–100 composite that evaluates each stock across five sections,
+inspired by Warren Buffett's criteria for identifying high-quality businesses at fair prices.
+
+| Section | Max | What it measures |
+|---|---|---|
+| **Quality Moat** | 40 | Gross & net margin vs sector peers · Return on equity · Revenue CAGR · Cash earnings quality |
+| **Financial Fortress** | 25 | Piotroski F-Score (9-signal balance sheet strength) · Altman Z-Score (bankruptcy risk) · Debt/Equity ratio |
+| **Valuation** | 20 | FCF yield · P/E vs sector median · Price/Book · DCF margin-of-safety bonus (+2 pts if ≥20% upside) |
+| **Momentum & Trend** | 10 | Price above 200-day MA · 200-day MA slope rising · Net income improving YoY |
+| **Shareholder Alignment** | 5 | Share count declining (buybacks) · Total shareholder yield |
+
+**Verdicts**
+
+| Score | Label | Meaning |
+|---|---|---|
+| 75 – 100 | 🟢 Strong Buy | High-quality, fairly-or-undervalued business with strong fundamentals |
+| 60 – 74 | 🟩 Buy | Solid fundamentals with minor weaknesses in valuation or momentum |
+| 45 – 59 | 🟡 Hold | Passing on most metrics but not compelling enough to add at current price |
+| 30 – 44 | 🟠 Weak | Material weaknesses in quality, balance sheet, or valuation |
+| 0 – 29 | 🔴 Avoid | Fails most criteria — deteriorating fundamentals or severely overvalued |
+
+**Macro-Adjusted Score** takes the raw Buffett Score and shifts it up or down by up to ±15 points
+based on how sensitive the stock's sector is to the economic regime you've selected above.
+For example, a defensive healthcare stock gets a tailwind in a contraction while a cyclical industrial
+gets a headwind. The raw score is always shown alongside the adjustment so you can see its effect.
+
+The **sub-scores** in the table (Moat/40, Fortress/25, Val./20, Mom./10) let you spot exactly
+where a stock is strong or weak at a glance — a high overall score with a low Valuation sub-score,
+for instance, means a great business that is currently expensive.
+
+*All data sourced from Yahoo Finance via yfinance and cached for 1–6 hours. Scores are a
+quantitative starting point for research, not a buy/sell recommendation.*
+""")
+
 # ── CSV Export ────────────────────────────────────────────────────────────────
 st.markdown("---")
 export_data = [
