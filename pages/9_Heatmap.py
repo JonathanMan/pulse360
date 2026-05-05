@@ -1,7 +1,7 @@
 """
 pages/9_Heatmap.py
 =====================
-Portfolio Macro Heatmap — Pulse360
+Portfolio Macro Heatmap — Pie360
 
 Paste a list of tickers and see how your portfolio scores across all 5 macro
 regimes. The heatmap instantly reveals your weakest holdings in each scenario

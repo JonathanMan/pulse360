@@ -1,5 +1,5 @@
 """
-Pulse360 — Buffett Stock Screener
+Pie360 — Buffett Stock Screener
 ===================================
 Scores a curated universe of ~80 US large-cap stocks using the same 100-point
 Buffett framework as the single-stock page, then ranks them with an optional

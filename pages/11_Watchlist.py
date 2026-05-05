@@ -1,5 +1,5 @@
 """
-Pulse360 — Watchlist
+Pie360 — Watchlist
 ======================
 A browser-persistent list of stocks the user wants to track.
 

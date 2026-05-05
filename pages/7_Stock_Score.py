@@ -1,5 +1,5 @@
 """
-Pulse360 — Buffett Stock Score
+Pie360 — Buffett Stock Score
 ================================
 100-point single-stock quality analysis implementing the Buffett / Munger
 investment framework.

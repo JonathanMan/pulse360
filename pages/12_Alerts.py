@@ -1,5 +1,5 @@
 """
-Pulse360 — Alerts
+Pie360 — Alerts
 ==================
 Rule management UI for the in-app alert system.
 
@@ -57,7 +57,7 @@ if not render_login_gate(
 
 DISCLAIMER = (
     "*Alerts are informational only — not personalised investment advice. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 # ── Create new rule ────────────────────────────────────────────────────────────

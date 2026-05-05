@@ -1,5 +1,5 @@
 """
-Pulse360 — Model Track Record
+Pie360 — Model Track Record
 =========================
 Historical validation of the recession probability model against
 NBER-dated recessions from 1997 to present.
@@ -319,5 +319,5 @@ performance, which requires waiting.
 st.caption(
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )

@@ -1,5 +1,5 @@
 """
-Pulse360 — Settings
+Pie360 — Settings
 =====================
 User-facing preferences page.
 
@@ -114,7 +114,7 @@ st.markdown("""
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## ⚙️ Settings")
-st.caption("Customise how Pulse360 works for you. Changes take effect immediately.")
+st.caption("Customise how Pie360 works for you. Changes take effect immediately.")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 0. ACCOUNT & LOGIN
@@ -480,7 +480,7 @@ st.markdown("")
 # Cache controls
 with st.expander("🗂️  Cache controls", expanded=False):
     st.caption(
-        "Pulse360 caches stock scores and FRED data for up to 1 hour to keep "
+        "Pie360 caches stock scores and FRED data for up to 1 hour to keep "
         "the app fast. Use the buttons below to bust the cache for a specific area."
     )
     cc1, cc2, cc3 = st.columns(3)
@@ -515,7 +515,7 @@ about_col1, about_col2 = st.columns([2, 1])
 
 with about_col1:
     st.markdown("""
-**Pulse360** is an AI-powered economic cycle dashboard for real-time business
+**Pie360** is an AI-powered economic cycle dashboard for real-time business
 cycle monitoring and investment decision-making.
 
 **Data sources**
@@ -570,6 +570,6 @@ with about_col2:
 
 st.markdown("---")
 st.caption(
-    "Pulse360 is for informational purposes only and does not constitute financial advice. "
+    "Pie360 is for informational purposes only and does not constitute financial advice. "
     "Always do your own research before making investment decisions."
 )

@@ -1,9 +1,9 @@
 """
-Pulse360 — Investment Analyser
+Pie360 — Investment Analyser
 ================================
 Upload any investment document — a broker screenshot, a fund brochure, a factsheet,
 or a CSV export — and get a plain-English macro-aware analysis flagging concentration
-risks, cycle sensitivity, and what the current Pulse360 model state means for the holdings.
+risks, cycle sensitivity, and what the current Pie360 model state means for the holdings.
 
 Two upload paths:
   📸 Screenshot  — drag-and-drop a broker portfolio screenshot or fund brochure/factsheet; Claude reads it via vision
@@ -260,7 +260,7 @@ def render_portfolio_chat(analysis_key: str) -> None:
 
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
-    "Pulse360 is not a Registered Investment Advisor. "
+    "Pie360 is not a Registered Investment Advisor. "
     "Consult a licensed financial advisor before making investment decisions.*"
 )
 
@@ -474,7 +474,7 @@ with tab_csv:
         st.markdown("""
 <div class="upload-tip">
 Download a positions CSV from your broker and drop it here. <br>
-Pulse360 automatically maps the columns — no manual formatting needed.<br>
+Pie360 automatically maps the columns — no manual formatting needed.<br>
 Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
 </div>
 """, unsafe_allow_html=True)

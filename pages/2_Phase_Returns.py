@@ -1,5 +1,5 @@
 """
-Pulse360 — What to Own & When
+Pie360 — What to Own & When
 ==========================================
 Asset class return statistics broken down by economic cycle phase.
 Answers: what has historically happened to equities, bonds, gold, and oil
@@ -346,7 +346,7 @@ with st.expander("⚠️ Important limitations of this analysis", expanded=False
 **In-sample phase labels**
 
 The phase labels (Expansion / Late Cycle / Contraction / Recovery) come from the
-Pulse360 recession model, which was calibrated using the same historical data.
+Pie360 recession model, which was calibrated using the same historical data.
 This means the model implicitly "knew" which periods were stressed when its
 parameters were chosen — so return differences between phases may partly reflect
 that calibration rather than genuine predictive power.
@@ -382,5 +382,5 @@ st.caption(
     f"Contraction (NBER active), Recovery (6 months post-recession). "
     f"Data: FRED. · "
     "*Educational macro analysis only — not personalised investment advice. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )

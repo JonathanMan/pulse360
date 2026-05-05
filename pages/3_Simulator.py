@@ -1,5 +1,5 @@
 """
-Pulse360 — Stress Test
+Pie360 — Stress Test
 ================================
 Adjust any of the 7 model inputs via sliders and watch the recession
 probability update in real time. Use preset scenarios to jump to
@@ -55,7 +55,7 @@ st.markdown(
 
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 # ── Feature configuration ─────────────────────────────────────────────────────

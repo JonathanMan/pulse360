@@ -1,5 +1,5 @@
 """
-Pulse360 — Buffett Indicator Page
+Pie360 — Buffett Indicator Page
 ===================================
 Standalone page for the Warren Buffett Indicator.
 Loaded by app.py via st.navigation(). set_page_config is
@@ -29,7 +29,7 @@ st.markdown("""
 col_h, col_r = st.columns([6, 1])
 with col_h:
     st.markdown("# ⚖️ Buffett Indicator")
-    st.caption("Warren Buffett's preferred measure of overall market valuation · Powered by Pulse360")
+    st.caption("Warren Buffett's preferred measure of overall market valuation · Powered by Pie360")
 with col_r:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🔄 Refresh", help="Clear cache and reload all data"):

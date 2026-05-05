@@ -1,5 +1,5 @@
 """
-Pulse360 — Main Dashboard
+Pie360 — Main Dashboard
 AI-powered economic cycle dashboard · Personal-use MVP
 
 This file is loaded by app.py via st.navigation(). set_page_config is
@@ -47,7 +47,7 @@ from data.market_client import fetch_shiller_cape, fetch_sector_returns
 DISCLAIMER = (
     "*Educational macro analysis only — not personalized investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 # ── Page CSS ──────────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ st.markdown("""
 # ── Header ─────────────────────────────────────────────────────────────────────
 col_h, col_r = st.columns([6, 1])
 with col_h:
-    st.markdown("# 📊 Pulse360")
+    st.markdown("# 📊 Pie360")
     st.caption("AI-powered economic cycle dashboard · Personal use")
 with col_r:
     st.markdown("<br>", unsafe_allow_html=True)
@@ -318,7 +318,7 @@ with st.sidebar:
             ok, msg = send_briefing_email(
                 to      = st.secrets.get("BRIEFING_EMAIL", "jonathancyman@gmail.com"),
                 subject = (
-                    f"Pulse360 · {date.today():%d %b %Y} · "
+                    f"Pie360 · {date.today():%d %b %Y} · "
                     f"{phase_output.phase} · {model_output.probability:.0f}% risk"
                 ),
                 html    = html,
@@ -335,7 +335,7 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Chat Sidebar ─────────────────────────────────────────────────────────
-    st.markdown("### 💬 Ask Pulse360 AI")
+    st.markdown("### 💬 Ask Pie360 AI")
     st.caption("Claude Haiku · Context-aware macro Q&A")
 
     # Initialise chat history
@@ -357,7 +357,7 @@ with st.sidebar:
             expanded=True,
         ):
             for msg in st.session_state["chat_messages"]:
-                role_label = "**You**" if msg["role"] == "user" else "**Pulse360 AI**"
+                role_label = "**You**" if msg["role"] == "user" else "**Pie360 AI**"
                 st.markdown(f"{role_label}: {msg['content']}")
                 st.markdown("---")
 

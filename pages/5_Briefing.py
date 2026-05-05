@@ -1,5 +1,5 @@
 """
-Pulse360 — AI Research Desk
+Pie360 — AI Research Desk
 =================================
 Seven on-demand AI research sections, each running a structured prompt
 through Claude Sonnet. Fill in the parameters for each section and click
