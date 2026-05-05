@@ -73,8 +73,9 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "DFII10":           ("10Y TIPS Real Yield",                    "daily",     5),
     "MORTGAGE30US":     ("30Y Mortgage Rate",                      "weekly",   14),
     # ── Phase Returns — asset class total return indices ────────────────────
-    "BAMLCC0A0CMTRIV":      ("IG Corporate Bond Total Return Index", "daily",     5),
+    "BAMLUT0008TRIV":       ("1-10Y Treasury Total Return Index",   "daily",     5),
     "BAMLHYH0A0HYM2TRIV":  ("HY Corporate Bond Total Return Index","daily",     5),
+    "GOLDAMGBD228NLBM":    ("Gold Price USD (London AM Fix)",       "daily",     5),
     # ── Tab 6 – Markets (FRED-sourced; sector ETFs via yfinance) ────────────
     "SP500":            ("S&P 500",                                "daily",     5),
     "NASDAQCOM":        ("NASDAQ Composite",                       "daily",     5),
@@ -258,13 +259,13 @@ _PREFETCH_TABS: list[str] = [
     "T10Y3M", "T10Y2Y", "FEDFUNDS", "DGS10", "DGS2",
     "NFCI", "BAMLC0A0CM", "BAMLH0A0HYM2", "MORTGAGE30US",
     # Tab 6 – Markets
-    "SP500", "NASDAQCOM", "VIXCLS", "BAMLC0A0CM", "BAMLH0A0HYM2",
+    "SP500", "NASDAQCOM", "VIXCLS", "BAMLC0A0CM", "BAMLH0A0HYM2", "WILL5000INDFC",
     # Tab 7 – Housing & Consumer
     "HOUST", "PERMIT", "CSUSHPISA", "RSXFS", "RSFSXMV", "UMCSENT", "PSAVERT",
     # Tab 8 – Global
     "DTWEXBGS", "DEXUSEU", "DEXJPUS", "DCOILBRENTEU", "PALLFNFINDEXQ",
     # Overview row — phase total-return indices
-    "BAMLCC0A0CMTRIV", "BAMLHYH0A0HYM2TRIV",
+    "BAMLUT0008TRIV", "BAMLHYH0A0HYM2TRIV", "GOLDAMGBD228NLBM",
     # NBER shading used by every tab
     "USREC",
 ]
@@ -327,6 +328,17 @@ def fetch_model_inputs() -> dict:
     """
     Returns a dict of series_id → fetch_series() result for all 7 model inputs.
     Uses start_date="1990-01-01" for longer history on model calculations.
+    Fetches in parallel so cold-start time is bounded by the slowest series,
+    not the sum of all series.
     """
     model_ids = ["T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA", "BAMLH0A0HYM2"]
-    return {sid: fetch_series(sid, start_date="1990-01-01") for sid in model_ids}
+    results: dict = {}
+    with ThreadPoolExecutor(max_workers=len(model_ids)) as pool:
+        futures = {
+            pool.submit(fetch_series, sid, "1990-01-01"): sid
+            for sid in model_ids
+        }
+        for fut in as_completed(futures):
+            sid = futures[fut]
+            results[sid] = fut.result()
+    return results

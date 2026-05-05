@@ -249,6 +249,11 @@ def _handle_oauth_callback() -> None:
                         return_to:    rt  || null
                     };
                     try { localStorage.setItem('p360_oauth_token', JSON.stringify(token)); } catch(e) {}
+                    // Write for cross-tab detection: original tab's storage listener picks this up
+                    try { localStorage.setItem('p360_auth_shared', JSON.stringify({
+                        at: p.get('access_token'),
+                        rt: p.get('refresh_token') || ''
+                    })); } catch(e) {}
                     window.parent.history.replaceState(
                         {}, document.title,
                         window.parent.location.pathname + window.parent.location.search
@@ -316,92 +321,24 @@ def get_google_oauth_url() -> str:
 
 def _render_google_signin_button(oauth_url: str, btn_key: str = "default", return_page: str | None = None) -> None:
     """
-    Render a Google sign-in button that navigates the CURRENT TAB to OAuth.
+    Render a Google sign-in button.
 
-    Why every other approach fails:
-      • st.link_button          → always renders target="_blank"
-      • st.markdown <a>         → Streamlit's React frontend intercepts ALL
-                                   external link clicks and forces a new tab
-      • st_javascript window.top → programmatic navigation loses user-activation
-                                   context (click → Python rerun → JS is no
-                                   longer a direct user gesture) so
-                                   allow-top-navigation-by-user-activation blocks it
+    Streamlit has NO mechanism to navigate the current tab to an external URL —
+    every approach is blocked by the platform:
+      • st.link_button:           hardcoded target="_blank"
+      • st.markdown <a>:          React router intercepts external clicks → new tab
+      • st.components.v1.html():  iframe sandbox blocks window.top navigation
+      • st_javascript:            programmatic JS loses user-activation context
 
-    What works:
-      A direct user click on <a href="..." target="_top"> inside a
-      st.components.v1.html() iframe.  Streamlit's component sandbox includes
-      "allow-top-navigation-by-user-activation".  A real mouse-click on an
-      anchor tag IS a user activation, so the browser honours target="_top"
-      and navigates the top-level frame.  The onclick handler can simultaneously
-      write return_page to localStorage (same-origin access is allowed too).
-
-    Flow:
-      1. Page renders the component iframe containing the styled <a> button
-      2. User clicks it → onclick stores return_page in localStorage
-                        → target="_top" navigates the entire Streamlit app to
-                           Google OAuth (same tab, no popup)
-      3. Google auth → Supabase redirects to _REDIRECT_URL with #access_token=...
-      4. _handle_oauth_callback() reads token + return_page from localStorage
-      5. app.py calls st.switch_page(return_page) → lands back where they started
+    We use st.link_button (opens new tab) and handle the cross-tab auth
+    completion via a "Complete sign-in" button in render_login_gate().
     """
-    import json as _json
-    from html import escape as _esc
-
-    safe_url   = _esc(oauth_url)
-    # Build the onclick JS: write return_page then let href/target do the navigation
-    onclick_js = ""
-    if return_page:
-        onclick_js = f"localStorage.setItem('p360_return_to',{_json.dumps(return_page)});"
-
-    st.components.v1.html(f"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
-  a {{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 10px 16px;
-    background: #ffffff;
-    border: 1.5px solid #d0d5dd;
-    border-radius: 8px;
-    color: #1a1a1a;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-  }}
-  a:hover {{
-    background: #f0f4ff;
-    border-color: #4285f4;
-  }}
-  a:active {{
-    background: #e8eeff;
-  }}
-</style>
-</head>
-<body>
-<a href="{safe_url}"
-   target="_top"
-   onclick="{onclick_js}">
-  <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-    <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
-    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
-  </svg>
-  Continue with Google
-</a>
-</body>
-</html>
-""", height=52, scrolling=False)
+    st.link_button(
+        "Continue with Google",
+        oauth_url,
+        use_container_width=True,
+        icon="🔵",
+    )
 
 
 def _render_login_page() -> None:
@@ -933,8 +870,72 @@ def render_login_gate(
         # ── OR CONTINUE WITH ──────────────────────────────────────────────────
         st.markdown('<div class="p360-gate-divider">or continue with</div>', unsafe_allow_html=True)
 
-        # Google SSO — same-tab redirect, returns to this page after auth
-        _render_google_signin_button(_google_oauth_url(), btn_key=f"gate_{_k}", return_page=return_page)
+        # Google SSO — opens in a new tab (Streamlit cannot navigate the current tab
+        # to an external URL; see _render_google_signin_button docstring).
+        _render_google_signin_button(_google_oauth_url(), btn_key=f"gate_{_k}")
+
+        # ── Complete Google sign-in ────────────────────────────────────────────
+        # After completing Google auth in the new tab, the user returns here and
+        # clicks this button. We read the access token that _handle_oauth_callback()
+        # wrote to localStorage in the new tab and establish the session here.
+        st.caption("After signing in with Google, come back here and click below.")
+        _cg_key = f"_p360_cg_{_k}"
+        if st.session_state.get(_cg_key):
+            # ── Phase 2: st_javascript value is now ready (2-render dance) ────
+            st.session_state.pop(_cg_key, None)
+            try:
+                from streamlit_javascript import st_javascript as _stjs
+                import json as _json
+                _shared = _stjs(
+                    "localStorage.getItem('p360_auth_shared') || ''",
+                    key=f"_p360_cg_ls_{_k}",
+                )
+                if _shared and _shared != 0 and _shared != "":
+                    # Token found — establish session
+                    try:
+                        _stjs("localStorage.removeItem('p360_auth_shared'); 1;",
+                              key=f"_p360_cg_clr_{_k}")
+                    except Exception:
+                        pass
+                    _td = _json.loads(_shared) if isinstance(_shared, str) else _shared
+                    _at = (_td.get("at") or _td.get("access_token") or "") if isinstance(_td, dict) else ""
+                    if _at:
+                        _resp = get_client().auth.get_user(_at)
+                        if _resp and _resp.user:
+                            st.session_state[_SESSION_KEY] = {
+                                "email": _resp.user.email,
+                                "id":    str(_resp.user.id),
+                                "phone": getattr(_resp.user, "phone", None) or None,
+                            }
+                            try:
+                                from components.analytics import log_login
+                                log_login("google")
+                            except Exception:
+                                pass
+                            if return_page:
+                                st.session_state["_post_auth_redirect"] = return_page
+                            st.rerun()
+                        else:
+                            st.error("Sign-in token invalid. Please try again.")
+                    else:
+                        st.warning("No Google sign-in found. Please complete the Google sign-in first.")
+                elif _shared == 0:
+                    # st_javascript not ready yet — rerun to get value
+                    st.session_state[_cg_key] = True
+                    st.rerun()
+                else:
+                    st.warning("No Google sign-in found. Please complete the Google sign-in first.")
+            except Exception:
+                st.warning("Could not check sign-in. Please try again.")
+        else:
+            if st.button(
+                "✓  I've signed in with Google",
+                key=f"_p360_cg_btn_{_k}",
+                use_container_width=True,
+            ):
+                # Phase 1: set flag + rerun so st_javascript renders and returns value
+                st.session_state[_cg_key] = True
+                st.rerun()
 
         # Email (collapsed by default — tertiary option)
         if not _show_email:

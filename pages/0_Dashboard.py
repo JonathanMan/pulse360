@@ -41,6 +41,7 @@ from ai.claude_client import (
 from ai.email_briefing import compose_briefing_html, send_briefing_email
 from components.chart_utils import dark_layout, add_nber, chart_meta
 from models.backtest import run_historical_backtest
+from data.market_client import fetch_shiller_cape, fetch_sector_returns
 
 # ── Compliance disclaimer ─────────────────────────────────────────────────────
 DISCLAIMER = (
@@ -54,7 +55,7 @@ from components.pulse360_theme import inject_theme
 inject_theme()
 st.markdown("""
 <style>
-    .main .block-container { padding-top: 1rem; }
+    .main .block-container { padding-top: 1rem; max-width: 1400px; }
     section[data-testid="stSidebar"] { width: 360px !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -72,11 +73,21 @@ with col_r:
 
 # ── Cold-start cache warm-up (runs once per server process) ───────────────────
 @st.cache_resource(show_spinner=False)
-def _warm_fred_cache() -> None:
-    """Fire all FRED fetches in parallel so the first render is fast."""
-    prefetch_all_series()   # uses 10Y default; populates @st.cache_data
+def _warm_caches() -> None:
+    """
+    Fire all data fetches in parallel at cold start so the first render is fast.
+    - FRED series (all tabs, model inputs, yield curve)
+    - Shiller CAPE (Yale Excel, ~24h TTL)
+    - Sector ETF returns (yfinance, ~1h TTL)
+    All are @st.cache_data calls so subsequent reruns hit memory instantly.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        pool.submit(prefetch_all_series)   # populates all FRED @st.cache_data
+        pool.submit(fetch_shiller_cape)    # pre-warm Yale CAPE
+        pool.submit(fetch_sector_returns)  # pre-warm sector ETF heatmap
 
-_warm_fred_cache()
+_warm_caches()
 
 # ── Load model data ────────────────────────────────────────────────────────────
 with st.spinner("Loading economic data…"):
@@ -103,14 +114,24 @@ phase_output = classify_cycle_phase(
 
 # ── Month-over-month probability delta ────────────────────────────────────────
 def _prev_month_prob() -> Optional[float]:
-    """Return last month's recession probability from the cached backtest."""
+    """Return last month's recession probability from the cached backtest.
+
+    Cached in session_state so the backtest only runs once per session,
+    not on every Streamlit rerun.
+    """
+    _CACHE_KEY = "_p360_prev_prob_cache"
+    if _CACHE_KEY in st.session_state:
+        return st.session_state[_CACHE_KEY]
     try:
         bt = run_historical_backtest()
         if bt.empty or len(bt) < 2:
-            return None
-        return float(bt["probability"].iloc[-2])
+            result = None
+        else:
+            result = float(bt["probability"].iloc[-2])
     except Exception:
-        return None
+        result = None
+    st.session_state[_CACHE_KEY] = result
+    return result
 
 _prev_prob = _prev_month_prob()
 prob_delta: Optional[float] = (
@@ -221,7 +242,7 @@ with st.sidebar:
     )
     st.markdown(
         f"""
-        <div style="background:#ffffff;border:1px solid #ececec;border-radius:0;
+        <div style="background:#ffffff;border:1px solid #ececec;border-radius:10px;
                     padding:10px 14px;margin-bottom:8px;">
           <div style="font-size:11px;color:#a0a0a0;margin-bottom:6px;font-weight:600;
                       letter-spacing:.05em;">📊 QUICK STATS</div>
@@ -320,6 +341,14 @@ with st.sidebar:
     # Initialise chat history
     if "chat_messages" not in st.session_state:
         st.session_state["chat_messages"] = []
+
+    # Cap history at 20 messages (10 exchanges) to prevent unbounded context
+    # growth that slows down each Claude API call.
+    _MAX_CHAT_MESSAGES = 20
+    if len(st.session_state["chat_messages"]) > _MAX_CHAT_MESSAGES:
+        st.session_state["chat_messages"] = (
+            st.session_state["chat_messages"][-_MAX_CHAT_MESSAGES:]
+        )
 
     # Display history (scrollable within expander to save space)
     if st.session_state["chat_messages"]:

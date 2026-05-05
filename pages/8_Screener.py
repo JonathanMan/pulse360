@@ -21,6 +21,7 @@ Features:
 from __future__ import annotations
 
 import io
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
 import streamlit as st
@@ -195,17 +196,27 @@ if run_screener:
     progress_bar  = st.progress(0, text="Starting screener…")
     status_text   = st.empty()
 
-    for i, tkr in enumerate(_SCREENER_UNIVERSE, 1):
-        progress_bar.progress(i / total_tickers,
-                              text=f"Scoring {tkr}… ({i}/{total_tickers})")
-        status_text.caption(f"Fetching **{tkr}**")
-        result = score_ticker_cached(tkr)
-        if result:
-            result.setdefault("Shareholder", 0)
-            result.setdefault("Mkt Cap $B",  0)
-            results_list.append(result)
-        else:
-            errors_list.append(tkr)
+    completed_count = 0
+
+    def _fetch_one(tkr: str) -> tuple[str, dict | None]:
+        return tkr, score_ticker_cached(tkr)
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(_fetch_one, tkr): tkr for tkr in _SCREENER_UNIVERSE}
+        for future in as_completed(futures):
+            completed_count += 1
+            tkr, result = future.result()
+            progress_bar.progress(
+                completed_count / total_tickers,
+                text=f"Scored {completed_count}/{total_tickers} tickers…",
+            )
+            status_text.caption(f"Completed **{tkr}**")
+            if result:
+                result.setdefault("Shareholder", 0)
+                result.setdefault("Mkt Cap $B",  0)
+                results_list.append(result)
+            else:
+                errors_list.append(tkr)
 
     progress_bar.empty()
     status_text.empty()

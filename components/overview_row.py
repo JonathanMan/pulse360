@@ -23,13 +23,28 @@ from models.recession_model import RecessionModelOutput
 
 
 # Lazy import for historical parallels — avoids circular deps and
-# allows the overview row to render even if the parallels module fails
+# allows the overview row to render even if the parallels module fails.
+# Results are cached in session_state keyed on probability so the expensive
+# distance calculation only re-runs when the model output actually changes
+# (at most once per FRED data refresh, typically monthly).
 def _get_parallels(model_output: RecessionModelOutput):
+    import streamlit as _st
+    _CACHE_KEY = "_p360_parallels_cache"
+    _PROB_KEY  = "_p360_parallels_prob"
+    cached_prob = _st.session_state.get(_PROB_KEY)
+    if (
+        _CACHE_KEY in _st.session_state
+        and cached_prob == round(model_output.probability, 2)
+    ):
+        return _st.session_state[_CACHE_KEY]
     try:
         from models.historical_parallels import find_historical_parallels
-        return find_historical_parallels(model_output, n=3)
+        result = find_historical_parallels(model_output, n=3)
     except Exception:
-        return []
+        result = []
+    _st.session_state[_CACHE_KEY] = result
+    _st.session_state[_PROB_KEY]  = round(model_output.probability, 2)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +56,7 @@ def _recession_gauge(probability: float, traffic_light: str) -> go.Figure:
         "green":  "#00a35a",
         "yellow": "#c98800",
         "red":    "#d92626",
-    }.get(traffic_light, "#a0a0a0")
+    }.get(traffic_light, "#95a5a6")
 
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
@@ -146,11 +161,11 @@ def _risk_scorecard(model_output: RecessionModelOutput) -> None:
             continue
 
         if feat.stress_score > 0.66:
-            icon, status, bg = "🔴", "Stressed",  "#fde8e8"
+            status, accent = "Stressed",  "#d92626"
         elif feat.stress_score > 0.33:
-            icon, status, bg = "🟡", "Elevated",  "#fff8e5"
+            status, accent = "Elevated",  "#c98800"
         else:
-            icon, status, bg = "🟢", "Normal",    "#e8f8ee"
+            status, accent = "Normal",    "#00a35a"
 
         # Stress score as a pseudo-percentile (0 = most benign, 100 = max stress)
         stress_pct = round(feat.stress_score * 100)
@@ -159,16 +174,23 @@ def _risk_scorecard(model_output: RecessionModelOutput) -> None:
         with cols[i]:
             st.markdown(
                 f"""
-                <div style="text-align:center; padding:10px 6px;
-                            background:{bg}; border-radius: 2px;
-                            border:1px solid #ececec; min-height:90px;">
-                    <div style="font-size:22px; line-height:1;">{icon}</div>
-                    <div style="font-size:11px; color:#0a0a0a; margin-top:5px;
-                                font-weight:600;">{_SCORECARD_LABELS[sid]}</div>
-                    <div style="font-size:10px; color:#6a6a6a; margin-top:2px;">
+                <div style="padding:14px 14px 12px;
+                            background:#ffffff;
+                            border:1px solid #ececec;
+                            border-top:2px solid {accent};
+                            border-radius:0;
+                            min-height:96px;">
+                    <div style="font-size:10px; font-weight:600;
+                                color:#a0a0a0; text-transform:uppercase;
+                                letter-spacing:0.12em;
+                                font-family:'Geist Mono',monospace;
+                                margin-bottom:6px;">{_SCORECARD_LABELS[sid]}</div>
+                    <div style="font-size:18px; font-weight:600;
+                                color:#0a0a0a; letter-spacing:-0.02em;
+                                font-family:'Geist Mono',monospace;">
                         {status}
                     </div>
-                    <div style="margin-top:5px;">{pctile_html}</div>
+                    <div style="margin-top:6px;">{pctile_html}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,

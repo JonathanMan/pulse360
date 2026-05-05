@@ -6,6 +6,7 @@ FRED handles all macro series; yfinance handles market data not on FRED.
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 import pandas as pd
@@ -98,17 +99,25 @@ def fetch_sector_returns(period_days: int = 22) -> pd.DataFrame:
 
     Columns: Sector, Ticker, Return (%)
     Sorted by Return descending.
+    Fetches all sector ETFs in parallel via ThreadPoolExecutor.
     """
+
+    def _fetch_one(ticker: str) -> tuple[str, dict]:
+        return ticker, fetch_ticker(ticker, period="6mo")
+
     rows = []
-    for ticker, sector in SECTOR_ETFS.items():
-        r = fetch_ticker(ticker, period="6mo")
-        if r["close"].empty or r["error"]:
-            continue
-        close = r["close"]
-        if len(close) < period_days + 1:
-            continue
-        ret = (close.iloc[-1] / close.iloc[-(period_days + 1)] - 1) * 100
-        rows.append({"Sector": sector, "Ticker": ticker, "Return (%)": round(ret, 2)})
+    with ThreadPoolExecutor(max_workers=len(SECTOR_ETFS)) as executor:
+        futures = {executor.submit(_fetch_one, tkr): tkr for tkr in SECTOR_ETFS}
+        for future in as_completed(futures):
+            ticker, r = future.result()
+            sector = SECTOR_ETFS[ticker]
+            if r["close"].empty or r["error"]:
+                continue
+            close = r["close"]
+            if len(close) < period_days + 1:
+                continue
+            ret = (close.iloc[-1] / close.iloc[-(period_days + 1)] - 1) * 100
+            rows.append({"Sector": sector, "Ticker": ticker, "Return (%)": round(ret, 2)})
 
     df = pd.DataFrame(rows)
     if not df.empty:
@@ -143,7 +152,7 @@ def fetch_shiller_cape() -> dict:
     }
 
     try:
-        url = "http://www.econ.yale.edu/~shiller/data/ie_data.xls"
+        url = "https://shiller.yale.edu/data/ie_data.xls"
         df = pd.read_excel(url, sheet_name="Data", skiprows=7, header=0)
 
         # Locate CAPE column (P/E10 or CAPE)
