@@ -890,6 +890,7 @@ def render_login_gate(
                 if st.button("← Change number", key=f"gate_back_{_k}", use_container_width=True):
                     st.session_state.pop(f"_gate_otp_sent_{_k}", None)
                     st.session_state.pop(f"_gate_otp_resend_at_{_k}", None)
+                    st.session_state.pop(f"_gate_otp_resend_at_{_k}", None)
                     st.rerun()
             with _rc:
                 _gate_last_resend = st.session_state.get(f"_gate_otp_resend_at_{_k}", 0)
