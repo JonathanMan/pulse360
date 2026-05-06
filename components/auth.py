@@ -862,8 +862,9 @@ def render_login_gate(
                     if len(_e164) >= 8:
                         try:
                             get_client().auth.sign_in_with_otp({"phone": _e164})
-                            st.session_state[f"_gate_otp_phone_{_k}"] = _e164
-                            st.session_state[f"_gate_otp_sent_{_k}"]  = True
+                            st.session_state[f"_gate_otp_phone_{_k}"]      = _e164
+                            st.session_state[f"_gate_otp_sent_{_k}"]       = True
+                            st.session_state[f"_gate_otp_resend_at_{_k}"]  = time.time()
                             st.rerun()
                         except Exception as exc:
                             st.error(f"Could not send code: {exc}")
@@ -884,10 +885,31 @@ def render_login_gate(
                 if st.form_submit_button("Verify & sign in", type="primary", use_container_width=True):
                     _do_verify_otp(_otp_phone, _otp_code.strip())
 
-            _bc, _ = st.columns([1, 2])
+            _bc, _rc, _ = st.columns([1, 1, 1])
             with _bc:
                 if st.button("← Change number", key=f"gate_back_{_k}", use_container_width=True):
                     st.session_state.pop(f"_gate_otp_sent_{_k}", None)
+                    st.session_state.pop(f"_gate_otp_resend_at_{_k}", None)
+                    st.rerun()
+            with _rc:
+                _gate_last_resend = st.session_state.get(f"_gate_otp_resend_at_{_k}", 0)
+                _gate_elapsed = int(time.time() - _gate_last_resend)
+                _gate_remaining = 60 - _gate_elapsed
+                if _gate_remaining > 0:
+                    st.button(
+                        f"Resend ({_gate_remaining}s)",
+                        key=f"gate_resend_{_k}",
+                        use_container_width=True,
+                        disabled=True,
+                    )
+                else:
+                    if st.button("Resend code", key=f"gate_resend_{_k}", use_container_width=True):
+                        st.session_state[f"_gate_otp_resend_at_{_k}"] = time.time()
+                        try:
+                            get_client().auth.sign_in_with_otp({"phone": _otp_phone})
+                            st.success("Code resent.")
+                        except Exception as exc:
+                            st.error(f"Could not resend: {exc}")
                     st.session_state.pop(f"_gate_otp_phone_{_k}", None)
                     st.rerun()
 
