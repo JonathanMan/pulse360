@@ -33,9 +33,6 @@ from components.pulse360_theme import inject_theme
 from components.user_profile import feature_visible
 from components.stock_score_utils import (
 
-from assets.logo_helper import header_with_logo
-header_with_logo("Heatmap", "Sector & Asset Class Performance Heatmap")
-
     fetch_stock_data,
     _compute_score,
     _macro_adj_score,
@@ -45,6 +42,10 @@ header_with_logo("Heatmap", "Sector & Asset Class Performance Heatmap")
     _FALLBACK_SCORES,
     DISCLAIMER,
 )
+
+from assets.logo_helper import header_with_logo
+header_with_logo("Heatmap", "Sector & Asset Class Performance Heatmap")
+
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 REGIMES: list[str] = list(_MACRO_ADJ.keys())
@@ -219,7 +220,6 @@ def _run_action_engine_with_threshold(
     triggered.sort(key=lambda a: 0 if a["severity"] == "red" else 1)
     return triggered
 
-
 def _render_action_panel(alerts: list[dict], active_regime: str) -> None:
     """Render the traffic-light action panel above the heatmap."""
 
@@ -294,7 +294,6 @@ def _render_action_panel(alerts: list[dict], active_regime: str) -> None:
 
     st.markdown("---")
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _score_color_css(score: int) -> str:
@@ -309,10 +308,8 @@ def _score_color_css(score: int) -> str:
         return "#e67e22"
     return "#d92626"
 
-
 def _score_text_css(score: int) -> str:
     return "#000000" if 40 <= score <= 65 else "#ffffff"
-
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _score_ticker(ticker: str) -> dict | None:
@@ -368,7 +365,6 @@ def _score_ticker(ticker: str) -> dict | None:
 
     return None
 
-
 def _build_heatmap_df(scored: list[dict]) -> tuple[pd.DataFrame, list[str], list[str]]:
     """Return (z_df, y_labels, x_labels) ready for go.Heatmap."""
     # Sort by base score descending
@@ -377,7 +373,6 @@ def _build_heatmap_df(scored: list[dict]) -> tuple[pd.DataFrame, list[str], list
     x_labels = REGIMES
     z_data = [[d["regime_scores"][r] for r in REGIMES] for d in scored_sorted]
     return pd.DataFrame(z_data, index=y_labels, columns=x_labels), y_labels, x_labels
-
 
 # ── Page ───────────────────────────────────────────────────────────────────────
 

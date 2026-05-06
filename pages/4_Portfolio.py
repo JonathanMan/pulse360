@@ -104,6 +104,10 @@ st.markdown(f"""
 
 import re as _re
 
+from assets.logo_helper import header_with_logo
+header_with_logo("Portfolio", "Macro-Adjusted Portfolio Analysis")
+
+
 def _fix_dollars(text: str) -> str:
     """Escape $ before numbers so Streamlit doesn't render them as LaTeX."""
     return _re.sub(r'\$(\d)', r'\\$\1', text)
@@ -257,7 +261,6 @@ def render_portfolio_chat(analysis_key: str) -> None:
         history.append({"role": "assistant", "content": response})
         st.session_state[chat_key] = history
 
-
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Pie360 is not a Registered Investment Advisor. "
@@ -335,7 +338,6 @@ st.markdown("---")
 # ── Two upload tabs ───────────────────────────────────────────────────────────
 
 tab_screenshot, tab_csv = st.tabs(["📸  Screenshot", "📄  CSV export"])
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 1 — Screenshot upload
@@ -460,7 +462,6 @@ For funds: drop a brochure or factsheet page — Claude will extract holdings, s
 </div>
 """, unsafe_allow_html=True)
 
-
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 2 — CSV upload
 # ═════════════════════════════════════════════════════════════════════════════
@@ -546,9 +547,6 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
                 # Warn about unrecognised tickers
                 from ai.portfolio_analyzer import TICKER_SECTORS
 
-from assets.logo_helper import header_with_logo
-header_with_logo("Portfolio", "Macro-Adjusted Portfolio Analysis")
-
                 unknown = [p["ticker"] for p in positions if p["ticker"] not in TICKER_SECTORS]
                 if unknown:
                     st.warning(
@@ -627,7 +625,6 @@ header_with_logo("Portfolio", "Macro-Adjusted Portfolio Analysis")
 
     # Follow-up chat (shown whenever an analysis result exists)
     render_portfolio_chat("csv_analysis_result")
-
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 

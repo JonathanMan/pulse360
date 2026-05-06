@@ -52,6 +52,10 @@ DISCLAIMER = (
 
 # ── Page CSS ──────────────────────────────────────────────────────────────────
 from components.pulse360_theme import inject_theme
+
+from assets.logo_helper import header_with_logo
+header_with_logo("Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard")
+
 inject_theme()
 st.markdown("""
 <style>
@@ -82,9 +86,6 @@ def _warm_caches() -> None:
     All are @st.cache_data calls so subsequent reruns hit memory instantly.
     """
     from concurrent.futures import ThreadPoolExecutor
-
-from assets.logo_helper import header_with_logo
-header_with_logo("Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard")
 
     with ThreadPoolExecutor(max_workers=3) as pool:
         pool.submit(prefetch_all_series)   # populates all FRED @st.cache_data
@@ -179,14 +180,12 @@ tabs = st.tabs([
     "8 · Global",
 ])
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — Macro Overview & Cycle Phase
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tabs[0]:
     render_tab1(model_output, phase_output, lei_growth=lei_growth)
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TABS 2–8 — Full tab renders
@@ -212,7 +211,6 @@ with tabs[6]:
 
 with tabs[7]:
     render_tab8(model_output, phase_output)
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR — Quick Stats + AI Daily Briefing + Chat

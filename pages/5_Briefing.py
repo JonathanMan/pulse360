@@ -22,6 +22,10 @@ import streamlit as st
 from ai.claude_client import stream_briefing_section
 from components.pulse360_theme import inject_theme
 
+from assets.logo_helper import header_with_logo
+header_with_logo("Daily Briefing", "AI-Generated Macro Summary & Investment Recommendations")
+
+
 inject_theme()
 
 st.markdown("""
@@ -111,7 +115,6 @@ for key in [
     if key not in st.session_state:
         st.session_state[key] = ""
 
-
 # ── Helper: render a streamed section ─────────────────────────────────────────
 def _run_section(prompt: str, state_key: str, placeholder) -> None:
     """Stream Claude response into placeholder and persist to session state."""
@@ -124,7 +127,6 @@ def _run_section(prompt: str, state_key: str, placeholder) -> None:
     st.session_state[state_key] = full_text
     placeholder.markdown(full_text)
 
-
 def _result_area(state_key: str) -> None:
     """Render persisted result as styled markdown inside a card container."""
     text = st.session_state.get(state_key, "")
@@ -134,9 +136,6 @@ def _result_area(state_key: str) -> None:
     # Falls back to raw text if the markdown library is not installed.
     try:
         import markdown as _md
-
-from assets.logo_helper import header_with_logo
-header_with_logo("Daily Briefing", "AI-Generated Macro Summary & Investment Recommendations")
 
         html_body = _md.markdown(
             text,
@@ -150,7 +149,6 @@ header_with_logo("Daily Briefing", "AI-Generated Macro Summary & Investment Reco
         f'<div class="result-box">{html_body}</div>',
         unsafe_allow_html=True,
     )
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 1 · MACRO SNAPSHOT
@@ -221,7 +219,6 @@ with st.container():
 
 st.markdown("---")
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # 2 · SHORT SQUEEZE SCREENER
 # ══════════════════════════════════════════════════════════════════════════════
@@ -269,7 +266,6 @@ with st.container():
 
 st.markdown("---")
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # 3 · M&A WATCHLIST
 # ══════════════════════════════════════════════════════════════════════════════
@@ -311,7 +307,6 @@ with st.container():
         _result_area("brief_ma")
 
 st.markdown("---")
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 4 · SENTIMENT VS FUNDAMENTALS
@@ -355,7 +350,6 @@ with st.container():
         _result_area("brief_sentiment")
 
 st.markdown("---")
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 5 · HEDGE FUND TRACKER
@@ -404,7 +398,6 @@ with st.container():
         _result_area("brief_hf")
 
 st.markdown("---")
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 6 · PORTFOLIO HEDGE BUILDER
@@ -459,7 +452,6 @@ with st.container():
         _result_area("brief_hedge")
 
 st.markdown("---")
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 7 · WEEKLY MARKET REPORT

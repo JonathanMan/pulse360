@@ -47,6 +47,10 @@ from components.stock_score_utils import (
     fetch_stock_data,
 )
 
+from assets.logo_helper import header_with_logo
+header_with_logo("Stock Score", "AI-Powered Stock Scoring & Cycle Alignment")
+
+
 # ── Styles ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -61,7 +65,6 @@ st.markdown("""
     .stTabs [aria-selected="true"] { background-color: #2a2a4a; }
 </style>
 """, unsafe_allow_html=True)
-
 
 # ── UI helpers ─────────────────────────────────────────────────────────────────
 
@@ -93,7 +96,6 @@ def _render_section_items(items: list[dict]) -> None:
             f'</span></div>',
             unsafe_allow_html=True,
         )
-
 
 # ── Page header ────────────────────────────────────────────────────────────────
 st.markdown("# 🔍 Buffett Stock Score")
@@ -137,9 +139,6 @@ if ticker_input:
 
     if raw.get("error") or not raw.get("info"):
         from components.stock_score_utils import _cache_read
-
-from assets.logo_helper import header_with_logo
-header_with_logo("Stock Score", "AI-Powered Stock Scoring & Cycle Alignment")
 
         _disk = _cache_read(ticker_input)
         if _disk:
@@ -191,7 +190,6 @@ header_with_logo("Stock Score", "AI-Powered Stock Scoring & Cycle Alignment")
                     fetch_stock_data.clear()
                     st.rerun()
             ticker_input = ""
-
 
 if ticker_input:
     info      = raw["info"]

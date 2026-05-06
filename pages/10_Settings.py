@@ -352,6 +352,10 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
 # Equalise card heights via JS — measures after render and sets min-height on all
 # .sp-card elements so the row looks uniform regardless of content length.
 import streamlit.components.v1 as _cv1
+
+from assets.logo_helper import header_with_logo
+header_with_logo("Settings", "Account, Preferences & API Configuration")
+
 _cv1.html("""
 <script>
 (function() {
@@ -426,7 +430,6 @@ def _key_status(secret_key: str) -> tuple[str, str]:
     except Exception:
         return "status-err", "Not configured"
 
-
 fred_cls,  fred_lbl  = _key_status("FRED_API_KEY")
 anth_cls,  anth_lbl  = _key_status("ANTHROPIC_API_KEY")
 
@@ -465,9 +468,6 @@ with st.expander("🗂️  Cache controls", expanded=False):
             # Clear all @st.cache_data decorated functions that score stocks
             try:
                 from components.stock_score_utils import fetch_stock_data
-
-from assets.logo_helper import header_with_logo
-header_with_logo("Settings", "Account, Preferences & API Configuration")
 
                 fetch_stock_data.clear()
                 st.success("Stock score cache cleared.")
