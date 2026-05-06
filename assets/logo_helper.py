@@ -48,7 +48,7 @@ def sidebar_logo(width: int = 120):
     st.sidebar.markdown(_load_logo(width), unsafe_allow_html=True)
 
 
-def header_with_logo(title: str = "Pie360", subtitle: str = "AI-Powered Economic Cycle Dashboard", logo_width: int = 60):
+def header_with_logo(title: str = "Pie360", subtitle: str = "AI-Powered Economic Cycle Dashboard", logo_width: int = 60, show_divider: bool = True):
     """
     Render a branded page header: logo + title + subtitle side by side.
 
@@ -69,5 +69,5 @@ def header_with_logo(title: str = "Pie360", subtitle: str = "AI-Powered Economic
             <div style="font-size:13px;color:#5a7a99;margin-top:2px;">{subtitle}</div>
         </div>
     </div>
-    <hr style="border:none;border-top:1px solid #e0e8f0;margin:8px 0 20px 0;"/>
+    {'<hr style="border:none;border-top:1px solid #e0e8f0;margin:8px 0 20px 0;"/>' if show_divider else ''}
     """, unsafe_allow_html=True)

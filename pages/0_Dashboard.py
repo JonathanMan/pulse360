@@ -65,12 +65,13 @@ st.markdown("""
 # ── Header ─────────────────────────────────────────────────────────────────────
 col_h, col_r = st.columns([8, 1])
 with col_h:
-    header_with_logo("Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard")
+    header_with_logo("Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard", show_divider=False)
 with col_r:
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🔄 Refresh", help="Clear cache and reload all data"):
         st.cache_data.clear()
         st.rerun()
+st.markdown('<hr style="border:none;border-top:1px solid #e0e8f0;margin:4px 0 20px 0;"/>', unsafe_allow_html=True)
 
 # ── Cold-start cache warm-up (runs once per server process) ───────────────────
 @st.cache_resource(show_spinner=False)
