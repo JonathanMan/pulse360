@@ -2,6 +2,7 @@ import streamlit as st
 import anthropic
 import json
 from datetime import date
+from components.supabase_client import get_client
 
 # Constrain to a readable width (app.py uses layout="wide")
 st.markdown(
@@ -128,10 +129,51 @@ SIGNAL_ORDER = ["Risk on", "Caution", "Risk off"]
 GROUP_LABELS = {"Risk on": "Risk on", "Caution": "Caution", "Risk off": "Risk off"}
 
 
-def get_signals():
-    if "macro_signals" not in st.session_state:
-        st.session_state.macro_signals = DEFAULT_SIGNALS
-    return st.session_state.macro_signals
+_SIGNALS_TABLE = "macro_signals"
+_SIGNALS_ROW_ID = 1
+
+
+@st.cache_data(ttl=300)  # refresh from DB at most every 5 minutes
+def _load_signals_from_db() -> dict | None:
+    """Fetch latest signals from Supabase. Returns None if unavailable."""
+    try:
+        sb = get_client()
+        row = (
+            sb.table(_SIGNALS_TABLE)
+            .select("signals_json")
+            .eq("id", _SIGNALS_ROW_ID)
+            .single()
+            .execute()
+        )
+        if row.data:
+            return row.data["signals_json"]
+    except Exception:
+        pass
+    return None
+
+
+def _save_signals_to_db(signals: dict) -> None:
+    """Upsert signals to Supabase and bust the cache so next load is fresh."""
+    try:
+        sb = get_client()
+        sb.table(_SIGNALS_TABLE).upsert({
+            "id": _SIGNALS_ROW_ID,
+            "signals_json": signals,
+        }).execute()
+        _load_signals_from_db.clear()
+    except Exception as e:
+        st.warning(f"Could not save signals to database: {e}")
+
+
+def get_signals() -> dict:
+    """Return signals: session_state → Supabase DB → DEFAULT_SIGNALS fallback."""
+    if "macro_signals" in st.session_state:
+        return st.session_state.macro_signals
+    db_signals = _load_signals_from_db()
+    if db_signals:
+        st.session_state.macro_signals = db_signals
+        return db_signals
+    return DEFAULT_SIGNALS
 
 
 def compute_consensus(forecasters):
@@ -390,6 +432,7 @@ def refresh_signals():
         if start != -1 and end > start:
             new_signals = json.loads(text_content[start:end])
             st.session_state.macro_signals = new_signals
+            _save_signals_to_db(new_signals)  # persist across sessions
             st.success("Signals updated successfully.")
         else:
             st.warning("Could not parse updated signals. Showing last known data.")
