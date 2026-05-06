@@ -20,6 +20,7 @@ Phone OTP flow:
 
 from __future__ import annotations
 
+import time
 from urllib.parse import urlencode
 
 import streamlit as st
@@ -42,6 +43,7 @@ _GOOGLE_ENABLED = False
 # Session state keys for phone OTP 2-step flow
 _OTP_PHONE_KEY    = "_p360_otp_phone"   # stores E.164 number while waiting for OTP
 _OTP_SENT_KEY     = "_p360_otp_sent"    # bool — True after send_otp succeeds
+_OTP_RESEND_AT    = "_p360_otp_resend_at"  # float — time.time() of last send/resend
 
 # Supported country codes
 _COUNTRY_CODES = [
@@ -161,7 +163,7 @@ def logout() -> None:
         get_client().auth.sign_out()
     except Exception:
         pass
-    for key in (_SESSION_KEY, _OTP_PHONE_KEY, _OTP_SENT_KEY):
+    for key in (_SESSION_KEY, _OTP_PHONE_KEY, _OTP_SENT_KEY, _OTP_RESEND_AT):
         st.session_state.pop(key, None)
     st.rerun()
 
@@ -512,8 +514,22 @@ def _render_phone_tab() -> None:
                 st.session_state.pop(_OTP_PHONE_KEY, None)
                 st.rerun()
 
-        if st.button("Resend code", key="ph_resend", use_container_width=True):
-            _do_send_otp_raw(otp_phone, resend=True)
+        # Resend code — 60-second cooldown to prevent spam
+        _RESEND_COOLDOWN = 60
+        _last_resend = st.session_state.get(_OTP_RESEND_AT, 0)
+        _elapsed = int(time.time() - _last_resend)
+        _remaining = _RESEND_COOLDOWN - _elapsed
+        if _remaining > 0:
+            st.button(
+                f"Resend code ({_remaining}s)",
+                key="ph_resend",
+                use_container_width=True,
+                disabled=True,
+            )
+        else:
+            if st.button("Resend code", key="ph_resend", use_container_width=True):
+                st.session_state[_OTP_RESEND_AT] = time.time()
+                _do_send_otp_raw(otp_phone, resend=True)
 
 
 # ── Auth actions ───────────────────────────────────────────────────────────────
@@ -600,8 +616,9 @@ def _do_send_otp_raw(e164_phone: str, resend: bool = False) -> None:
     """Call Supabase to send (or resend) the SMS OTP."""
     try:
         get_client().auth.sign_in_with_otp({"phone": e164_phone})
-        st.session_state[_OTP_PHONE_KEY] = e164_phone
-        st.session_state[_OTP_SENT_KEY]  = True
+        st.session_state[_OTP_PHONE_KEY]  = e164_phone
+        st.session_state[_OTP_SENT_KEY]   = True
+        st.session_state[_OTP_RESEND_AT]  = time.time()  # start cooldown
         if resend:
             st.success("Code resent! Check your messages.")
         st.rerun()
