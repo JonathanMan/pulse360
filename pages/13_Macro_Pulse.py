@@ -290,7 +290,7 @@ def build_full_html(signals):
 # Refresh via Anthropic API (web search)
 # ---------------------------------------------------------------------------
 
-REFRESH_PROMPT = """You are refreshing macro forecaster signals for an investment app called Pulse360.
+REFRESH_PROMPT = """You are refreshing macro forecaster signals for an investment app called Pie360.
 
 Search for the latest public statements from each of these 9 forecasters and assign each a signal.
 
@@ -388,7 +388,7 @@ with col1:
         prompt = (
             f"The macro forecasters are currently split: "
             f"{counts['Risk on']} risk on, {counts['Caution']} caution, {counts['Risk off']} risk off. "
-            f"Run a full Pulse360 macro-adjusted review of my portfolio and give me the top 3 "
+            f"Run a full Pie360 macro-adjusted review of my portfolio and give me the top 3 "
             f"changes I should consider given this outlook."
         )
         st.chat_message("assistant").write(
