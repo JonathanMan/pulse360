@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 7: Housing, Consumer & Sentiment
+Pie360 — Tab 7: Housing, Consumer & Sentiment
 =================================================
 Charts: Housing Starts + Building Permits, Case-Shiller HPI YoY,
         Consumer Sentiment, Retail Sales, Personal Savings Rate.
@@ -20,7 +20,7 @@ from ai.claude_client import get_investment_implications
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 

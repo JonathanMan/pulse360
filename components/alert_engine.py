@@ -223,7 +223,7 @@ def send_email_alert(rule: dict, current_value: float) -> bool:
         port     = 587
         username = "sender@example.com"
         password = "app_password"
-        from_addr = "Pulse360 Alerts <sender@example.com>"   (optional)
+        from_addr = "Pie360 Alerts <sender@example.com>"   (optional)
 
     Returns True on success, False on any failure (never raises).
     """
@@ -245,11 +245,11 @@ def send_email_alert(rule: dict, current_value: float) -> bool:
 
         series_label = SERIES_PRESETS.get(rule["series_id"], rule["series_id"])
         op_label     = OPERATOR_LABELS.get(rule["operator"], rule["operator"])
-        subject      = f"🚨 Pulse360 Alert: {rule['name']}"
+        subject      = f"🚨 Pie360 Alert: {rule['name']}"
         body_html    = f"""
 <html><body style="font-family:sans-serif;color:#0a0a0a;max-width:560px;margin:auto;">
   <div style="background:#0a0a0a;padding:18px 24px;border-radius:8px 8px 0 0;">
-    <h2 style="color:#fff;margin:0;">📊 Pulse360 Alert Fired</h2>
+    <h2 style="color:#fff;margin:0;">📊 Pie360 Alert Fired</h2>
   </div>
   <div style="background:#f4f4f4;padding:20px 24px;border-radius:0 0 8px 8px;
               border:1px solid #ececec;border-top:none;">
@@ -278,7 +278,7 @@ def send_email_alert(rule: dict, current_value: float) -> bool:
     </table>
     <p style="font-size:0.82rem;color:#6a6a6a;border-top:1px solid #ececec;
               padding-top:12px;margin-bottom:0;">
-      This is an automated alert from <strong>Pulse360</strong>. Not personalised
+      This is an automated alert from <strong>Pie360</strong>. Not personalised
       investment advice. Manage your alerts in the Alerts page of the dashboard.
     </p>
   </div>

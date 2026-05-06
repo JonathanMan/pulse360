@@ -24,7 +24,7 @@ Usage (in 0_Dashboard.py sidebar):
         html = compose_briefing_html(briefing_text, cycle_phase, probability, traffic_light)
         ok, msg = send_briefing_email(
             to      = st.secrets.get("BRIEFING_EMAIL", "jonathancyman@gmail.com"),
-            subject = f"Pulse360 · {date.today():%d %b %Y} · {cycle_phase}",
+            subject = f"Pie360 · {date.today():%d %b %Y} · {cycle_phase}",
             html    = html,
         )
         st.success(msg) if ok else st.error(msg)
@@ -47,7 +47,7 @@ _EMAIL_TEMPLATE = """\
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pulse360 Daily Briefing</title>
+<title>Pie360 Daily Briefing</title>
 <style>
   body {{
     margin: 0; padding: 0;
@@ -151,7 +151,7 @@ _EMAIL_TEMPLATE = """\
 <div class="wrapper">
 
   <div class="header">
-    <p class="header-title">📊 Pulse360 Daily Briefing</p>
+    <p class="header-title">📊 Pie360 Daily Briefing</p>
     <p class="header-sub">{date_str}</p>
     <div class="badges">
       <span class="badge badge-phase">{cycle_phase}</span>
@@ -164,7 +164,7 @@ _EMAIL_TEMPLATE = """\
   </div>
 
   <div class="footer">
-    Pulse360 · Personal macro dashboard · <a href="https://pulse360.streamlit.app" style="color:#555">Open app</a>
+    Pie360 · Personal macro dashboard · <a href="https://pulse360.streamlit.app" style="color:#555">Open app</a>
   </div>
 
 </div>

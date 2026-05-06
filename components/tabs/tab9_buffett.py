@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 9: Buffett Indicator
+Pie360 — Tab 9: Buffett Indicator
 =====================================
 The Warren Buffett Indicator: Total US Market Cap / GDP ratio.
 Buffett called it "probably the best single measure of where
@@ -30,7 +30,7 @@ from data.fred_client import fetch_series
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 # ── Valuation zones ───────────────────────────────────────────────────────────

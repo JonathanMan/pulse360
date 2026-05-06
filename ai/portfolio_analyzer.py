@@ -1,5 +1,5 @@
 """
-Pulse360 — Portfolio Analyser AI Module
+Pie360 — Portfolio Analyser AI Module
 =========================================
 Handles all Claude API calls for the Portfolio Analyser tab.
 
@@ -99,7 +99,7 @@ TICKER_SECTORS: dict[str, str] = {
 # System prompt (shared by both entry points)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_PORTFOLIO_SYSTEM = """You are the Pulse360 Portfolio Analyser — an AI layer embedded in an economic cycle \
+_PORTFOLIO_SYSTEM = """You are the Pie360 Portfolio Analyser — an AI layer embedded in an economic cycle \
 dashboard that helps a personal investor understand how their holdings align with the current macro environment.
 
 YOUR JOB:
@@ -394,12 +394,12 @@ def stream_portfolio_from_positions(
 
 HAIKU = "claude-haiku-4-5-20251001"
 
-_PORTFOLIO_CHAT_SYSTEM = """You are the Pulse360 Portfolio Chat assistant — a macro-aware analyst \
+_PORTFOLIO_CHAT_SYSTEM = """You are the Pie360 Portfolio Chat assistant — a macro-aware analyst \
 helping a personal investor dig deeper into their portfolio analysis.
 
 CONTEXT YOU HAVE:
   • A completed portfolio analysis (provided below as "ANALYSIS")
-  • Current Pulse360 macro dashboard state (cycle phase, recession probability)
+  • Current Pie360 macro dashboard state (cycle phase, recession probability)
   • The investor's actual holdings as described in the analysis
 
 YOUR ROLE:

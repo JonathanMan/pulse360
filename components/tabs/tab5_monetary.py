@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 5: Monetary Policy & Financial Conditions
+Pie360 — Tab 5: Monetary Policy & Financial Conditions
 ==========================================================
 Charts: Live yield curve snapshot, Yield spreads (10Y-3M + 10Y-2Y),
         Fed Funds vs 10Y Treasury, NFCI, IG OAS Credit Spread,
@@ -22,7 +22,7 @@ from ai.claude_client import get_investment_implications
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 # Maturities in order for yield curve snapshot

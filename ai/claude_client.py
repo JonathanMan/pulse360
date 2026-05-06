@@ -1,5 +1,5 @@
 """
-Pulse360 — Claude API Client
+Pie360 — Claude API Client
 ==============================
 Handles all Anthropic API calls for the AI layer:
   • get_daily_briefing()          → cached 6h, returns markdown string
@@ -187,7 +187,7 @@ def stream_scenario_analysis(
     )
 
     system_prompt = (
-        "You are the Pulse360 macro analysis engine. You interpret economic indicator "
+        "You are the Pie360 macro analysis engine. You interpret economic indicator "
         "scenarios for professional investors and macro analysts. Write in plain English — "
         "analyst tone, action-oriented, probabilistic not certain. 3–4 sentences max. "
         "No bullet points. Never give specific buy/sell advice. "
@@ -281,7 +281,7 @@ def format_features_for_prompt(features: list) -> list[dict]:
 # AI Research Desk — generic streaming section runner
 # ─────────────────────────────────────────────────────────────────────────────
 
-_BRIEFING_SYSTEM = """You are the Pulse360 AI Research Desk engine.
+_BRIEFING_SYSTEM = """You are the Pie360 AI Research Desk engine.
 You produce high-signal, structured financial research for a sophisticated personal investor.
 
 RULES:
@@ -311,7 +311,7 @@ the key finding per line."""
 # Buffett Indicator analysis  (streaming, user-triggered)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_BUFFETT_SYSTEM = """You are the Pulse360 macro valuation analyst.
+_BUFFETT_SYSTEM = """You are the Pie360 macro valuation analyst.
 You answer the question: "What does the Warren Buffett Indicator say today for the current market conditions?"
 
 Write for a sophisticated personal investor. Rules:

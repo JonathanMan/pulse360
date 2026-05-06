@@ -386,7 +386,7 @@ def _render_login_page() -> None:
 <div class="auth-wrap">
   <div class="auth-header">
     <div class="auth-icon">📊</div>
-    <div class="auth-name">Pulse360</div>
+    <div class="auth-name">Pie360</div>
     <div class="auth-sub">AI-Powered Economic Cycle Dashboard</div>
   </div>
   <div class="auth-card">
@@ -396,7 +396,7 @@ def _render_login_page() -> None:
     # ── Google SSO (hidden while OAuth new-tab flow is under review) ─────────
     if _GOOGLE_ENABLED:
         _render_google_signin_button(_google_oauth_url(), btn_key="login_page")
-        st.caption("New to Pulse360? Google sign-in creates your account automatically.")
+        st.caption("New to Pie360? Google sign-in creates your account automatically.")
         st.markdown('<div class="auth-divider">or sign in with</div>', unsafe_allow_html=True)
 
     # ── Email / Phone tabs ────────────────────────────────────────────────────
@@ -998,7 +998,7 @@ def render_login_gate(
         # Terms footer
         st.markdown(
             f'<div class="p360-gate-terms">'
-            f'By continuing you agree to Pulse360\'s '
+            f'By continuing you agree to Pie360\'s '
             f'<a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app">Terms of Service</a>'
             f' and <a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app">Privacy Policy</a>.'
             f'</div>',

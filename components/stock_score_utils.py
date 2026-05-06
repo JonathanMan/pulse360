@@ -37,7 +37,7 @@ import yfinance as yf
 # ── Disclaimer ────────────────────────────────────────────────────────────────
 DISCLAIMER = (
     "*Educational analysis only — not personalised investment advice. "
-    "Pulse360 is not a Registered Investment Advisor. "
+    "Pie360 is not a Registered Investment Advisor. "
     "Consult a licensed financial advisor before making investment decisions.*"
 )
 

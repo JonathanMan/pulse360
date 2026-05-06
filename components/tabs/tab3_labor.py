@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 3: Labor Market
+Pie360 — Tab 3: Labor Market
 ================================
 Charts: Unemployment Rate, Sahm Rule, Nonfarm Payrolls MoM,
         Initial Claims 4-week avg, JOLTS Openings, U-6 Underemployment.
@@ -18,7 +18,7 @@ from ai.claude_client import get_investment_implications
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 

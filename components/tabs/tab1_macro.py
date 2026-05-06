@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 1: Macro Overview & Cycle Phase
+Pie360 — Tab 1: Macro Overview & Cycle Phase
 ================================================
 Charts: Real GDP Level, Real GDP Growth (QoQ Ann.), CFNAI.
 Includes Investment Implications callout (Claude Haiku, cached 2h).
@@ -20,7 +20,7 @@ from data.fred_client import fetch_series
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 

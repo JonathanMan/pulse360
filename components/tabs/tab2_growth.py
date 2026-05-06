@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 2: Growth & Business Activity
+Pie360 — Tab 2: Growth & Business Activity
 =============================================
 Charts: Industrial Production, Capacity Utilization,
         ISM Manufacturing + Services PMI, Durable Goods Orders.
@@ -18,7 +18,7 @@ from ai.claude_client import get_investment_implications
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 

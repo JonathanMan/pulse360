@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 6: Markets, Valuations & Sentiment
+Pie360 — Tab 6: Markets, Valuations & Sentiment
 ====================================================
 Charts: S&P 500 + NASDAQ, VIX, HY/IG OAS credit spreads,
         Wilshire 5000, sector ETF 1-month returns (via yfinance).
@@ -23,7 +23,7 @@ from ai.claude_client import get_investment_implications
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 

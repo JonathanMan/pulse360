@@ -1,5 +1,5 @@
 """
-Pulse360 — Claude Prompt Templates
+Pie360 — Claude Prompt Templates
 =====================================
 Two prompts used by the AI layer:
 
@@ -24,7 +24,7 @@ from typing import Optional
 DISCLAIMER = (
     "\n\n---\n*Educational macro analysis only. Not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 
@@ -32,7 +32,7 @@ DISCLAIMER = (
 # 1. DAILY BRIEFING PROMPT
 # ─────────────────────────────────────────────────────────────────────────────
 
-BRIEFING_SYSTEM = """You are the analytical engine behind Pulse360, an AI-powered economic cycle dashboard. \
+BRIEFING_SYSTEM = """You are the analytical engine behind Pie360, an AI-powered economic cycle dashboard. \
 Your job is to write a concise, high-signal daily macro briefing for a sophisticated personal investor \
 (Jonathan) who monitors the economic cycle daily.
 
@@ -44,7 +44,7 @@ RULES — follow all of them precisely:
 5. Never fabricate data. Only cite numbers provided in the input. If a figure is missing, say so.
 6. Never give personalised investment advice ("you should buy X"). Frame implications in general terms.
 7. Always end with the standard disclaimer (it will be appended automatically — do not include it).
-8. The product is called Pulse360. Never call it CyclePulse or any other name.
+8. The product is called Pie360. Never call it Pie360, CyclePulse, or any other name.
 9. Do not use headers like "Introduction" or "Conclusion". Use only the section headers specified below."""
 
 
@@ -133,7 +133,7 @@ Major data releases (past 7 days):
 {releases_text}
 ═══════════════════════════════════════════════════════════════
 
-Using the model output above, write the Pulse360 daily briefing with EXACTLY these five sections \
+Using the model output above, write the Pie360 daily briefing with EXACTLY these five sections \
 in this order. Use the section headers verbatim. Do not add, rename, or remove any section.
 
 ## Economic Cycle Summary
@@ -169,7 +169,7 @@ The disclaimer will be appended automatically — do not write it."""
 # 2. INVESTMENT IMPLICATIONS PROMPT  (per-tab)
 # ─────────────────────────────────────────────────────────────────────────────
 
-IMPLICATIONS_SYSTEM = """You are the analytical engine behind Pulse360. \
+IMPLICATIONS_SYSTEM = """You are the analytical engine behind Pie360. \
 Your job is to write a concise Investment Implications callout at the bottom of a macro dashboard tab. \
 The callout connects the tab's current data readings to portfolio positioning implications \
 for a sophisticated personal investor.
@@ -328,7 +328,7 @@ def build_chat_system_prompt(
     lei_text = f"{lei_growth:+.1f}% annualised" if lei_growth is not None else "unavailable"
     tl_label = {"green": "low", "yellow": "elevated", "red": "high"}.get(traffic_light, traffic_light)
 
-    return f"""You are the Pulse360 AI assistant — a macro analyst embedded in an economic cycle dashboard. \
+    return f"""You are the Pie360 AI assistant — a macro analyst embedded in an economic cycle dashboard. \
 You help Jonathan understand what the current data means for the economic cycle and portfolio positioning.
 
 CURRENT DASHBOARD STATE:

@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 4: Inflation & Prices
+Pie360 — Tab 4: Inflation & Prices
 ======================================
 Charts: CPI YoY (All + Core), PCE YoY (All + Core),
         Breakeven Inflation (5Y + 10Y), WTI Crude Oil, PPI Final Demand.
@@ -21,7 +21,7 @@ from ai.claude_client import get_investment_implications
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 

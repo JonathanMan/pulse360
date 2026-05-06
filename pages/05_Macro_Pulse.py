@@ -290,7 +290,7 @@ def _run_deep_dive(f):
     """Synchronous deep-dive call — returns full text. Short enough that streaming isn't needed."""
     client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     first_name = f["name"].split()[0]
-    prompt = f"""You are a macro research analyst at Pulse360 giving a concise deep dive on one forecaster.
+    prompt = f"""You are a macro research analyst at Pie360 giving a concise deep dive on one forecaster.
 
 Forecaster: {f['name']}
 Specialty: {f.get('specialty', '')}
@@ -459,7 +459,7 @@ def render_macro_pulse(signals):
 # Refresh via Anthropic API (web search)
 # ---------------------------------------------------------------------------
 
-REFRESH_PROMPT = """You are refreshing macro forecaster signals for an investment app called Pulse360.
+REFRESH_PROMPT = """You are refreshing macro forecaster signals for an investment app called Pie360.
 
 Search for the latest public statements from each of these 9 forecasters and assign each a signal.
 

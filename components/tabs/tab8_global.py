@@ -1,5 +1,5 @@
 """
-Pulse360 — Tab 8: Global & External Factors
+Pie360 — Tab 8: Global & External Factors
 =============================================
 Charts: Trade-Weighted USD (broad), USD/EUR exchange rate,
         USD/JPY exchange rate, Brent Crude Oil,
@@ -21,7 +21,7 @@ from ai.claude_client import get_investment_implications
 DISCLAIMER = (
     "*Educational macro analysis only — not personalised investment advice. "
     "Consult a licensed financial advisor before making investment decisions. "
-    "Pulse360 is not a Registered Investment Advisor.*"
+    "Pie360 is not a Registered Investment Advisor.*"
 )
 
 
