@@ -286,8 +286,8 @@ def build_card_html_native(f):
     """
 
 
-def _deep_dive_stream(f):
-    """Generator that streams a deep-dive brief on a single forecaster."""
+def _run_deep_dive(f):
+    """Synchronous deep-dive call — returns full text. Short enough that streaming isn't needed."""
     client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     first_name = f["name"].split()[0]
     prompt = f"""You are a macro research analyst at Pulse360 giving a concise deep dive on one forecaster.
@@ -307,12 +307,12 @@ Write a tight 3-part brief:
 **Portfolio implication** — One specific, actionable takeaway for a diversified investor given this signal. (1-2 sentences)
 
 Total length: 150-200 words. Write for a sophisticated investor. Be specific, not generic."""
-    with client.messages.stream(
+    response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=400,
         messages=[{"role": "user", "content": prompt}],
-    ) as stream:
-        yield from stream.text_stream
+    )
+    return response.content[0].text
 
 
 def _render_forecaster_card(f):
@@ -352,28 +352,32 @@ def _render_forecaster_card(f):
             unsafe_allow_html=True,
         )
 
-        # Deep dive button (only when no dive is open)
-        if not st.session_state.get(dd_key):
+        # State: None → show button | "run" → fetch | string → show result
+        dd_state = st.session_state.get(dd_key)
+
+        if dd_state == "run":
+            # Fetch and cache
+            st.divider()
+            with st.spinner(f"Analysing {f['name'].split()[0]}..."):
+                result = _run_deep_dive(f)
+            st.session_state[dd_key] = result
+            st.rerun()
+
+        elif dd_state:
+            # Show cached result
+            st.divider()
+            st.markdown(dd_state)
+            if st.button("✕ Close", key=f"close_{card_key}"):
+                del st.session_state[dd_key]
+                st.rerun()
+
+        else:
+            # Show CTA button
             if st.button(
                 f"Deep dive: {f['name'].split()[0]} ↗",
                 key=f"btn_{card_key}",
-                use_container_width=False,
             ):
                 st.session_state[dd_key] = "run"
-                st.rerun()
-
-        # Stream on first trigger
-        if st.session_state.get(dd_key) == "run":
-            st.divider()
-            result = st.write_stream(_deep_dive_stream(f))
-            st.session_state[dd_key] = result
-
-        # Show cached result with close button
-        elif st.session_state.get(dd_key):
-            st.divider()
-            st.markdown(st.session_state[dd_key])
-            if st.button("✕ Close", key=f"close_{card_key}"):
-                del st.session_state[dd_key]
                 st.rerun()
 
 
