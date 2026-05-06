@@ -134,6 +134,10 @@ def _result_area(state_key: str) -> None:
     # Falls back to raw text if the markdown library is not installed.
     try:
         import markdown as _md
+
+from assets.logo_helper import header_with_logo
+header_with_logo("5 Briefing", "Pie360 — AI-Powered Economic Cycle Dashboard")
+
         html_body = _md.markdown(
             text,
             extensions=["tables", "fenced_code", "nl2br"],

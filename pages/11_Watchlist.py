@@ -119,6 +119,10 @@ st.caption(
 
 # ── Guest gate ────────────────────────────────────────────────────────────────
 from components.auth import render_login_gate  # noqa: E402
+
+from assets.logo_helper import header_with_logo
+header_with_logo("11 Watchlist", "Pie360 — AI-Powered Economic Cycle Dashboard")
+
 if not render_login_gate(
     title="Sign in to use Watchlist",
     body="Track stocks you care about with live Buffett scores, macro regime overlays, and earnings alerts.",

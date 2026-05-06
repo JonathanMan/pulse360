@@ -465,6 +465,10 @@ with st.expander("🗂️  Cache controls", expanded=False):
             # Clear all @st.cache_data decorated functions that score stocks
             try:
                 from components.stock_score_utils import fetch_stock_data
+
+from assets.logo_helper import header_with_logo
+header_with_logo("Global & External", "Global Indicators & External Factors")
+
                 fetch_stock_data.clear()
                 st.success("Stock score cache cleared.")
             except Exception as e:

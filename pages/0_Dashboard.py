@@ -82,6 +82,10 @@ def _warm_caches() -> None:
     All are @st.cache_data calls so subsequent reruns hit memory instantly.
     """
     from concurrent.futures import ThreadPoolExecutor
+
+from assets.logo_helper import header_with_logo
+header_with_logo("0 Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard")
+
     with ThreadPoolExecutor(max_workers=3) as pool:
         pool.submit(prefetch_all_series)   # populates all FRED @st.cache_data
         pool.submit(fetch_shiller_cape)    # pre-warm Yale CAPE

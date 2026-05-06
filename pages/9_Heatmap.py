@@ -32,6 +32,10 @@ from ai.claude_client import extract_tickers_from_screenshot
 from components.pulse360_theme import inject_theme
 from components.user_profile import feature_visible
 from components.stock_score_utils import (
+
+from assets.logo_helper import header_with_logo
+header_with_logo("9 Heatmap", "Pie360 — AI-Powered Economic Cycle Dashboard")
+
     fetch_stock_data,
     _compute_score,
     _macro_adj_score,

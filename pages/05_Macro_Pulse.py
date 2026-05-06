@@ -4,6 +4,10 @@ import json
 from datetime import date
 from components.supabase_client import get_client
 
+from assets.logo_helper import header_with_logo
+header_with_logo("Macro Pulse", "Real-time Forecaster Signals & Consensus Tracking")
+
+
 # Constrain to a readable width (app.py uses layout="wide")
 st.markdown(
     "<style>.main .block-container{max-width:860px;padding-top:1.2rem;}</style>",

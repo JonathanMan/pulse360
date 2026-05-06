@@ -29,6 +29,10 @@ import streamlit as st
 from components.user_profile import feature_visible
 
 from components.stock_score_utils import (
+
+from assets.logo_helper import header_with_logo
+header_with_logo("8 Screener", "Pie360 — AI-Powered Economic Cycle Dashboard")
+
     DISCLAIMER,
     _COMPLEXITY,
     _FALLBACK_SCORES,

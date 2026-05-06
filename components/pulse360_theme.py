@@ -208,7 +208,7 @@ h3 {{
 }}
 [data-testid="stCaptionContainer"] p,
 .main small {{
-    color: {FG_MUTED} !important;
+    color: #505050 !important;
     font-size: 0.72rem !important;
 }}
 

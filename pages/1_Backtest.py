@@ -21,6 +21,10 @@ from components.chart_utils import dark_layout, add_nber
 
 # ── Dark-theme CSS ───────────────────────────────────────────────────────────
 from components.pulse360_theme import inject_theme
+
+from assets.logo_helper import header_with_logo
+header_with_logo("1 Backtest", "Pie360 — AI-Powered Economic Cycle Dashboard")
+
 inject_theme()
 
 st.markdown("""

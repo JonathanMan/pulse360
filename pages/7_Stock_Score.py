@@ -137,6 +137,10 @@ if ticker_input:
 
     if raw.get("error") or not raw.get("info"):
         from components.stock_score_utils import _cache_read
+
+from assets.logo_helper import header_with_logo
+header_with_logo("7 Stock Score", "Pie360 — AI-Powered Economic Cycle Dashboard")
+
         _disk = _cache_read(ticker_input)
         if _disk:
             # Serve stale data with a clear banner — better than a hard error
