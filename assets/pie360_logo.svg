@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 450" width="400" height="450">
+  <!-- Background: transparent -->
+
+  <!-- Outer circle -->
+  <circle cx="200" cy="185" r="130" fill="none" stroke="#1a2e4a" stroke-width="8"/>
+
+  <!-- Pie chart segments inside circle -->
+  <!-- Large dark segment (top-right, ~120 degrees) -->
+  <path d="M200,185 L200,65 A120,120 0 0,1 303.9,245 Z" fill="#1a2e4a"/>
+  <!-- Medium light segment (top-left, ~90 degrees) -->
+  <path d="M200,185 L80,185 A120,120 0 0,1 200,65 Z" fill="#d8e4f0"/>
+  <!-- Small medium segment (bottom, ~150 degrees) -->
+  <path d="M200,185 L303.9,245 A120,120 0 0,1 80,185 Z" fill="#8aafc8"/>
+
+  <!-- Pulse waveform line (electric blue, overlaid on pie) -->
+  <!-- Flat line from left edge, then waveform in center, then flat to right -->
+  <polyline
+    points="
+      70,185
+      95,185
+      115,185
+      130,160
+      145,210
+      160,145
+      175,225
+      190,175
+      205,195
+      220,185
+      250,185
+      330,185
+    "
+    fill="none"
+    stroke="#4a90d9"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- PIE360 text -->
+  <text
+    x="200"
+    y="375"
+    font-family="'Arial', 'Helvetica Neue', sans-serif"
+    font-weight="700"
+    font-size="54"
+    fill="#1a2e4a"
+    text-anchor="middle"
+    letter-spacing="4"
+  >PIE360</text>
+</svg>
