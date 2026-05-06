@@ -63,7 +63,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-col_h, col_r = st.columns([7, 1])
+col_h, col_r = st.columns([6, 1])
 with col_h:
     header_with_logo("Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard", show_divider=False)
 with col_r:
