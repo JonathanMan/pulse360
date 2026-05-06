@@ -46,7 +46,7 @@ lei_growth   = compute_cfnai_signal(model_inputs["CFNAI"]["data"])
 from data.fred_client import fetch_series
 
 from assets.logo_helper import header_with_logo
-header_with_logo("6 Buffett", "Pie360 — AI-Powered Economic Cycle Dashboard")
+header_with_logo("Buffett Indicators", "Valuation, Market Cap-to-GDP & Long-Term Signals")
 
 unrate_result = fetch_series("UNRATE", start_date="2010-01-01")
 unrate_data   = unrate_result["data"] if not unrate_result["data"].empty else None

@@ -25,7 +25,7 @@ from components.chart_utils import dark_layout, add_nber
 from components.pulse360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
-header_with_logo("2 Phase Returns", "Pie360 — AI-Powered Economic Cycle Dashboard")
+header_with_logo("Phase Returns", "Asset Returns by Economic Cycle Phase")
 
 inject_theme()
 

@@ -139,7 +139,7 @@ if ticker_input:
         from components.stock_score_utils import _cache_read
 
 from assets.logo_helper import header_with_logo
-header_with_logo("7 Stock Score", "Pie360 — AI-Powered Economic Cycle Dashboard")
+header_with_logo("Stock Score", "AI-Powered Stock Scoring & Cycle Alignment")
 
         _disk = _cache_read(ticker_input)
         if _disk:

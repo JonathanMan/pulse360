@@ -84,7 +84,7 @@ def _warm_caches() -> None:
     from concurrent.futures import ThreadPoolExecutor
 
 from assets.logo_helper import header_with_logo
-header_with_logo("0 Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard")
+header_with_logo("Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard")
 
     with ThreadPoolExecutor(max_workers=3) as pool:
         pool.submit(prefetch_all_series)   # populates all FRED @st.cache_data

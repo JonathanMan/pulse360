@@ -28,7 +28,7 @@ from ai.claude_client import stream_scenario_analysis
 from components.pulse360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
-header_with_logo("3 Simulator", "Pie360 — AI-Powered Economic Cycle Dashboard")
+header_with_logo("Scenario Simulator", "Model Macro Shocks & Policy Changes")
 
 inject_theme()
 

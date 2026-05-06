@@ -121,7 +121,7 @@ st.caption(
 from components.auth import render_login_gate  # noqa: E402
 
 from assets.logo_helper import header_with_logo
-header_with_logo("11 Watchlist", "Pie360 — AI-Powered Economic Cycle Dashboard")
+header_with_logo("Watchlist", "Track Assets & Monitor Macro Signals")
 
 if not render_login_gate(
     title="Sign in to use Watchlist",

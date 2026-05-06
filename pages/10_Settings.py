@@ -467,7 +467,7 @@ with st.expander("🗂️  Cache controls", expanded=False):
                 from components.stock_score_utils import fetch_stock_data
 
 from assets.logo_helper import header_with_logo
-header_with_logo("Global & External", "Global Indicators & External Factors")
+header_with_logo("Settings", "Account, Preferences & API Configuration")
 
                 fetch_stock_data.clear()
                 st.success("Stock score cache cleared.")

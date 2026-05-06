@@ -547,7 +547,7 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
                 from ai.portfolio_analyzer import TICKER_SECTORS
 
 from assets.logo_helper import header_with_logo
-header_with_logo("4 Portfolio", "Pie360 — AI-Powered Economic Cycle Dashboard")
+header_with_logo("Portfolio", "Macro-Adjusted Portfolio Analysis")
 
                 unknown = [p["ticker"] for p in positions if p["ticker"] not in TICKER_SECTORS]
                 if unknown:

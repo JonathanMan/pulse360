@@ -136,7 +136,7 @@ def _result_area(state_key: str) -> None:
         import markdown as _md
 
 from assets.logo_helper import header_with_logo
-header_with_logo("5 Briefing", "Pie360 — AI-Powered Economic Cycle Dashboard")
+header_with_logo("Daily Briefing", "AI-Generated Macro Summary & Investment Recommendations")
 
         html_body = _md.markdown(
             text,
