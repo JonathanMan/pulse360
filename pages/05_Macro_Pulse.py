@@ -286,6 +286,97 @@ def build_card_html_native(f):
     """
 
 
+def _deep_dive_stream(f):
+    """Generator that streams a deep-dive brief on a single forecaster."""
+    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+    first_name = f["name"].split()[0]
+    prompt = f"""You are a macro research analyst at Pulse360 giving a concise deep dive on one forecaster.
+
+Forecaster: {f['name']}
+Specialty: {f.get('specialty', '')}
+Bias: {f.get('bias', '')}
+Current signal: {f['signal']}
+Current view: {f['summary']}
+
+Write a tight 3-part brief:
+
+**Core thesis** — What is {first_name}'s current investment framework? What does he/she think is driving markets right now? (2-3 sentences)
+
+**Recent positioning** — What specific moves, bets, or statements reveal conviction? Be concrete — name assets, sectors, or calls where possible. (2-3 sentences)
+
+**Portfolio implication** — One specific, actionable takeaway for a diversified investor given this signal. (1-2 sentences)
+
+Total length: 150-200 words. Write for a sophisticated investor. Be specific, not generic."""
+    with client.messages.stream(
+        model="claude-sonnet-4-6",
+        max_tokens=400,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        yield from stream.text_stream
+
+
+def _render_forecaster_card(f):
+    """Render a single forecaster card with an interactive deep-dive CTA."""
+    card_key = f["name"].replace(" ", "_").lower()
+    dd_key = f"deep_dive_{card_key}"
+
+    s = SIGNAL_STYLES.get(f["signal"], SIGNAL_STYLES["Caution"])
+    bias = f.get("bias", "")
+    bs = BIAS_STYLES.get(bias, {"color": "#888", "bg": "#f0f0f0"})
+    bias_html = (
+        f'<span class="mp-bias-tag" style="color:{bs["color"]};background:{bs["bg"]};">'
+        f'{bias}</span>'
+    ) if bias else ""
+
+    with st.container(border=True):
+        # Header: name + bias on left, signal badge on right
+        col_info, col_badge = st.columns([5, 1])
+        with col_info:
+            st.markdown(f"""
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:2px;">
+                <p class="mp-fname" style="margin:0;">{f['name']}</p>{bias_html}
+              </div>
+              <p class="mp-fspecialty">{f['specialty']}</p>
+            """, unsafe_allow_html=True)
+        with col_badge:
+            st.markdown(
+                f'<div style="text-align:right;margin-top:4px;">'
+                f'<span class="mp-signal-badge" style="background:{s["bg"]};color:{s["text"]};">'
+                f'{f["signal"]}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+        # Summary
+        st.markdown(
+            f'<p class="mp-fread">{f["summary"]}</p>',
+            unsafe_allow_html=True,
+        )
+
+        # Deep dive button (only when no dive is open)
+        if not st.session_state.get(dd_key):
+            if st.button(
+                f"Deep dive: {f['name'].split()[0]} ↗",
+                key=f"btn_{card_key}",
+                use_container_width=False,
+            ):
+                st.session_state[dd_key] = "run"
+                st.rerun()
+
+        # Stream on first trigger
+        if st.session_state.get(dd_key) == "run":
+            st.divider()
+            result = st.write_stream(_deep_dive_stream(f))
+            st.session_state[dd_key] = result
+
+        # Show cached result with close button
+        elif st.session_state.get(dd_key):
+            st.divider()
+            st.markdown(st.session_state[dd_key])
+            if st.button("✕ Close", key=f"close_{card_key}"):
+                del st.session_state[dd_key]
+                st.rerun()
+
+
 def render_macro_pulse(signals):
     """Render the full Macro Pulse section using native st.markdown — no iframe."""
     forecasters = signals["forecasters"]
@@ -357,7 +448,7 @@ def render_macro_pulse(signals):
             unsafe_allow_html=True,
         )
         for f in group:
-            st.markdown(build_card_html_native(f), unsafe_allow_html=True)
+            _render_forecaster_card(f)
 
 
 # ---------------------------------------------------------------------------
