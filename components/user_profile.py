@@ -150,7 +150,7 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
 
     macro_pages = [
         st.Page("pages/0_Dashboard.py",    title="Dashboard",   icon="📊", default=True),
-        st.Page("pages/13_Macro_Pulse.py", title="Macro Pulse", icon="🌐"),
+        st.Page("pages/05_Macro_Pulse.py", title="Macro Pulse", icon="🌐"),
     ]
 
     portfolio_pages = [
