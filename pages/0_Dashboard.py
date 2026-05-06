@@ -54,8 +54,6 @@ DISCLAIMER = (
 from components.pulse360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
-header_with_logo("Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard")
-
 inject_theme()
 st.markdown("""
 <style>
@@ -65,11 +63,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-col_h, col_r = st.columns([6, 1])
+col_h, col_r = st.columns([8, 1])
 with col_h:
-    pass
+    header_with_logo("Dashboard", "Pie360 — AI-Powered Economic Cycle Dashboard")
 with col_r:
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     if st.button("🔄 Refresh", help="Clear cache and reload all data"):
         st.cache_data.clear()
         st.rerun()
