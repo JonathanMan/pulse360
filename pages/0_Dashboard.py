@@ -67,6 +67,7 @@ st.markdown("""
 # ── Header ─────────────────────────────────────────────────────────────────────
 col_h, col_r = st.columns([6, 1])
 with col_h:
+    pass
 with col_r:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🔄 Refresh", help="Clear cache and reload all data"):
