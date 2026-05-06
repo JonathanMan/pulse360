@@ -398,8 +398,48 @@ def refresh_signals():
 
 
 # ---------------------------------------------------------------------------
+# Portfolio review helpers
+# ---------------------------------------------------------------------------
+
+def _build_review_prompt(signals):
+    counts = compute_consensus(signals["forecasters"])
+    forecaster_lines = "\n".join([
+        f"- {f['name']} ({f.get('specialty', '')}): {f['signal']} — {f['summary']}"
+        for f in signals["forecasters"]
+    ])
+    return f"""You are a senior macro strategist giving a concise portfolio review.
+
+Current macro consensus across {len(signals['forecasters'])} top forecasters:
+Risk on: {counts['Risk on']} | Caution: {counts['Caution']} | Risk off: {counts['Risk off']}
+
+Individual signals:
+{forecaster_lines}
+
+Provide a crisp, actionable review with three sections:
+1. **Cycle read** — 2-3 sentences on what this consensus implies about the current economic cycle phase
+2. **Top 3 portfolio adjustments** — specific, actionable allocation moves given this macro backdrop
+3. **Key risks to monitor** — 2-3 near-term catalysts that could change the picture
+
+Write for a professional investor. Be specific, not generic."""
+
+
+def _stream_review(prompt):
+    """Generator that yields text chunks from Claude for st.write_stream."""
+    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+    with client.messages.stream(
+        model="claude-sonnet-4-6",
+        max_tokens=1200,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        yield from stream.text_stream
+
+
+# ---------------------------------------------------------------------------
 # Render
 # ---------------------------------------------------------------------------
+
+if "portfolio_review" not in st.session_state:
+    st.session_state.portfolio_review = None
 
 signals = get_signals()
 
@@ -411,18 +451,26 @@ col1, col2 = st.columns([2, 1])
 with col2:
     if st.button("↻ Refresh signals", use_container_width=True):
         refresh_signals()
+        st.session_state.portfolio_review = None  # clear stale review on signal refresh
         st.rerun()
 
 with col1:
-    if st.button("Run full macro-adjusted portfolio review ↗", use_container_width=True, type="primary"):
-        counts = compute_consensus(signals["forecasters"])
-        prompt = (
-            f"The macro forecasters are currently split: "
-            f"{counts['Risk on']} risk on, {counts['Caution']} caution, {counts['Risk off']} risk off. "
-            f"Run a full Pulse360 macro-adjusted review of my portfolio and give me the top 3 "
-            f"changes I should consider given this outlook."
-        )
-        st.chat_message("assistant").write(
-            f"Running a full macro-adjusted portfolio review based on the current forecaster signals "
-            f"({counts['Risk on']} risk on / {counts['Caution']} caution / {counts['Risk off']} risk off)..."
-        )
+    run_review = st.button(
+        "Run full macro-adjusted portfolio review ↗",
+        use_container_width=True,
+        type="primary",
+    )
+
+if run_review:
+    prompt = _build_review_prompt(signals)
+    st.markdown("---")
+    st.markdown("#### Macro-Adjusted Portfolio Review")
+    try:
+        result = st.write_stream(_stream_review(prompt))
+        st.session_state.portfolio_review = result
+    except Exception as e:
+        st.error(f"Review failed: {e}")
+elif st.session_state.portfolio_review:
+    st.markdown("---")
+    st.markdown("#### Macro-Adjusted Portfolio Review")
+    st.markdown(st.session_state.portfolio_review)
