@@ -358,22 +358,22 @@ def _send_via_transport(to: str, subject: str, html: str) -> tuple[bool, str]:
     # Prerequisites:
     #   1. Sign up at resend.com (free tier: 100 emails/day, 3k/month)
     #   2. Create an API key
-    #   3. pip install resend
-    #   4. Add to .streamlit/secrets.toml:
+    #   3. pip install resend  (already in requirements.txt)
+    #   4. Add to .streamlit/secrets.toml and Streamlit Cloud secrets:
     #        RESEND_API_KEY = "re_xxxxxxxxxxxx"
-    #        RESEND_FROM    = "Pulse360 <briefing@yourdomain.com>"
-    #        BRIEFING_EMAIL = "you@gmail.com"
+    #        RESEND_FROM    = "onboarding@resend.dev"   # free-tier sender
+    #        BRIEFING_EMAIL = "jonathancyman@gmail.com"
     #
-    # if "RESEND_API_KEY" in st.secrets:
-    #     import resend
-    #     resend.api_key = st.secrets["RESEND_API_KEY"]
-    #     resend.Emails.send({
-    #         "from":    st.secrets.get("RESEND_FROM", "onboarding@resend.dev"),
-    #         "to":      [to],
-    #         "subject": subject,
-    #         "html":    html,
-    #     })
-    #     return True, f"Briefing sent to {to} via Resend ✓"
+    if "RESEND_API_KEY" in st.secrets:
+        import resend
+        resend.api_key = st.secrets["RESEND_API_KEY"]
+        resend.Emails.send({
+            "from":    st.secrets.get("RESEND_FROM", "onboarding@resend.dev"),
+            "to":      [to],
+            "subject": subject,
+            "html":    html,
+        })
+        return True, f"Briefing sent to {to} via Resend ✓"
 
     # ── Option 3: SendGrid ────────────────────────────────────────────────────
     # Prerequisites:
