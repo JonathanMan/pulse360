@@ -313,3 +313,4 @@ def get_weight(ticker: str) -> float:
     if not isinstance(current, dict):
         return 0.0
     return float(current.get(ticker.upper().strip(), 0.0))
+
