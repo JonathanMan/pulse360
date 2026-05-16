@@ -617,6 +617,11 @@ st.caption(
 # Load weights at page level — the only call to load_weights() / _js_read_weights()
 weights = load_weights()
 
+# Equal-split hint — computed before the form so it's visible above the inputs
+_n_positions = len(scored) + len(failed)
+_equal_split = round(100.0 / _n_positions, 1) if _n_positions > 0 else 0.0
+st.caption(f"💡 Equal split across {_n_positions} positions: **{_equal_split}%** each")
+
 with st.form("portfolio_weights_form"):
     new_weights: dict[str, float] = {}
 
@@ -659,18 +664,24 @@ with st.form("portfolio_weights_form"):
 
     # Live total — computed from the form's current values
     total_w = sum(new_weights.values())
-    diff = round(100.0 - total_w, 1)
-    if abs(diff) < 0.05:
+    diff    = round(100.0 - total_w, 1)
+    _ready  = abs(diff) < 0.5
+
+    # Progress bar: clamp to [0, 1], turns green via CSS when complete
+    _progress_val = min(1.0, max(0.0, total_w / 100.0))
+    st.progress(_progress_val)
+
+    if _ready:
         total_html = (
-            '<span style="color:#00a35a;font-weight:700;font-size:0.9rem;">'
-            f'Total: {total_w:.1f}%  ✅  Ready to rebalance'
+            '<span style="color:#00a35a;font-weight:700;font-size:0.88rem;">'
+            f'✅  {total_w:.1f}% — weights complete, ready to rebalance'
             '</span>'
         )
     else:
         sign = "+" if diff > 0 else ""
         total_html = (
-            '<span style="color:#d92626;font-weight:700;font-size:0.9rem;">'
-            f'Total: {total_w:.1f}%  ({sign}{diff}% to reach 100%)'
+            '<span style="color:#d92626;font-weight:700;font-size:0.88rem;">'
+            f'{total_w:.1f}% allocated  ·  {sign}{diff}% to reach 100%'
             '</span>'
         )
     st.markdown(total_html, unsafe_allow_html=True)
@@ -737,31 +748,102 @@ if _plan:
     st.info(PHASE_RATIONALE.get(_phase, ""), icon="🔭")
     st.markdown("")
 
-    # Build display DataFrame
-    df = plan_to_dataframe(_plan)
-
-    # Colour-code the delta column
-    def _delta_color(val: float) -> str:
-        if val >= 5.0:
-            return "color: #059669; font-weight: 700;"
-        if val <= -5.0:
-            return "color: #dc2626; font-weight: 700;"
-        if abs(val) >= 2.0:
-            return "color: #d97706; font-weight: 600;"
-        return "color: #6b7280;"
-
-    def _style_row(row: pd.Series):
-        styles = [""] * len(row)
-        delta_idx = df.columns.get_loc("Δ")
-        styles[delta_idx] = _delta_color(row["Δ"])
-        return styles
-
-    styled = (
-        df.style
-        .apply(_style_row, axis=1)
-        .format({"Current %": "{:.1f}%", "Suggested %": "{:.1f}%", "Δ": "{:+.1f}%"})
+    # ── HTML rebalancing table ────────────────────────────────────────────────
+    # Sort by |delta| descending so biggest moves are at the top
+    _sorted_plan = sorted(
+        _plan.items(), key=lambda kv: abs(kv[1]["delta"]), reverse=True
     )
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+
+    _row_pad  = "6px 10px"
+    _row_font = "0.82rem"
+
+    def _delta_html(delta: float) -> str:
+        sign = "+" if delta >= 0 else ""
+        if delta >= 5.0:
+            col, wt = "#059669", "700"
+        elif delta <= -5.0:
+            col, wt = "#dc2626", "700"
+        elif abs(delta) >= 2.0:
+            col, wt = "#d97706", "600"
+        else:
+            col, wt = "#6b7280", "400"
+        return (
+            f'<span style="color:{col};font-weight:{wt};">'
+            f'{sign}{delta:.1f}%</span>'
+        )
+
+    def _action_html(action: str) -> str:
+        if "Add" in action and "Minor" not in action:
+            return f'<span style="color:#059669;font-weight:700;">{action}</span>'
+        if "Trim" in action and "Minor" not in action:
+            return f'<span style="color:#dc2626;font-weight:700;">{action}</span>'
+        if "Minor" in action:
+            return f'<span style="color:#d97706;font-weight:600;">{action}</span>'
+        return f'<span style="color:#9ca3af;">{action}</span>'
+
+    _plan_rows_html = ""
+    for ticker, p in _sorted_plan:
+        delta   = p["delta"]
+        ac_col  = ASSET_CLASS_COLORS.get(p["asset_class"], "#6b7280")
+        # Row background tint
+        if delta >= 5.0:
+            row_bg = "#f0fff8"
+        elif delta <= -5.0:
+            row_bg = "#fff5f5"
+        else:
+            row_bg = "#ffffff"
+
+        _plan_rows_html += (
+            f'<tr style="border-bottom:1px solid #ececec;background:{row_bg};">'
+            f'<td style="color:#3498db;font-weight:700;padding:{_row_pad};'
+            f'font-size:{_row_font};">{ticker}</td>'
+            f'<td style="color:#495057;padding:{_row_pad};font-size:{_row_font};">'
+            f'{p["sector"]}</td>'
+            f'<td style="padding:{_row_pad};font-size:0.72rem;">'
+            f'<span style="color:{ac_col};font-weight:600;">{p["asset_class"]}</span></td>'
+            f'<td style="text-align:right;padding:{_row_pad};font-size:{_row_font};'
+            f'color:#495057;">{p["current"]:.1f}%</td>'
+            f'<td style="text-align:right;padding:{_row_pad};font-size:{_row_font};'
+            f'font-weight:600;color:#0a0a0a;">{p["suggested"]:.1f}%</td>'
+            f'<td style="text-align:right;padding:{_row_pad};">'
+            f'{_delta_html(delta)}</td>'
+            f'<td style="padding:{_row_pad};font-size:{_row_font};">'
+            f'{_action_html(p["action"])}</td>'
+            f'</tr>'
+        )
+
+    _plan_thead = (
+        f'<div style="overflow-x:auto;margin:12px 0;">'
+        f'<table style="width:100%;border-collapse:collapse;background:#fff;'
+        f'font-size:{_row_font};border-radius:6px;overflow:hidden;'
+        f'box-shadow:0 1px 3px rgba(0,0,0,0.06);">'
+        f'<thead><tr style="border-bottom:2px solid #dee2e6;background:#f8f9fa;'
+        f'color:#6a6a6a;font-size:0.65rem;text-transform:uppercase;letter-spacing:.05em;">'
+        f'<th style="padding:{_row_pad};text-align:left;">Ticker</th>'
+        f'<th style="padding:{_row_pad};text-align:left;">Sector</th>'
+        f'<th style="padding:{_row_pad};text-align:left;">Asset Class</th>'
+        f'<th style="padding:{_row_pad};text-align:right;">Current</th>'
+        f'<th style="padding:{_row_pad};text-align:right;">Suggested</th>'
+        f'<th style="padding:{_row_pad};text-align:right;">Δ</th>'
+        f'<th style="padding:{_row_pad};text-align:left;">Action</th>'
+        f'</tr></thead><tbody>'
+    )
+    st.markdown(_plan_thead + _plan_rows_html + "</tbody></table></div>",
+                unsafe_allow_html=True)
+
+    # ── CSV export ────────────────────────────────────────────────────────────
+    df = plan_to_dataframe(_plan)
+    _csv_buf = io.StringIO()
+    df.to_csv(_csv_buf, index=False)
+    _csv_col, _ = st.columns([1, 4])
+    with _csv_col:
+        st.download_button(
+            label="📥 Export CSV",
+            data=_csv_buf.getvalue(),
+            file_name=f"rebalancing_{_phase.replace(' / ', '_').replace(' ', '_').lower()}.csv",
+            mime="text/csv",
+            key="plan_csv_download",
+        )
 
     # Summary metrics
     actions_required = sum(
@@ -795,6 +877,8 @@ if _plan:
         st.markdown("#### 📝 AI Rebalancing Memo")
         with st.container(border=True):
             st.markdown(memo_state)
+        with st.expander("📋 Copy memo text", expanded=False):
+            st.code(memo_state, language=None)
         if st.button("✕ Close memo", key="close_memo"):
             del st.session_state["_memo_state"]
             st.rerun()
