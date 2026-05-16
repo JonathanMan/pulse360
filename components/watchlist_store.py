@@ -175,6 +175,12 @@ def remove_from_watchlist(ticker: str) -> bool:
     updated = [t for t in current if t != ticker]
     st.session_state["_watchlist_cache"] = updated
     _js_write(updated)
+    # Clean the removed ticker out of the weights cache (no JS write needed —
+    # the weights will be reconciled against the live watchlist on next save)
+    w_cache = st.session_state.get("_weights_cache")
+    if isinstance(w_cache, dict) and ticker in w_cache:
+        del w_cache[ticker]
+        st.session_state["_weights_cache"] = w_cache
     return True
 
 
@@ -194,3 +200,116 @@ def clear_watchlist() -> None:
     """Remove all tickers from the watchlist."""
     st.session_state["_watchlist_cache"] = []
     _js_write([])
+    # Also clear weights
+    st.session_state["_weights_cache"] = {}
+    _js_write_weights({})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Portfolio weights store
+# ══════════════════════════════════════════════════════════════════════════════
+# Stored separately in localStorage under 'pulse360_weights' as a JSON object:
+#   {"AAPL": 12.5, "MSFT": 8.0, ...}
+#
+# Follows the exact same two-tier pattern as the watchlist store:
+# - load_weights()  — only function that calls _js_read_weights(); reads once at page level
+# - save_weights()  — updates session_state + writes to localStorage
+# - get_weight()    — reads session_state directly; safe in form submission handlers
+# ══════════════════════════════════════════════════════════════════════════════
+
+_WEIGHTS_KEY = "pulse360_weights"
+
+
+def _js_read_weights() -> dict[str, float] | None:
+    """
+    Read portfolio weights from localStorage.
+
+    Returns:
+        dict[str, float]  — weights keyed by uppercase ticker (may be {})
+        None              — JS component hasn't mounted yet (first render cycle)
+    """
+    try:
+        from streamlit_javascript import st_javascript  # type: ignore
+    except ImportError:
+        return None
+
+    raw = st_javascript(
+        f"JSON.parse(localStorage.getItem('{_WEIGHTS_KEY}') || '{{}}')",
+        key="wl_weights_read",
+    )
+    if raw is None or raw == 0:
+        return None
+    if isinstance(raw, dict):
+        # Coerce values to float, skip non-numeric entries
+        return {
+            str(k).upper().strip(): float(v)
+            for k, v in raw.items()
+            if k and isinstance(v, (int, float))
+        }
+    return {}
+
+
+def _js_write_weights(weights: dict[str, float]) -> None:
+    """
+    Persist portfolio weights to localStorage.
+    Also mirrors to st.session_state so the same render cycle sees the update.
+    """
+    try:
+        from streamlit_javascript import st_javascript  # type: ignore
+    except ImportError:
+        return
+
+    payload = json.dumps({k.upper(): round(float(v), 2) for k, v in weights.items()})
+    safe_payload = payload.replace("'", "\\'")
+    st_javascript(
+        f"localStorage.setItem('{_WEIGHTS_KEY}', '{safe_payload}'); 1",
+        key="wl_weights_write",
+    )
+    st.session_state["_weights_cache"] = weights.copy()
+
+
+def load_weights() -> dict[str, float]:
+    """
+    Return the current portfolio weights as a dict of {TICKER: weight_pct}.
+
+    Reads from st.session_state cache first, then falls back to localStorage.
+    Returns {} if the JS component hasn't mounted yet (first render cycle).
+    """
+    if "_weights_cache" in st.session_state:
+        return dict(st.session_state["_weights_cache"])
+
+    weights = _js_read_weights()
+    if weights is not None:
+        st.session_state["_weights_cache"] = weights
+        return weights
+    return {}
+
+
+def save_weights(weights: dict[str, float]) -> None:
+    """
+    Persist all portfolio weights at once.
+
+    Call this once after a form submission — do NOT call set_weight()
+    per-ticker in a loop, as each call would try to register a new
+    'wl_weights_write' JS key in the same render cycle.
+
+    Args:
+        weights: dict mapping uppercase ticker → weight percentage (0–100)
+    """
+    cleaned = {k.upper().strip(): round(float(v), 2) for k, v in weights.items() if v > 0}
+    st.session_state["_weights_cache"] = cleaned
+    _js_write_weights(cleaned)
+
+
+def get_weight(ticker: str) -> float:
+    """
+    Return the portfolio weight for *ticker* (default 0.0).
+
+    Reads session_state directly — never calls _js_read_weights() — to stay
+    safe inside form submission handlers where 'wl_weights_read' is already
+    registered.
+    """
+    current = st.session_state.get("_weights_cache")
+    if not isinstance(current, dict):
+        return 0.0
+    return float(current.get(ticker.upper().strip(), 0.0))

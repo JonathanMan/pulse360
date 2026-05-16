@@ -29,7 +29,10 @@ from components.watchlist_store import (
     add_to_watchlist,
     clear_watchlist,
     load_watchlist,
+    load_weights,
     remove_from_watchlist,
+    save_weights,
+    get_weight,
 )
 from components.stock_score_utils import (
     DISCLAIMER,
@@ -522,6 +525,92 @@ with clr_col:
     if st.button("🗑️ Clear watchlist", use_container_width=True):
         clear_watchlist()
         st.rerun()
+
+# ── Portfolio Weights ──────────────────────────────────────────────────────────
+st.markdown("---")
+st.markdown("#### 💼 Portfolio Weights")
+st.caption(
+    "Enter your current allocation (%) for each position. "
+    "Weights must sum to 100% to unlock the Rebalancing Plan."
+)
+
+# Load weights at page level — the only call to load_weights() / _js_read_weights()
+weights = load_weights()
+
+with st.form("portfolio_weights_form"):
+    new_weights: dict[str, float] = {}
+
+    # Lay inputs out in rows of 4
+    n_cols = min(len(scored), 4)
+    weight_cols = st.columns(n_cols) if n_cols > 0 else []
+
+    for idx, s in enumerate(scored):
+        ticker = s.get("Ticker", "")
+        current_w = float(weights.get(ticker, 0.0))
+        col_idx = idx % n_cols if n_cols else 0
+        with weight_cols[col_idx]:
+            w = st.number_input(
+                ticker,
+                min_value=0.0,
+                max_value=100.0,
+                value=current_w,
+                step=0.5,
+                format="%.1f",
+                key=f"wf_{ticker}",
+                help=f"{s.get('Company', ticker)}  ·  {s.get('Sector', '—')}",
+            )
+            new_weights[ticker] = w
+
+    # Live total — computed from the form's current values
+    total_w = sum(new_weights.values())
+    diff = round(100.0 - total_w, 1)
+    if abs(diff) < 0.05:
+        total_html = (
+            '<span style="color:#00a35a;font-weight:700;font-size:0.9rem;">'
+            f'Total: {total_w:.1f}%  ✅  Ready to rebalance'
+            '</span>'
+        )
+    else:
+        sign = "+" if diff > 0 else ""
+        total_html = (
+            '<span style="color:#d92626;font-weight:700;font-size:0.9rem;">'
+            f'Total: {total_w:.1f}%  ({sign}{diff}% to reach 100%)'
+            '</span>'
+        )
+    st.markdown(total_html, unsafe_allow_html=True)
+    st.markdown("")
+
+    save_weights_btn = st.form_submit_button("💾 Save weights", type="primary")
+
+if save_weights_btn:
+    save_weights(new_weights)
+    st.success("Portfolio weights saved.", icon="💾")
+    # Don't st.rerun() — avoid race condition with the localStorage JS write
+
+# Reload weights after potential save to check if total is ready
+_saved_weights = st.session_state.get("_weights_cache", {})
+_saved_total   = sum(float(v) for v in _saved_weights.values()) if _saved_weights else 0.0
+_weights_ready = abs(_saved_total - 100.0) < 0.05 and len(_saved_weights) > 0
+
+st.markdown("")
+if _weights_ready:
+    if st.button(
+        "📊 Generate Rebalancing Plan",
+        type="primary",
+        help="Produces a cycle-informed rebalancing table + AI memo",
+    ):
+        st.info(
+            "🚧 **Rebalancing engine coming next build.** "
+            "Your weights are saved — the plan generator will use them automatically.",
+            icon="🔧",
+        )
+else:
+    st.button(
+        "📊 Generate Rebalancing Plan",
+        type="primary",
+        disabled=True,
+        help="Save weights that sum to 100% to unlock this.",
+    )
 
 # ── How scores work ───────────────────────────────────────────────────────────
 st.markdown("---")
