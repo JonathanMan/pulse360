@@ -20,8 +20,10 @@ Features
 from __future__ import annotations
 
 import io
+import os
 from datetime import date
 
+import anthropic
 import pandas as pd
 import streamlit as st
 
@@ -52,6 +54,71 @@ from components.stock_score_utils import (
     _score_color_sub,
     score_ticker_cached,
 )
+
+
+def _generate_rebalancing_memo(plan: dict, cycle_phase: str) -> str:
+    """
+    Call Claude synchronously to generate a 4-part rebalancing memo.
+    Returns the full memo text, or an error string on failure.
+    Follows the same synchronous pattern as _run_deep_dive in Macro Pulse.
+    """
+    # Build a compact portfolio summary for the prompt
+    positions_lines = []
+    for ticker, p in sorted(plan.items(), key=lambda x: -abs(x[1]["delta"])):
+        sign = "+" if p["delta"] >= 0 else ""
+        positions_lines.append(
+            f"  {ticker} ({p['sector']} · {p['asset_class']}): "
+            f"{p['current']}% → {p['suggested']}% ({sign}{p['delta']}%) {p['action']}"
+        )
+    positions_str = "\n".join(positions_lines)
+
+    # Separate key moves for emphasis
+    trims = [
+        f"{t} ({p['delta']:+.1f}%)" for t, p in plan.items()
+        if p["delta"] <= -2.0
+    ]
+    adds = [
+        f"{t} ({p['delta']:+.1f}%)" for t, p in plan.items()
+        if p["delta"] >= 2.0
+    ]
+
+    prompt = f"""You are a senior macro strategist at Pie360 writing a concise rebalancing memo for a professional investor.
+
+CYCLE PHASE: {cycle_phase}
+
+FULL PORTFOLIO REBALANCING PLAN:
+{positions_str}
+
+KEY TRIMS: {', '.join(trims) if trims else 'None'}
+KEY ADDS: {', '.join(adds) if adds else 'None'}
+
+Write a tight 4-part investment memo. Use **bold headers** exactly as shown:
+
+**Macro Context**
+2–3 sentences on the {cycle_phase} phase: what it means for growth, rates, and earnings. Be specific — reference yield curves, PMI direction, credit spreads, or Fed policy as relevant.
+
+**Portfolio Assessment**
+1 paragraph. Assess how this specific portfolio is currently positioned for the {cycle_phase} phase. Name the biggest exposure mismatches. Be direct — don't hedge everything.
+
+**Key Actions**
+3–5 bullet points. Each bullet = one concrete change with a one-line rationale. Name specific tickers or sectors. Format: "• Trim [TICKER/SECTOR] — [reason]" or "• Add [TICKER/SECTOR] — [reason]".
+
+**Risk Flags**
+1–2 sentences. What data or events would invalidate this cycle phase call and force a reversal? Be specific (e.g. "ISM Manufacturing rebounds above 52", "10-year yield breaks below 3.8%").
+
+Total length: 280–360 words. Write for a sophisticated investor. No disclaimers or boilerplate."""
+
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", "")
+        client  = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=600,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text
+    except Exception as e:
+        return f"⚠️ Could not generate memo: {e}"
 
 
 def _badge(score: int) -> str:
@@ -714,11 +781,37 @@ if _plan:
         "before trading."
     )
 
+    # ── AI Memo ───────────────────────────────────────────────────────────────
+    st.markdown("---")
+    memo_state = st.session_state.get("_memo_state")
+
+    if memo_state == "run":
+        with st.spinner("Writing rebalancing memo…"):
+            memo_text = _generate_rebalancing_memo(_plan, _phase)
+        st.session_state["_memo_state"] = memo_text
+        st.rerun()
+
+    elif memo_state and memo_state != "run":
+        st.markdown("#### 📝 AI Rebalancing Memo")
+        with st.container(border=True):
+            st.markdown(memo_state)
+        if st.button("✕ Close memo", key="close_memo"):
+            del st.session_state["_memo_state"]
+            st.rerun()
+
+    else:
+        if st.button(
+            "📝 Generate AI Memo",
+            help="Claude writes a plain-English macro rationale and action plan.",
+        ):
+            st.session_state["_memo_state"] = "run"
+            st.rerun()
+
     st.markdown("")
     if st.button("✕ Close plan", key="close_rebalancing_plan"):
         del st.session_state["_rebalancing_plan"]
-        if "_rebalancing_phase" in st.session_state:
-            del st.session_state["_rebalancing_phase"]
+        for _k in ("_rebalancing_phase", "_memo_state"):
+            st.session_state.pop(_k, None)
         st.rerun()
 
 # ── How scores work ───────────────────────────────────────────────────────────
