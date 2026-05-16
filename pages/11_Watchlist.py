@@ -34,6 +34,7 @@ from components.watchlist_store import (
     save_weights,
     get_weight,
 )
+from components.ticker_classifier import classify_all, ASSET_CLASS_COLORS
 from components.stock_score_utils import (
     DISCLAIMER,
     _COMPLEXITY,
@@ -255,6 +256,12 @@ if failed:
         "Individual stocks only. Use the ✕ buttons below to remove unsupported tickers.",
         icon="⚠️",
     )
+
+# ── Classify all tickers (sector + asset class) ───────────────────────────────
+# Results are stored in session_state so the rebalancing engine can read them
+# without re-running classify_all on every render.
+classifications = classify_all(scored, failed)
+st.session_state["_classifications"] = classifications
 
 if not scored:
     st.error("No scores available. Try refreshing or check your tickers.")
@@ -540,14 +547,23 @@ weights = load_weights()
 with st.form("portfolio_weights_form"):
     new_weights: dict[str, float] = {}
 
+    # Combine scored + failed tickers for weight inputs
+    # (ETFs in `failed` still need a weight if the user holds them)
+    all_weight_items: list[dict] = list(scored) + [
+        {"Ticker": t, "Company": t, "Sector": classifications.get(t, {}).get("sector", "—")}
+        for t in failed
+    ]
+
     # Lay inputs out in rows of 4
-    n_cols = min(len(scored), 4)
+    n_cols = min(len(all_weight_items), 4)
     weight_cols = st.columns(n_cols) if n_cols > 0 else []
 
-    for idx, s in enumerate(scored):
+    for idx, s in enumerate(all_weight_items):
         ticker = s.get("Ticker", "")
         current_w = float(weights.get(ticker, 0.0))
         col_idx = idx % n_cols if n_cols else 0
+        clf = classifications.get(ticker, {"sector": s.get("Sector", "—"), "asset_class": "Equity"})
+        ac_color = ASSET_CLASS_COLORS.get(clf["asset_class"], "#6b7280")
         with weight_cols[col_idx]:
             w = st.number_input(
                 ticker,
@@ -557,7 +573,14 @@ with st.form("portfolio_weights_form"):
                 step=0.5,
                 format="%.1f",
                 key=f"wf_{ticker}",
-                help=f"{s.get('Company', ticker)}  ·  {s.get('Sector', '—')}",
+                help=f"{s.get('Company', ticker)}  ·  {clf['sector']}",
+            )
+            # Asset class badge
+            st.markdown(
+                f'<div style="font-size:0.65rem;color:{ac_color};font-weight:600;'
+                f'margin-top:-8px;margin-bottom:4px;letter-spacing:0.03em;">'
+                f'{clf["sector"]} · {clf["asset_class"]}</div>',
+                unsafe_allow_html=True,
             )
             new_weights[ticker] = w
 
