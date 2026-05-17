@@ -33,6 +33,11 @@ def _try_restore_profile() -> bool:
     Side-effect: sets st.session_state["_p360_ls_checked"] = True once
     localStorage has definitely returned null (no saved profile).
     """
+    # Don't overwrite a profile that was explicitly set during this session
+    # (e.g. via the Settings page profile-switch button).
+    if "pie360_profile" in st.session_state:
+        return False
+
     from components.user_profile import PROFILES as _PROFILES
 
     # ── 1. Supabase (synchronous, only for logged-in users) ───────────────────
