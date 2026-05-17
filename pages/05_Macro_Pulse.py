@@ -1,7 +1,7 @@
 import streamlit as st
 import anthropic
 import json
-from datetime import date
+from datetime import date, datetime
 from components.supabase_client import get_client
 
 from assets.logo_helper import header_with_logo
@@ -15,7 +15,28 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+
+_STALE_DAYS = 14            # show "⚠️ Review needed" if signal older than this
+_REFRESH_TIMEOUT_SECS = 25  # max seconds for Claude Opus web-search call
+
+
+def _is_stale(statement_date_str: str) -> bool:
+    """Return True if statement_date is more than _STALE_DAYS days ago."""
+    if not statement_date_str:
+        return False
+    try:
+        dt = datetime.strptime(statement_date_str, "%B %d, %Y").date()
+        return (date.today() - dt).days > _STALE_DAYS
+    except ValueError:
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Default signal data — overwritten on refresh
+# source_url / statement_date are populated by the refresh call; defaults are
+# intentionally blank because the static text has no canonical single source.
 # ---------------------------------------------------------------------------
 
 DEFAULT_SIGNALS = {
@@ -26,6 +47,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Equity market & sentiment cycles",
             "bias": "Perma-bull",
             "signal": "Risk on",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Lee sees strong earnings growth, resilient consumer spending, and improving sentiment "
                 "as tailwinds for equities. He remains one of Wall Street's most vocal bulls on the "
@@ -37,6 +60,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Corporate earnings & productivity growth",
             "bias": "Perma-bull",
             "signal": "Risk on",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Yardeni argues that U.S. corporate productivity gains — driven by AI and technology — "
                 "are underpriced by the market. He sees earnings growth as durable enough to justify "
@@ -48,6 +73,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Long-run equity returns",
             "bias": "Perma-bull",
             "signal": "Risk on",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Siegel's long-run thesis holds: equities beat every other asset class over time, and "
                 "investors who exit miss the recoveries that matter most. He cautions against letting "
@@ -59,6 +86,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Yield curve indicator",
             "bias": "Neutral",
             "signal": "Risk on",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Harvey's yield curve has re-steepened, which historically marks the window where equities "
                 "can recover. He notes the recession signal has faded, though the all-clear isn't unconditional."
@@ -69,6 +98,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Long-term value & market valuation",
             "bias": "Neutral",
             "signal": "Caution",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Berkshire's cash pile has hit record highs and Buffett has slowed buybacks — his clearest "
                 "signal that he finds few things worth buying at current prices. His market cap-to-GDP "
@@ -80,6 +111,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Systemic crisis detection",
             "bias": "Perma-bear",
             "signal": "Caution",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Debt levels and stagflation risk are elevated, but not yet a 2008 scenario. Roubini warns "
                 "the tools to fight the next crisis are already depleted."
@@ -90,6 +123,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Bubble identification",
             "bias": "Perma-bear",
             "signal": "Risk off",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Valuations remain historically extreme. Grantham sees a third bubble in 25 years still "
                 "deflating — real assets and emerging markets are his relative shelter."
@@ -100,6 +135,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Contrarian deep value",
             "bias": "Contrarian",
             "signal": "Risk off",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Burry has flagged index concentration and passive investment flows as a systemic risk. "
                 "He's positioned short on broad indices and long on specific undervalued names."
@@ -110,6 +147,8 @@ DEFAULT_SIGNALS = {
             "specialty": "Macro timing & liquidity",
             "bias": "Flexible",
             "signal": "Risk off",
+            "source_url": "",
+            "statement_date": "May 4, 2026",
             "summary": (
                 "Druckenmiller is watching Fed policy and liquidity cycles closely. He's reduced equity "
                 "exposure and flagged that the easy money environment is structurally over."
@@ -260,6 +299,12 @@ MP_CSS = """
     border-left: 2px solid rgba(0,0,0,0.15); padding-left: 10px; }
   .mp-bias-tag { font-size: 10px; font-weight: 500; padding: 2px 7px;
     border-radius: 20px; white-space: nowrap; letter-spacing: 0.02em; }
+  .mp-source-meta { font-size: 11px; color: #888780; margin: 6px 0 0; display: flex;
+    align-items: center; gap: 6px; flex-wrap: wrap; }
+  .mp-source-link { color: #2a6ebb !important; text-decoration: none !important; }
+  .mp-source-link:hover { text-decoration: underline !important; }
+  .mp-stale-badge { color: #854F0B; font-weight: 600; }
+  .mp-meta-sep { color: #d0cfc9; }
 </style>
 """
 
@@ -273,6 +318,25 @@ def build_card_html_native(f):
         f'<span class="mp-bias-tag" style="color:{bs["color"]};background:{bs["bg"]};">'
         f'{bias}</span>'
     ) if bias else ""
+
+    # Source / date metadata row
+    source_url   = f.get("source_url", "")
+    stmt_date    = f.get("statement_date", "")
+    stale        = _is_stale(stmt_date)
+    meta_parts   = []
+    if stmt_date:
+        stale_html = ' <span class="mp-stale-badge">⚠️ Review needed</span>' if stale else ""
+        meta_parts.append(f'{stmt_date}{stale_html}')
+    if source_url:
+        meta_parts.append(
+            f'<span class="mp-meta-sep">·</span> '
+            f'<a class="mp-source-link" href="{source_url}" target="_blank">Source ↗</a>'
+        )
+    meta_html = (
+        f'<p class="mp-source-meta">{"  ".join(meta_parts)}</p>'
+        if meta_parts else ""
+    )
+
     return f"""
     <div class="mp-fcard">
       <div class="mp-fcard-top">
@@ -286,6 +350,7 @@ def build_card_html_native(f):
         <span class="mp-signal-badge" style="background:{s['bg']};color:{s['text']};">{f['signal']}</span>
       </div>
       <p class="mp-fread">{f['summary']}</p>
+      {meta_html}
     </div>
     """
 
@@ -355,6 +420,25 @@ def _render_forecaster_card(f):
             f'<p class="mp-fread">{f["summary"]}</p>',
             unsafe_allow_html=True,
         )
+
+        # Source / date metadata row
+        source_url = f.get("source_url", "")
+        stmt_date  = f.get("statement_date", "")
+        stale      = _is_stale(stmt_date)
+        meta_parts = []
+        if stmt_date:
+            stale_html = ' <span class="mp-stale-badge">⚠️ Review needed</span>' if stale else ""
+            meta_parts.append(f'{stmt_date}{stale_html}')
+        if source_url:
+            meta_parts.append(
+                f'<span class="mp-meta-sep">·</span> '
+                f'<a class="mp-source-link" href="{source_url}" target="_blank">Source ↗</a>'
+            )
+        if meta_parts:
+            st.markdown(
+                f'<p class="mp-source-meta">{"  ".join(meta_parts)}</p>',
+                unsafe_allow_html=True,
+            )
 
         # State: None → show button | "run" → fetch | string → show result
         dd_state = st.session_state.get(dd_key)
@@ -482,6 +566,8 @@ For each forecaster:
 - Search for their most recent public statement, interview, or investor letter (past 3 months if possible)
 - Assign a signal: "Risk on", "Caution", or "Risk off"
 - Write a 2-sentence plain-English summary (no jargon)
+- Record the direct URL of the source you used (article, interview, letter page)
+- Record the date of that source statement in "Month D, YYYY" format
 
 Return ONLY valid JSON in this exact format:
 {
@@ -492,7 +578,9 @@ Return ONLY valid JSON in this exact format:
       "specialty": "Their specialty",
       "bias": "Perma-bull|Perma-bear|Neutral|Contrarian|Flexible",
       "signal": "Risk on|Caution|Risk off",
-      "summary": "Two plain-English sentences about their current view."
+      "summary": "Two plain-English sentences about their current view.",
+      "source_url": "https://... (direct URL to the article/interview/letter; empty string if not found)",
+      "statement_date": "Month D, YYYY (date of the source statement; empty string if unknown)"
     }
   ]
 }
@@ -516,6 +604,7 @@ def refresh_signals():
             response = client.messages.create(
                 model="claude-opus-4-6",
                 max_tokens=4096,
+                timeout=_REFRESH_TIMEOUT_SECS,
                 tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 18}],
                 messages=[{"role": "user", "content": REFRESH_PROMPT}],
             )
