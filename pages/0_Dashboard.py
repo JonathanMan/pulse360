@@ -87,6 +87,10 @@ def _warm_caches() -> None:
     """
     from concurrent.futures import ThreadPoolExecutor
 
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        pool.submit(prefetch_all_series)   # populates all FRED @st.cache_data
+        pool.submit(fetch_shiller_cape)    # pre-warm Yale CAPE
+        pool.submit(fetch_sector_returns)  # pre-warm sector ETF heatmap
 
 # ── Uptime / warmup indicator ─────────────────────────────────────────────────
 # Small dot that confirms the app is fully loaded (not recovering from cold start).
@@ -99,10 +103,6 @@ _uptime_dot = (
     'App live</span>'
 )
 st.markdown(_uptime_dot, unsafe_allow_html=True)
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        pool.submit(prefetch_all_series)   # populates all FRED @st.cache_data
-        pool.submit(fetch_shiller_cape)    # pre-warm Yale CAPE
-        pool.submit(fetch_sector_returns)  # pre-warm sector ETF heatmap
 
 _warm_caches()
 
