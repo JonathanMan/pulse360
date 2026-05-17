@@ -24,6 +24,9 @@ from components.auth import (
 )
 from components.supabase_client import get_client
 
+from components.observability import init_page, log, track, capture_exception
+init_page("Settings")
+
 # ── Page config ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -468,9 +471,6 @@ with st.expander("🗂️  Cache controls", expanded=False):
             # Clear all @st.cache_data decorated functions that score stocks
             try:
                 from components.stock_score_utils import fetch_stock_data
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Settings")
 
                 fetch_stock_data.clear()
                 st.success("Stock score cache cleared.")

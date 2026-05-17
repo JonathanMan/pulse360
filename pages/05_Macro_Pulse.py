@@ -9,6 +9,9 @@ import streamlit as st
 from datetime import date
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("Macro Pulse")
 from components.forecasters import (
     get_signals,
     save_signals,
@@ -25,9 +28,6 @@ from components.forecaster_weights import (
     FORECASTER_NAMES,
 )
 from components.prompts import (
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Macro Pulse")
     run_deep_dive,
     build_review_prompt,
     stream_review,

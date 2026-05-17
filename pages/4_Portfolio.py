@@ -105,6 +105,9 @@ st.markdown(f"""
 import re as _re
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("Portfolio")
 header_with_logo("Portfolio", "Macro-Adjusted Portfolio Analysis")
 
 
@@ -546,9 +549,6 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
 
                 # Warn about unrecognised tickers
                 from ai.portfolio_analyzer import TICKER_SECTORS
-
-from components.observability import init_page, log, track, capture_exception
-init_page("4 Portfolio")
 
                 unknown = [p["ticker"] for p in positions if p["ticker"] not in TICKER_SECTORS]
                 if unknown:

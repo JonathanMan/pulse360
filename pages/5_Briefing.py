@@ -23,6 +23,9 @@ from ai.claude_client import stream_briefing_section
 from components.pie360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("Briefing")
 header_with_logo("Daily Briefing", "AI-Generated Macro Summary & Investment Recommendations")
 
 
@@ -136,9 +139,6 @@ def _result_area(state_key: str) -> None:
     # Falls back to raw text if the markdown library is not installed.
     try:
         import markdown as _md
-
-from components.observability import init_page, log, track, capture_exception
-init_page("5 Briefing")
 
         html_body = _md.markdown(
             text,
