@@ -196,12 +196,29 @@ with col_left:
     for feat in _FEAT_CFG:
         label = f"**{feat['name']}** · {feat['weight']*100:.0f}% weight"
         st.markdown(label)
+
+        # ── Clamp before render ───────────────────────────────────────────────
+        # st.slider raises StreamlitValueBelowMinError / StreamlitValueAboveMaxError
+        # if the session-state value (set by a preset or live FRED feed) falls
+        # outside [min_value, max_value].  Clamp first, then show a note so the
+        # user knows the live reading is more extreme than the slider range allows.
+        sk = f"sim_{feat['id']}"
+        raw_val = float(st.session_state.get(sk, feat["min"]))
+        clamped_val = max(feat["min"], min(feat["max"], raw_val))
+        if clamped_val != raw_val:
+            st.session_state[sk] = clamped_val
+            direction = "minimum" if clamped_val == feat["min"] else "maximum"
+            st.caption(
+                f"⚠️ Live value ({raw_val:g}{feat['unit']}) is outside the simulation "
+                f"range — clamped to {direction}."
+            )
+
         val = st.slider(
-            label          = feat["name"],
-            min_value      = feat["min"],
-            max_value      = feat["max"],
-            step           = feat["step"],
-            key            = f"sim_{feat['id']}",
+            label            = feat["name"],
+            min_value        = feat["min"],
+            max_value        = feat["max"],
+            step             = feat["step"],
+            key              = sk,
             label_visibility = "collapsed",
         )
         stress, desc = feat["fn"](float(val))
