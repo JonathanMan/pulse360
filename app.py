@@ -556,11 +556,11 @@ with st.sidebar:
 # We only run the check when the dashboard has already cached live values in
 # session state (key: "pie360_live_values"), so we never trigger a fresh FRED
 # pull from the router itself.  The Dashboard page populates that key.
-try:
-    from components.alert_engine import check_and_render_alerts as _check_alerts
-
 from components.observability import init_page, log, track, capture_exception
 init_page("Home")
+
+try:
+    from components.alert_engine import check_and_render_alerts as _check_alerts
     _live = st.session_state.get("pie360_live_values")
     _prob = st.session_state.get("pie360_recession_prob")
     if _live is not None:
