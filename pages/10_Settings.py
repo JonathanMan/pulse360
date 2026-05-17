@@ -32,16 +32,7 @@ st.markdown("""
 <style>
     .main .block-container { max-width: 860px; padding-top: 1.2rem; }
 
-    /* Profile cards — equal height via flex column */
-    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
-        display: flex;
-        flex-direction: column;
-    }
-    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"] {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
+    /* Profile cards — heights equalised via JS (see eq() below) */
     .sp-card {
         border: 1px solid #2a2a4a;
         border-radius: 12px;
