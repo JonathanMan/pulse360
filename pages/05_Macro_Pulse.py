@@ -19,6 +19,11 @@ from components.forecasters import (
     GROUP_LABELS,
     is_stale,
 )
+from components.forecaster_weights import (
+    load_weights, save_weights, reset_weights,
+    is_equal_weighted, DEFAULT_WEIGHT, MAX_WEIGHT,
+    FORECASTER_NAMES,
+)
 from components.prompts import (
     run_deep_dive,
     build_review_prompt,
@@ -156,10 +161,10 @@ def _render_forecaster_card(f: dict) -> None:
 
 # ── Main render ───────────────────────────────────────────────────────────────
 
-def render_macro_pulse(signals: dict) -> None:
+def render_macro_pulse(signals: dict, weights: dict | None = None) -> None:
     forecasters  = signals["forecasters"]
     last_updated = signals.get("last_updated", str(date.today()))
-    counts       = compute_consensus(forecasters)
+    counts       = compute_consensus(forecasters, weights=weights)
     total        = len(forecasters)
 
     pct_off  = round(counts["Risk off"] / total * 100) if total else 0
@@ -183,9 +188,44 @@ def render_macro_pulse(signals: dict) -> None:
       <p class="mp-update-time">Last updated: {last_updated}</p>
     """, unsafe_allow_html=True)
 
+    # ── Credibility weight editor ──────────────────────────────────────────────
+    with st.expander("⚖️ Forecaster credibility weights", expanded=False):
+        st.caption(
+            "Adjust how much weight each forecaster carries in the consensus bar. "
+            "1.0 = normal · 0.0 = ignore · 3.0 = triple conviction. "
+            "Weights are saved to your account."
+        )
+        _w_edited: dict[str, float] = {}
+        _cols = st.columns(3)
+        for _idx, _name in enumerate(FORECASTER_NAMES):
+            with _cols[_idx % 3]:
+                _w_edited[_name] = st.slider(
+                    _name.split()[-1],   # last name only — saves space
+                    min_value=0.0,
+                    max_value=MAX_WEIGHT,
+                    value=float((weights or {}).get(_name, DEFAULT_WEIGHT)),
+                    step=0.25,
+                    key=f"fw_{_name.replace(' ', '_').lower()}",
+                    help=_name,
+                )
+        _sc, _rc = st.columns([1, 1])
+        with _sc:
+            if st.button("💾 Save weights", key="fw_save", use_container_width=True, type="primary"):
+                save_weights(_w_edited)
+                st.success("Weights saved.")
+                st.rerun()
+        with _rc:
+            if st.button("↺ Reset to equal", key="fw_reset", use_container_width=True):
+                reset_weights()
+                st.success("Reset to equal weights.")
+                st.rerun()
+
     st.markdown(f"""
       <div class="mp-consensus-box">
-        <p class="mp-consensus-label">Macro consensus across {total} forecasters</p>
+        <p class="mp-consensus-label">
+          {'⚖️ Weighted consensus' if weights and not is_equal_weighted(weights) else 'Macro consensus'}
+          across {total} forecasters
+        </p>
         <div class="mp-bar-track">
           <div style="background:#E24B4A;height:6px;width:{pct_off}%;"></div>
           <div style="background:#EF9F27;height:6px;width:{pct_caut}%;"></div>
@@ -230,8 +270,9 @@ def render_macro_pulse(signals: dict) -> None:
 if "portfolio_review" not in st.session_state:
     st.session_state.portfolio_review = None
 
-signals = get_signals()
-render_macro_pulse(signals)
+signals      = get_signals()
+user_weights = load_weights()   # T3-3: per-user credibility weights
+render_macro_pulse(signals, weights=user_weights)
 
 st.divider()
 
