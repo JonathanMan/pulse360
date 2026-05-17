@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from components.user_profile import PROFILES, feature_visible, get_profile, get_profile_key
+from components.user_profile import PROFILES, feature_visible, get_profile, get_profile_key, save_profile
 from components.auth import (
     get_session_user, get_linked_phone_for_email, get_canonical_email_for_phone,
     save_phone_link, _COUNTRY_CODES, _build_e164, _do_send_otp_raw,
@@ -347,7 +347,7 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             use_container_width=True,
             disabled=is_active,
         ):
-            st.session_state["pie360_profile"] = key
+            save_profile(key)   # persist to Supabase + localStorage
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
             st.rerun()

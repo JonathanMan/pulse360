@@ -15,32 +15,9 @@ from components.pie360_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_S
 _PROFILE_LS_KEY = "p360_profile"
 
 def _save_profile(profile: str) -> None:
-    """
-    Persist the chosen profile so returning users skip onboarding.
-    1. localStorage  — instant, device-local (works for all users)
-    2. Supabase user_metadata — cross-device, logged-in users only
-    """
-    # localStorage write (fire-and-forget; return value ignored)
-    try:
-        from streamlit_javascript import st_javascript
-        _ctr = st.session_state.get("_p360_save_ctr", 0) + 1
-        st.session_state["_p360_save_ctr"] = _ctr
-        st_javascript(
-            f"localStorage.setItem('{_PROFILE_LS_KEY}', '{profile}'); 1;",
-            key=f"_p360_save_{_ctr}",
-        )
-    except Exception:
-        pass
-
-    # Supabase user_metadata write (best-effort for logged-in users)
-    try:
-        from components.auth import get_session_user
-        from components.supabase_client import get_client
-        if get_session_user():
-            get_client().auth.update_user({"data": {_PROFILE_LS_KEY: profile}})
-    except Exception:
-        pass
-
+    """Delegate to the shared save_profile() in user_profile."""
+    from components.user_profile import save_profile as _sp
+    _sp(profile)
 
 def _try_restore_profile() -> bool:
     """

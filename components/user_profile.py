@@ -187,3 +187,44 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
         "Analysis":      analysis_pages,
         "Account":       settings_pages,
     }
+
+
+_PROFILE_LS_KEY = "p360_profile"   # must match app.py constant
+
+
+def save_profile(profile_key: str) -> None:
+    """
+    Persist a profile change so it survives reruns and page navigation.
+
+    Write order (both best-effort, never raises):
+      1. localStorage  — instant, works for guest users and as fast fallback
+      2. Supabase user_metadata — cross-device, only when authenticated
+
+    Call this whenever the user explicitly switches profiles.
+    """
+    import streamlit as st
+
+    # Update session immediately
+    st.session_state["pie360_profile"] = profile_key
+
+    # 1. localStorage
+    try:
+        from streamlit_javascript import st_javascript
+        import time
+        _ctr = int(time.time() * 1000) % 999_999
+        st_javascript(
+            f"localStorage.setItem('{_PROFILE_LS_KEY}', '{profile_key}'); 1;",
+            key=f"_p360_save_{_ctr}",
+        )
+    except Exception:
+        pass
+
+    # 2. Supabase user_metadata (logged-in users only)
+    try:
+        from components.auth import get_session_user
+        from components.supabase_client import get_client
+        if get_session_user():
+            get_client().auth.update_user({"data": {_PROFILE_LS_KEY: profile_key}})
+    except Exception:
+        pass
+
