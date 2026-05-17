@@ -1,0 +1,49 @@
+# .github/workflows/daily_briefing.yml
+# ──────────────────────────────────────
+# Runs the daily macro briefing at 07:00 UTC every weekday.
+# Replaces the Cowork scheduled task — GitHub Actions is more reliable
+# (no dependency on the Cowork session being alive).
+#
+# Required GitHub Actions secrets (Settings → Secrets → Actions):
+#   ANTHROPIC_API_KEY
+#   FRED_API_KEY
+#   SUPABASE_URL
+#   SUPABASE_KEY
+#   RESEND_API_KEY
+#   CONFLUENCE_API_TOKEN   (optional — skip if not using Confluence)
+
+name: Daily Briefing
+
+on:
+  schedule:
+    - cron: "0 7 * * 1-5"   # 07:00 UTC, Monday–Friday
+  workflow_dispatch:          # manual trigger for testing
+
+jobs:
+  briefing:
+    name: Generate & send briefing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily briefing
+        env:
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          FRED_API_KEY:        ${{ secrets.FRED_API_KEY }}
+          SUPABASE_URL:        ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:        ${{ secrets.SUPABASE_KEY }}
+          RESEND_API_KEY:      ${{ secrets.RESEND_API_KEY }}
+          CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+        run: python scripts/daily_briefing_runner.py

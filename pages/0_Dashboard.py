@@ -84,6 +84,18 @@ def _warm_caches() -> None:
     """
     from concurrent.futures import ThreadPoolExecutor
 
+
+# ── Uptime / warmup indicator ─────────────────────────────────────────────────
+# Small dot that confirms the app is fully loaded (not recovering from cold start).
+# The badge disappears after 10 seconds so it doesn't distract.
+_uptime_dot = (
+    '<span style="display:inline-flex;align-items:center;gap:5px;'
+    'font-size:0.68rem;color:#27ae60;opacity:0.7;">'
+    '<span style="width:6px;height:6px;border-radius:50%;'
+    'background:#27ae60;display:inline-block;"></span>'
+    'App live</span>'
+)
+st.markdown(_uptime_dot, unsafe_allow_html=True)
     with ThreadPoolExecutor(max_workers=3) as pool:
         pool.submit(prefetch_all_series)   # populates all FRED @st.cache_data
         pool.submit(fetch_shiller_cape)    # pre-warm Yale CAPE

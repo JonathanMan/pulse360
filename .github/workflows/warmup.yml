@@ -1,0 +1,43 @@
+# .github/workflows/warmup.yml
+# ─────────────────────────────
+# Pings the Pie360 Streamlit Cloud app every 8 minutes to prevent cold starts.
+#
+# Streamlit Community Cloud free tier sleeps apps after ~7 minutes of
+# inactivity. A lightweight HTTP GET is enough to trigger a wake — the app
+# will still take 20–40 seconds to fully load after waking, but this keeps
+# the gap below the sleep threshold during business hours.
+#
+# Set APP_URL as a repository variable (Settings → Variables → Actions):
+#   APP_URL = https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app
+#
+# Schedule: every 8 minutes, 07:00–23:00 UTC Mon–Fri.
+# Adjust the cron expression to match your users' timezones.
+
+name: Warmup Ping
+
+on:
+  schedule:
+    # Every 8 minutes during waking hours (07:00–22:58 UTC, Mon–Fri)
+    - cron: "0,8,16,24,32,40,48,56 7-22 * * 1-5"
+  workflow_dispatch:   # allow manual trigger from Actions tab
+
+jobs:
+  ping:
+    name: Ping app
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: HTTP GET
+        run: |
+          echo "Pinging ${{ vars.APP_URL || 'https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app' }}"
+          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            "${{ vars.APP_URL || 'https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app' }}")
+          echo "HTTP status: $status"
+          if [ "$status" -ge 200 ] && [ "$status" -lt 400 ]; then
+            echo "✅ App is up"
+          else
+            echo "⚠️ Unexpected status: $status (app may be waking)"
+          fi
+        # Don't fail the workflow on a slow wake — just report
+        continue-on-error: true
