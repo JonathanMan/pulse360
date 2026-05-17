@@ -45,6 +45,7 @@ from components.rebalancer import (
     compute_plan,
     plan_to_dataframe,
 )
+from components.cycle_engine import detect_cycle_phase
 from components.stock_score_utils import (
     DISCLAIMER,
     _COMPLEXITY,
@@ -696,6 +697,14 @@ if save_weights_btn:
     st.success("Portfolio weights saved.", icon="💾")
     # Don't st.rerun() — avoid race condition with the localStorage JS write
 
+# ── Auto cycle phase detection ─────────────────────────────────────────────────
+fred_key = st.secrets.get("FRED_API_KEY", "") or ""
+_cycle_result = None
+try:
+    _cycle_result = detect_cycle_phase(fred_key)
+except Exception:
+    pass  # graceful degradation — manual picker still works
+
 # ── Rebalancing Plan ──────────────────────────────────────────────────────────
 _saved_weights = st.session_state.get("_weights_cache", {})
 _saved_total   = sum(float(v) for v in _saved_weights.values()) if _saved_weights else 0.0
@@ -705,14 +714,33 @@ st.markdown("")
 rb_left, rb_right = st.columns([2, 3])
 
 with rb_left:
+    # Pre-populate from auto-detected phase if available
+    _default_phase_idx = 2  # Late / Peak (conservative fallback)
+    if _cycle_result and _cycle_result.phase in CYCLE_PHASES:
+        _default_phase_idx = CYCLE_PHASES.index(_cycle_result.phase)
     cycle_phase = st.selectbox(
         "Current cycle phase",
         options=CYCLE_PHASES,
-        index=2,                  # default: Late / Peak (conservative starting point)
-        help="Select the macro cycle phase that best matches current conditions. "
-             "Check the Dashboard and Macro Pulse pages for guidance.",
+        index=_default_phase_idx,
+        help=(
+            "Auto-detected from live FRED data (yield curve, unemployment, "
+            "industrial production, CPI, initial claims). You can override this manually."
+            if _cycle_result and _cycle_result.confidence >= 30
+            else "Select the macro cycle phase that best matches current conditions. "
+                 "Check the Dashboard and Macro Pulse pages for guidance."
+        ),
         key="rebalancer_cycle_phase",
     )
+    if _cycle_result and _cycle_result.data_quality != "unavailable":
+        _conf_color = "#27ae60" if _cycle_result.confidence >= 60 else (
+            "#c98800" if _cycle_result.confidence >= 30 else "#9ca3af"
+        )
+        st.markdown(
+            f'<div style="font-size:0.7rem;color:{_conf_color};margin-top:4px;">'
+            f'🤖 Auto-detected: <strong>{_cycle_result.phase}</strong> '
+            f'({_cycle_result.confidence_label}, {_cycle_result.confidence}%)</div>',
+            unsafe_allow_html=True,
+        )
 
 with rb_right:
     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
@@ -745,6 +773,12 @@ if _plan:
     _phase = st.session_state.get("_rebalancing_phase", cycle_phase)
     st.markdown("---")
     st.markdown(f"### 📊 Rebalancing Plan — {_phase}")
+
+    # Auto cycle detection card (shown once when plan is rendered)
+    if _cycle_result and _cycle_result.data_quality != "unavailable":
+        _cycle_result.render()
+    elif _cycle_result is None:
+        st.caption("💡 Set `FRED_API_KEY` in Streamlit secrets to enable auto cycle detection.")
 
     # Phase rationale callout
     st.info(PHASE_RATIONALE.get(_phase, ""), icon="🔭")
