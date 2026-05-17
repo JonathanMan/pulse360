@@ -201,6 +201,9 @@ st.caption(
 from components.auth import render_login_gate  # noqa: E402
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("Watchlist")
 header_with_logo("Watchlist", "Track Assets & Monitor Macro Signals")
 
 if not render_login_gate(

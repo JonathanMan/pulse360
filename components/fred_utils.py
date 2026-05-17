@@ -29,6 +29,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 
 import pandas as pd
 import streamlit as st
+from components.observability import log, capture_exception
 
 logger = logging.getLogger(__name__)
 

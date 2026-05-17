@@ -44,6 +44,9 @@ from components.stock_score_utils import (
 )
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("9 Heatmap")
 header_with_logo("Heatmap", "Sector & Asset Class Performance Heatmap")
 
 

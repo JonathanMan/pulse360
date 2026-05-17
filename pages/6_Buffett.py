@@ -46,6 +46,9 @@ lei_growth   = compute_cfnai_signal(model_inputs["CFNAI"]["data"])
 from data.fred_client import fetch_series
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("6 Buffett")
 header_with_logo("Buffett Indicators", "Valuation, Market Cap-to-GDP & Long-Term Signals")
 
 unrate_result = fetch_series("UNRATE", start_date="2010-01-01")

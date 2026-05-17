@@ -558,6 +558,9 @@ with st.sidebar:
 # pull from the router itself.  The Dashboard page populates that key.
 try:
     from components.alert_engine import check_and_render_alerts as _check_alerts
+
+from components.observability import init_page, log, track, capture_exception
+init_page("Home")
     _live = st.session_state.get("pie360_live_values")
     _prob = st.session_state.get("pie360_recession_prob")
     if _live is not None:

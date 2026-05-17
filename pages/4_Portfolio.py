@@ -547,6 +547,9 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
                 # Warn about unrecognised tickers
                 from ai.portfolio_analyzer import TICKER_SECTORS
 
+from components.observability import init_page, log, track, capture_exception
+init_page("4 Portfolio")
+
                 unknown = [p["ticker"] for p in positions if p["ticker"] not in TICKER_SECTORS]
                 if unknown:
                     st.warning(

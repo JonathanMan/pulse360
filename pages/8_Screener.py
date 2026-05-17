@@ -47,6 +47,9 @@ from components.stock_score_utils import (
 )
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("8 Screener")
 header_with_logo("Screener", "Macro-Filtered Stock & Asset Screener")
 
 

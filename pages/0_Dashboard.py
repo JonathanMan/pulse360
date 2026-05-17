@@ -84,6 +84,9 @@ def _warm_caches() -> None:
     """
     from concurrent.futures import ThreadPoolExecutor
 
+from components.observability import init_page, log, track, capture_exception
+init_page("Dashboard")
+
 
 # ── Uptime / warmup indicator ─────────────────────────────────────────────────
 # Small dot that confirms the app is fully loaded (not recovering from cold start).

@@ -25,6 +25,9 @@ from components.forecaster_weights import (
     FORECASTER_NAMES,
 )
 from components.prompts import (
+
+from components.observability import init_page, log, track, capture_exception
+init_page("Macro Pulse")
     run_deep_dive,
     build_review_prompt,
     stream_review,

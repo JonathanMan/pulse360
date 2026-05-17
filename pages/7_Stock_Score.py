@@ -140,6 +140,9 @@ if ticker_input:
     if raw.get("error") or not raw.get("info"):
         from components.stock_score_utils import _cache_read
 
+from components.observability import init_page, log, track, capture_exception
+init_page("7 Stock Score")
+
         _disk = _cache_read(ticker_input)
         if _disk:
             # Serve stale data with a clear banner — better than a hard error

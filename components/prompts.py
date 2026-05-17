@@ -24,6 +24,7 @@ import os
 
 import anthropic
 import streamlit as st
+from components.observability import log, capture_exception
 
 from components.forecasters import compute_consensus, save_signals
 
@@ -204,5 +205,6 @@ def refresh_signals() -> bool:
             st.warning("Could not parse updated signals. Showing last known data.")
             return False
     except Exception as exc:
+        capture_exception(exc, context={"component": "prompts", "fn": "refresh_signals"})
         st.error(f"Refresh failed: {exc}")
         return False

@@ -469,6 +469,9 @@ with st.expander("🗂️  Cache controls", expanded=False):
             try:
                 from components.stock_score_utils import fetch_stock_data
 
+from components.observability import init_page, log, track, capture_exception
+init_page("Settings")
+
                 fetch_stock_data.clear()
                 st.success("Stock score cache cleared.")
             except Exception as e:

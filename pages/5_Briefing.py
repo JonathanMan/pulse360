@@ -137,6 +137,9 @@ def _result_area(state_key: str) -> None:
     try:
         import markdown as _md
 
+from components.observability import init_page, log, track, capture_exception
+init_page("5 Briefing")
+
         html_body = _md.markdown(
             text,
             extensions=["tables", "fenced_code", "nl2br"],

@@ -43,6 +43,7 @@ from typing import Literal
 
 import pandas as pd
 import streamlit as st
+from components.observability import log, capture_exception
 
 from components.fred_utils import safe_get_series
 

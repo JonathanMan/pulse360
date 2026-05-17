@@ -29,6 +29,9 @@ from ai.claude_client import stream_scenario_analysis
 from components.pie360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("Simulator")
 header_with_logo("Scenario Simulator", "Model Macro Shocks & Policy Changes")
 
 inject_theme()
