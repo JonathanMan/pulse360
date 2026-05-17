@@ -40,6 +40,8 @@ from components.ticker_classifier import classify_all, ASSET_CLASS_COLORS
 from components.rebalancer import (
     CYCLE_PHASES,
     PHASE_RATIONALE,
+    TILT_MULTIPLIERS,
+    TILT_BUCKET_LABELS,
     compute_plan,
     plan_to_dataframe,
 )
@@ -862,6 +864,42 @@ if _plan:
         "investment advice. Verify against your own risk tolerance and tax situation "
         "before trading."
     )
+
+    # ── Rebalancing math expander ──────────────────────────────────────────────
+    with st.expander("🔢 Show rebalancing math", expanded=False):
+        tilts = TILT_MULTIPLIERS.get(_phase, {})
+
+        st.markdown(f"""
+**Algorithm — how the {_phase} tilt is computed**
+
+1. Each position is mapped to a *bucket* (Equity-cyclical, Bond, Cash, etc.)
+2. Its current weight is multiplied by the bucket's tilt factor
+3. All raw tilted weights are normalised so the portfolio still sums to 100%
+4. The suggested weight minus the current weight gives **Δ**
+
+| Bucket | Tilt factor | Direction |
+|---|---|---|""")
+
+        # Build one row per bucket, sorted strongest tilt first
+        for bucket, mult in sorted(tilts.items(), key=lambda kv: -kv[1]):
+            label     = TILT_BUCKET_LABELS.get(bucket, bucket)
+            direction = "↑ Overweight" if mult > 1.02 else ("↓ Underweight" if mult < 0.98 else "→ Neutral")
+            st.markdown(f"| {label} | **{mult:.2f}×** | {direction} |")
+
+        st.markdown(f"""
+**Action thresholds** (applied after normalisation)
+
+| |Δ|| Tag | Meaning |
+|---|---|---|
+| ≥ 5% | 🟢 Add / 🔴 Trim | Action Required — rebalance now |
+| 2–5% | 🟡 Minor add/trim | Optional — worth reviewing |
+| < 2% | ⚪ Hold | Within tolerance — no trade needed |
+
+**Calibration note:** Multipliers are set so that a 60/40 portfolio in *Contraction* shifts
+to roughly 45/47/8 (equity/bond/cash), consistent with typical recession playbooks.
+Late/Peak cyclical equities land ~15% below their current weight post-normalisation —
+matching a "reduce overweights, rotate to defensives" tilt.
+""")
 
     # ── AI Memo ───────────────────────────────────────────────────────────────
     st.markdown("---")
