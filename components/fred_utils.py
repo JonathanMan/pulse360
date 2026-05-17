@@ -130,6 +130,12 @@ def safe_get_series(
             time.sleep(backoff)
             backoff *= 2
 
+    # T3-5b: report to Sentry when all FRED retries are exhausted
+    if last_exc is not None:
+        capture_exception(
+            last_exc,
+            context={"component": "fred_utils", "series": series_id},
+        )
     # ── All attempts failed — try the cache ───────────────────────────────────
     cached = _get_cached(series_id)
     if cached is not None and not cached.empty:
