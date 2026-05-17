@@ -54,6 +54,9 @@ DISCLAIMER = (
 from components.pie360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
+
+from components.observability import init_page, log, track, capture_exception
+init_page("Dashboard")
 inject_theme()
 st.markdown("""
 <style>
@@ -83,9 +86,6 @@ def _warm_caches() -> None:
     All are @st.cache_data calls so subsequent reruns hit memory instantly.
     """
     from concurrent.futures import ThreadPoolExecutor
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Dashboard")
 
 
 # ── Uptime / warmup indicator ─────────────────────────────────────────────────
