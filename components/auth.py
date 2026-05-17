@@ -867,7 +867,27 @@ def render_login_gate(
                             st.session_state[f"_gate_otp_resend_at_{_k}"]  = time.time()
                             st.rerun()
                         except Exception as exc:
-                            st.error(f"Could not send code: {exc}")
+                            _msg = str(exc).lower()
+                            if "sms_send_failed" in _msg or "sms" in _msg:
+                                st.error(
+                                    "SMS could not be sent. Check the number is correct "
+                                    "and includes the country code."
+                                )
+                            elif "rate" in _msg:
+                                st.error(
+                                    "Too many attempts — please wait a moment before "
+                                    "requesting another code."
+                                )
+                            elif "invalid" in _msg or "not valid" in _msg:
+                                st.error(
+                                    "That phone number isn't recognised. Please include "
+                                    "the country code (e.g. +1 for US)."
+                                )
+                            else:
+                                st.error(
+                                    "Could not send verification code. Please check "
+                                    "the number and try again."
+                                )
                     else:
                         st.error("Phone number looks too short.")
         else:

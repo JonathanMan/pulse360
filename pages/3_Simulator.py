@@ -12,6 +12,7 @@ of whatever combination you have dialled in.
 from __future__ import annotations
 
 import streamlit as st
+from components.fred_utils import safe_get_series as _fred_safe
 import plotly.graph_objects as go
 
 from models.recession_model import (
