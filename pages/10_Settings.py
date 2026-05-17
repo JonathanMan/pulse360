@@ -41,7 +41,6 @@ st.markdown("""
         background: #0e0e1a;
         transition: border-color .2s, background .2s;
         cursor: pointer;
-        flex: 1;
         display: flex;
         flex-direction: column;
     }
