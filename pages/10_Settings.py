@@ -347,7 +347,7 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             use_container_width=True,
             disabled=is_active,
         ):
-            save_profile(key)   # persist to Supabase + localStorage
+            st.session_state["pie360_profile"] = key
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
             st.rerun()
