@@ -1,7 +1,7 @@
 """
 components/user_profile.py
 ============================
-Investor profiling system for Pulse360.
+Investor profiling system for Pie360.
 
 Three tiers:
   Beginner  — new to investing, wants macro context without jargon
@@ -117,7 +117,7 @@ _FEATURE_LEVELS: dict[str, int] = {
 
 def get_profile_key() -> str:
     """Return the current profile key, defaulting to 'Beginner'."""
-    return st.session_state.get("pulse360_profile", "Beginner")
+    return st.session_state.get("pie360_profile", "Beginner")
 
 
 def get_profile() -> dict:

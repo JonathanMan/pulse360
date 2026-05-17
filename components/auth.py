@@ -26,7 +26,7 @@ from urllib.parse import urlencode
 import streamlit as st
 
 from components.supabase_client import get_client
-from components.pulse360_theme import (
+from components.pie360_theme import (
     BLUE, BORDER, CARD_BG, FG_MUTED, FG_PRIMARY, FG_SEC, PAGE_BG, TEXT_PRI, TEXT_SEC,
 )
 
@@ -701,7 +701,7 @@ def render_login_gate(
     if not is_guest():
         return True
 
-    from components.pulse360_theme import (
+    from components.pie360_theme import (
         BLUE, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT,
     )
 

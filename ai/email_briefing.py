@@ -1,5 +1,5 @@
 """
-Pulse360 — Email Briefing Module
+Pie360 — Email Briefing Module
 ===================================
 Composes the daily macro briefing as a clean HTML email and sends it
 via a pluggable transport layer.
@@ -177,7 +177,7 @@ _EMAIL_TEMPLATE = """\
 
 def _md_to_html(md: str) -> str:
     """
-    Convert Pulse360 briefing markdown to email-safe HTML.
+    Convert Pie360 briefing markdown to email-safe HTML.
     Handles: ## headings, bullet lists, **bold**, *italic*, --- dividers,
     and the standard disclaimer block.
     Deliberately minimal — only what the briefing format actually uses.
@@ -268,7 +268,7 @@ def compose_briefing_html(
     date_str: Optional[str] = None,
 ) -> str:
     """
-    Convert a Pulse360 briefing markdown string into a styled HTML email.
+    Convert a Pie360 briefing markdown string into a styled HTML email.
 
     Args:
         briefing_md:           Output of get_daily_briefing() — markdown string

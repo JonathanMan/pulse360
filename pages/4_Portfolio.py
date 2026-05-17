@@ -30,7 +30,7 @@ from ai.portfolio_analyzer import (
 
 # ── Page config & styles ──────────────────────────────────────────────────────
 
-from components.pulse360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
+from components.pie360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
 inject_theme()
 st.markdown(f"""
 <style>

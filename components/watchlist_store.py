@@ -41,8 +41,8 @@ from __future__ import annotations
 import json
 import streamlit as st
 
-_LS_KEY      = "pulse360_watchlist"
-_WEIGHTS_KEY = "pulse360_weights"
+_LS_KEY      = "pie360_watchlist"
+_WEIGHTS_KEY = "pie360_weights"
 _MAX_TICKERS = 50
 _SB_TABLE    = "user_watchlists"
 
