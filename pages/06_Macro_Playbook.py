@@ -299,6 +299,7 @@ with rc:
 with sc:
     st.caption("Playbook auto-refreshes when cycle phase changes. FRED data cached 1 hr.")
 
-# Indicator detail
-with st.expander("📡 Indicator signals driving this playbook", expanded=False):
-    cycle_result.render()
+# Indicator detail — cycle_result.render() creates its own expanders internally;
+# wrapping it in another expander causes nested expander issues in Streamlit.
+st.markdown("##### 📡 Indicator signals")
+cycle_result.render()
