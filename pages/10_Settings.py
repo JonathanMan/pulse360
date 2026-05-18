@@ -338,6 +338,7 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             disabled=is_active,
         ):
             st.session_state["pie360_profile"] = key
+            st.session_state["sidebar_profile_switch"] = key
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
             st.rerun()
