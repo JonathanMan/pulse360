@@ -402,6 +402,9 @@ with st.sidebar:
 """, unsafe_allow_html=True)
 
     # Profile switcher (compact selectbox)
+    # Sync selectbox with pie360_profile (may differ after Settings-page switch)
+    if st.session_state.get("sidebar_profile_switch") != profile_key:
+        st.session_state["sidebar_profile_switch"] = profile_key
     new_profile = st.selectbox(
         "Switch profile",
         options=list(PROFILES.keys()),
