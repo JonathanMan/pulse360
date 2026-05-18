@@ -299,7 +299,24 @@ with rc:
 with sc:
     st.caption("Playbook auto-refreshes when cycle phase changes. FRED data cached 1 hr.")
 
-# Indicator detail — cycle_result.render() creates its own expanders internally;
-# wrapping it in another expander causes nested expander issues in Streamlit.
-st.markdown("##### 📡 Indicator signals")
-cycle_result.render()
+# Indicator signals — simple table, avoids calling cycle_result.render() which
+# has nested-expander and HTML issues in Streamlit 1.50.
+with st.expander("📡 Indicator signals driving this playbook", expanded=False):
+    if cycle_result.signals:
+        import pandas as _pd
+        from components.cycle_engine import _PHASE_COLORS as _PC
+        rows = []
+        for r in cycle_result.signals.values():
+            implied = r.implied_phase or "—"
+            rows.append({
+                "Indicator": r.name,
+                "Value":     r.formatted,
+                "Trend":     r.trend,
+                "Signals":   implied,
+                "Note":      r.note,
+            })
+        df = _pd.DataFrame(rows)
+        st.dataframe(df, hide_index=True, use_container_width=True)
+    else:
+        st.caption("No indicator data available.")
+    st.caption(f"Model confidence: {cycle_result.confidence}% ({cycle_result.confidence_label}) · {cycle_result.summary}")
