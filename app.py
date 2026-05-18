@@ -144,6 +144,7 @@ def _render_onboarding() -> None:
         # Macro Context
         ("📊", "Dashboard",           0, "Macro Context"),
         ("🌐", "Macro Pulse",         0, "Macro Context"),
+        ("🗺️", "Macro Playbook",     0, "Macro Context"),
         # My Portfolio
         ("🗂️", "Investment Analyser", 0, "My Portfolio"),
         ("⭐", "Watchlist",           0, "My Portfolio"),
