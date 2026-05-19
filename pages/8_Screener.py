@@ -94,7 +94,7 @@ for col, (name, cfg) in zip(p_cols, PRESETS.items()):
     is_active = (active_preset == name)
     label = f"✓ {name}" if is_active else name
     with col:
-        if st.button(label, key=f"preset_{name}", use_container_width=True,
+        if st.button(label, key=f"preset_{name}", width='stretch',
                      help=cfg["desc"],
                      type="primary" if is_active else "secondary"):
             st.session_state["screener_active_preset"] = name

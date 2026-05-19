@@ -280,7 +280,7 @@ with st.sidebar:
     st.markdown("### 🤖 AI Daily Briefing")
     st.caption("Powered by Claude Sonnet · Cached 6 hours")
 
-    if st.button("📋 Generate Briefing", use_container_width=True, key="gen_briefing"):
+    if st.button("📋 Generate Briefing", width='stretch', key="gen_briefing"):
         st.session_state["show_briefing"] = True
 
     if st.session_state.get("show_briefing"):
@@ -307,7 +307,7 @@ with st.sidebar:
 
     # ── Email briefing button ────────────────────────────────────────────────
     if st.session_state.get("briefing_text"):
-        if st.button("📧 Email me this briefing", use_container_width=True, key="email_briefing"):
+        if st.button("📧 Email me this briefing", width='stretch', key="email_briefing"):
             html = compose_briefing_html(
                 briefing_md           = st.session_state["briefing_text"],
                 cycle_phase           = phase_output.phase,
@@ -360,7 +360,7 @@ with st.sidebar:
                 st.markdown(f"{role_label}: {msg['content']}")
                 st.markdown("---")
 
-        if st.button("🗑️ Clear chat", use_container_width=True, key="clear_chat"):
+        if st.button("🗑️ Clear chat", width='stretch', key="clear_chat"):
             st.session_state["chat_messages"] = []
             st.rerun()
 
@@ -373,7 +373,7 @@ with st.sidebar:
             key="chat_input_area",
             label_visibility="collapsed",
         )
-        submitted = st.form_submit_button("Send ▶", use_container_width=True)
+        submitted = st.form_submit_button("Send ▶", width='stretch')
 
     if submitted and user_input.strip():
         # Append user message

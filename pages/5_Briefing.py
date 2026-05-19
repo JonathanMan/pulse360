@@ -177,7 +177,7 @@ with st.container():
         )
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        run_macro = st.button("▶ Run", key="btn_macro", use_container_width=True)
+        run_macro = st.button("▶ Run", key="btn_macro", width='stretch')
 
     if run_macro and macro_markets:
         markets_str = ", ".join(macro_markets)
@@ -249,7 +249,7 @@ with st.container():
             placeholder="e.g. 30 days, 2 weeks",
         )
 
-    run_squeeze = st.button("▶ Run", key="btn_squeeze", use_container_width=True)
+    run_squeeze = st.button("▶ Run", key="btn_squeeze", width='stretch')
 
     if run_squeeze:
         prompt = (
@@ -289,7 +289,7 @@ with st.container():
             placeholder="e.g. $1B–$20B",
         )
 
-    run_ma = st.button("▶ Run", key="btn_ma", use_container_width=True)
+    run_ma = st.button("▶ Run", key="btn_ma", width='stretch')
 
     if run_ma:
         prompt = (
@@ -331,7 +331,7 @@ with st.container():
             placeholder="e.g. $500M–$20B",
         )
 
-    run_sentiment = st.button("▶ Run", key="btn_sentiment", use_container_width=True)
+    run_sentiment = st.button("▶ Run", key="btn_sentiment", width='stretch')
 
     if run_sentiment:
         prompt = (
@@ -374,7 +374,7 @@ with st.container():
             placeholder="e.g. AI/Tech, Energy, EM — leave blank for all",
         )
 
-    run_hf = st.button("▶ Run", key="btn_hf", use_container_width=True)
+    run_hf = st.button("▶ Run", key="btn_hf", width='stretch')
 
     if run_hf:
         theme_clause = (
@@ -428,7 +428,7 @@ with st.container():
             key="hedge_risk",
         )
 
-    run_hedge = st.button("▶ Run", key="btn_hedge", use_container_width=True)
+    run_hedge = st.button("▶ Run", key="btn_hedge", width='stretch')
 
     if run_hedge:
         prompt = (
@@ -482,7 +482,7 @@ with st.container():
             key="weekly_risk",
         )
 
-    run_weekly = st.button("▶ Run", key="btn_weekly", use_container_width=True)
+    run_weekly = st.button("▶ Run", key="btn_weekly", width='stretch')
 
     if run_weekly:
         tickers_clause = (
@@ -516,7 +516,7 @@ st.markdown("---")
 # ── Footer controls ───────────────────────────────────────────────────────────
 col_cl, col_sp = st.columns([2, 5])
 with col_cl:
-    if st.button("🗑️ Clear all results", use_container_width=True):
+    if st.button("🗑️ Clear all results", width='stretch'):
         for key in [
             "brief_macro", "brief_squeeze", "brief_ma",
             "brief_sentiment", "brief_hf", "brief_hedge", "brief_weekly",

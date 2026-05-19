@@ -183,7 +183,7 @@ def render_logout_button() -> None:
             unsafe_allow_html=True,
         )
     with col_btn:
-        if st.button("Sign out", key="logout_btn", use_container_width=True):
+        if st.button("Sign out", key="logout_btn", width='stretch'):
             logout()
 
 
@@ -418,7 +418,7 @@ def _render_email_tab() -> None:
         with st.form("login_form", clear_on_submit=False):
             email    = st.text_input("Email", placeholder="you@example.com", key="li_email")
             password = st.text_input("Password", type="password", key="li_pw")
-            submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("Sign in", type="primary", width='stretch')
         if submitted:
             _do_sign_in(email.strip(), password)
 
@@ -428,7 +428,7 @@ def _render_email_tab() -> None:
             email    = st.text_input("Email", placeholder="you@example.com", key="su_email")
             password = st.text_input("Password", type="password", key="su_pw",
                                      help="Minimum 8 characters")
-            submitted = st.form_submit_button("Create account", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("Create account", type="primary", width='stretch')
         if submitted:
             _do_sign_up(email.strip(), password)
 
@@ -509,7 +509,7 @@ def _render_phone_tab() -> None:
         st.markdown("")
         col_back, _ = st.columns([1, 2])
         with col_back:
-            if st.button("← Change number", key="ph_back", use_container_width=True):
+            if st.button("← Change number", key="ph_back", width='stretch'):
                 st.session_state.pop(_OTP_SENT_KEY, None)
                 st.session_state.pop(_OTP_PHONE_KEY, None)
                 st.rerun()
@@ -527,7 +527,7 @@ def _render_phone_tab() -> None:
                 disabled=True,
             )
         else:
-            if st.button("Resend code", key="ph_resend", use_container_width=True):
+            if st.button("Resend code", key="ph_resend", width='stretch'):
                 st.session_state[_OTP_RESEND_AT] = time.time()
                 _do_send_otp_raw(otp_phone, resend=True)
 
@@ -856,7 +856,7 @@ def render_login_gate(
                         key=f"gate_ph_{_k}",
                         label_visibility="collapsed",
                     )
-                if st.form_submit_button("Send code", type="primary", use_container_width=True):
+                if st.form_submit_button("Send code", type="primary", width='stretch'):
                     _cc = _COUNTRY_CODES[_cc_idx][0]
                     _e164 = _build_e164(_cc, _local.strip())
                     if len(_e164) >= 8:
@@ -882,12 +882,12 @@ def render_login_gate(
                     "Code", placeholder="123456", max_chars=6,
                     key=f"gate_otp_{_k}", label_visibility="collapsed",
                 )
-                if st.form_submit_button("Verify & sign in", type="primary", use_container_width=True):
+                if st.form_submit_button("Verify & sign in", type="primary", width='stretch'):
                     _do_verify_otp(_otp_phone, _otp_code.strip())
 
             _bc, _rc, _ = st.columns([1, 1, 1])
             with _bc:
-                if st.button("← Change number", key=f"gate_back_{_k}", use_container_width=True):
+                if st.button("← Change number", key=f"gate_back_{_k}", width='stretch'):
                     st.session_state.pop(f"_gate_otp_sent_{_k}", None)
                     st.session_state.pop(f"_gate_otp_resend_at_{_k}", None)
                     st.session_state.pop(f"_gate_otp_resend_at_{_k}", None)
@@ -904,7 +904,7 @@ def render_login_gate(
                         disabled=True,
                     )
                 else:
-                    if st.button("Resend code", key=f"gate_resend_{_k}", use_container_width=True):
+                    if st.button("Resend code", key=f"gate_resend_{_k}", width='stretch'):
                         st.session_state[f"_gate_otp_resend_at_{_k}"] = time.time()
                         try:
                             get_client().auth.sign_in_with_otp({"phone": _otp_phone})
@@ -992,7 +992,7 @@ def render_login_gate(
                     "Password", type="password", placeholder="Password",
                     label_visibility="collapsed", key=f"gate_pw_{_k}",
                 )
-                if st.form_submit_button("Sign in", type="primary", use_container_width=True):
+                if st.form_submit_button("Sign in", type="primary", width='stretch'):
                     _do_sign_in(_email.strip(), _pw)
 
         # Terms footer

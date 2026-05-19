@@ -208,7 +208,7 @@ if _user:
                             "Phone", placeholder="69038453",
                             key="sett_ph_num", label_visibility="collapsed",
                         )
-                    _sent = st.form_submit_button("Send verification code", use_container_width=True)
+                    _sent = st.form_submit_button("Send verification code", width='stretch')
                 if _sent:
                     _e164 = _build_e164(_COUNTRY_CODES[_cc_idx][0], _local.strip())
                     if len(_e164) >= 8:
@@ -222,7 +222,7 @@ if _user:
                 st.markdown(f"Code sent to **{_ph_phone}**.")
                 with st.form("sett_link_verify_form"):
                     _otp = st.text_input("Enter 6-digit code", max_chars=6, key="sett_ph_otp")
-                    _verify = st.form_submit_button("Verify & link", type="primary", use_container_width=True)
+                    _verify = st.form_submit_button("Verify & link", type="primary", width='stretch')
                 if _verify:
                     if _otp and len(_otp) == 6 and _otp.isdigit():
                         try:
@@ -273,7 +273,7 @@ if _user:
             )
             with st.form("sett_link_email_form"):
                 _new_email = st.text_input("Your email address", placeholder="you@example.com")
-                _link_it   = st.form_submit_button("Link email", type="primary", use_container_width=True)
+                _link_it   = st.form_submit_button("Link email", type="primary", width='stretch')
             if _link_it:
                 import re as _re
                 if _new_email and _re.match(r"[^@]+@[^@]+\.[^@]+", _new_email.strip()):
@@ -464,7 +464,7 @@ with st.expander("🗂️  Cache controls", expanded=False):
     )
     cc1, cc2, cc3 = st.columns(3)
     with cc1:
-        if st.button("🔄 Clear stock score cache", use_container_width=True):
+        if st.button("🔄 Clear stock score cache", width='stretch'):
             # Clear all @st.cache_data decorated functions that score stocks
             try:
                 from components.stock_score_utils import fetch_stock_data
@@ -474,7 +474,7 @@ with st.expander("🗂️  Cache controls", expanded=False):
             except Exception as e:
                 st.warning(f"Could not clear: {e}")
     with cc2:
-        if st.button("🔄 Clear FRED cache", use_container_width=True):
+        if st.button("🔄 Clear FRED cache", width='stretch'):
             try:
                 # Dashboard caches data via @st.cache_data — clear all
                 st.cache_data.clear()
@@ -482,7 +482,7 @@ with st.expander("🗂️  Cache controls", expanded=False):
             except Exception as e:
                 st.warning(f"Could not clear: {e}")
     with cc3:
-        if st.button("🔄 Clear all caches", use_container_width=True):
+        if st.button("🔄 Clear all caches", width='stretch'):
             st.cache_data.clear()
             st.success("All caches cleared. Next page load will re-fetch live data.")
 

@@ -286,7 +286,7 @@ def _render_onboarding() -> None:
 </div>
 """, unsafe_allow_html=True)
 
-        if st.button("Get Started →", type="primary", use_container_width=True):
+        if st.button("Get Started →", type="primary", width='stretch'):
             st.session_state["pulse360_profile"] = chosen
             _save_profile(chosen)   # persist so returning users skip this screen
             for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:

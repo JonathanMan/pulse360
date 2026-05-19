@@ -189,7 +189,7 @@ def render_portfolio_chat(analysis_key: str) -> None:
     sug_cols = st.columns(2)
     for i, sug in enumerate(suggestions):
         with sug_cols[i % 2]:
-            if st.button(sug, key=f"sug_{analysis_key}_{i}", use_container_width=True):
+            if st.button(sug, key=f"sug_{analysis_key}_{i}", width='stretch'):
                 st.session_state[submitting_key] = sug
 
     # ── Chat history display ──────────────────────────────────────────────────
@@ -218,7 +218,7 @@ def render_portfolio_chat(analysis_key: str) -> None:
             key         = input_key,
             label_visibility = "collapsed",
         )
-        submitted = st.form_submit_button("Send ↗", use_container_width=True)
+        submitted = st.form_submit_button("Send ↗", width='stretch')
 
     # Handle form submission or suggested prompt click
     question = (

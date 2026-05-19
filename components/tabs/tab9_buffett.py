@@ -1183,7 +1183,7 @@ def render_tab9(model_output, phase_output) -> None:
     st.markdown("### 🤖 Buffett Indicator — AI Analysis")
     st.caption("Claude Sonnet · Cached 6 hours · Answers: what does the Buffett Indicator say today?")
 
-    if st.button("📊 Generate Buffett Analysis", use_container_width=True, key="buffett_brief_btn"):
+    if st.button("📊 Generate Buffett Analysis", width='stretch', key="buffett_brief_btn"):
         st.session_state["show_buffett_brief"] = True
         st.session_state.pop("buffett_brief_text", None)
 

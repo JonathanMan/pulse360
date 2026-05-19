@@ -403,7 +403,7 @@ with st.expander("Enter your portfolio tickers", expanded=True):
             st.image(uploaded_file, caption=uploaded_file.name, use_container_width=True)
         with btn_col:
             st.markdown("<br><br>", unsafe_allow_html=True)
-            if st.button("Extract Tickers", type="secondary", use_container_width=True):
+            if st.button("Extract Tickers", type="secondary", width='stretch'):
                 with st.spinner("Reading screenshot…"):
                     found = extract_tickers_from_screenshot(
                         uploaded_file.getvalue(),
