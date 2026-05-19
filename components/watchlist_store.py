@@ -1,39 +1,35 @@
 """
-watchlist_store.py
-==================
-Dual-persistence watchlist + portfolio weights store.
+components/watchlist_store.py
+==============================
+Browser-persistent watchlist using localStorage via streamlit-javascript.
 
-  • Authenticated users  → Supabase (cross-device, cloud-synced)
-  • Unauthenticated users → localStorage via streamlit-javascript (browser-only)
+The watchlist is stored in the browser's localStorage under the key
+'pulse360_watchlist' as a JSON array of uppercase ticker strings:
+  ["AAPL", "MSFT", "GOOGL"]
 
-Supabase table: user_watchlists (user_id, ticker, weight_pct, created_at)
-  One row per ticker per user.  weight_pct = 0.0 for un-weighted tickers.
-  See supabase_watchlist_migration.sql for the CREATE TABLE statement.
+Persistence model
+-----------------
+- Survives page refreshes and new tabs on the same device/browser
+- Private to the user's browser — no server-side storage required
+- Lost if the user clears browser data or switches to a different browser
 
-Session-state keys (same contract as before — nothing in the UI layer changes):
-  _watchlist_cache : list[str]         current tickers, uppercase
-  _weights_cache   : dict[str, float]  current weights keyed by ticker
-  _wl_user_id      : str | None        cached Supabase UUID for this session
-  _wl_source       : "supabase" | "localstorage"
+Usage
+-----
+    from components.watchlist_store import (
+        load_watchlist,
+        add_to_watchlist,
+        remove_from_watchlist,
+        in_watchlist,
+    )
 
-Public API (unchanged from the previous localStorage-only version):
-  load_watchlist()           → list[str]
-  add_to_watchlist(ticker)   → bool
-  remove_from_watchlist(t)   → bool
-  in_watchlist(ticker)       → bool
-  clear_watchlist()          → None
-  load_weights()             → dict[str, float]
-  save_weights(weights)      → None
-  get_weight(ticker)         → float
+    tickers = load_watchlist()          # list[str] — may be [] on first render
+    add_to_watchlist("AAPL")
+    remove_from_watchlist("AAPL")
+    in_watchlist("AAPL")               # bool
 
-Important invariants (preserved from original):
-  • Mutation functions (add / remove / save / clear) read st.session_state
-    directly — they NEVER call load_watchlist() or _js_read().  This avoids
-    StreamlitDuplicateElementKey errors when called inside form handlers.
-  • Supabase writes happen after session_state is updated, so the same render
-    cycle already sees the new data without waiting for the network call.
-  • If Supabase is unavailable, writes silently fail (same as the old
-    _sync_export pattern).  Reads fall back to an empty list with a warning.
+Important: st_javascript renders as an invisible component and its return
+value is 0 (int) on the very first render cycle before the JS executes.
+Always guard with:  `if tickers and tickers != 0`
 """
 
 from __future__ import annotations
@@ -41,124 +37,36 @@ from __future__ import annotations
 import json
 import streamlit as st
 
-_LS_KEY      = "pie360_watchlist"
-_WEIGHTS_KEY = "pie360_weights"
+_LS_KEY = "pulse360_watchlist"
 _MAX_TICKERS = 50
-_SB_TABLE    = "user_watchlists"
 
+# Path where the scheduled briefing agent reads the watchlist
+_EXPORT_PATH = (
+    "/Users/jonathanman/Library/CloudStorage/"
+    "GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/watchlist.json"
+)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Private helpers — user identity
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _get_user_id() -> str | None:
-    """
-    Return the Supabase user UUID for the current session, or None if the
-    user is not authenticated.  Caches the result in session_state so
-    subsequent calls within the same render cycle are free.
-    """
-    if "_wl_user_id" in st.session_state:
-        return st.session_state["_wl_user_id"]
-    try:
-        from components.supabase_client import get_user_id
-        uid = get_user_id()
-        if uid:
-            st.session_state["_wl_user_id"] = uid
-            return uid
-    except Exception:
-        pass
-    return None
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Private helpers — Supabase
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _sb_load(user_id: str) -> tuple[list[str], dict[str, float]]:
-    """
-    Fetch all watchlist rows for user_id in a single Supabase query.
-    Returns (tickers, weights).  Both empty on any error — caller must
-    decide whether to surface the failure.
-    """
-    try:
-        from components.supabase_client import get_client
-        rows = (
-            get_client()
-            .table(_SB_TABLE)
-            .select("ticker, weight_pct")
-            .eq("user_id", user_id)
-            .execute()
-        ).data or []
-        tickers = [r["ticker"] for r in rows]
-        weights = {
-            r["ticker"]: float(r["weight_pct"])
-            for r in rows
-            if r.get("weight_pct", 0.0) > 0
-        }
-        return tickers, weights
-    except Exception:
-        return [], {}
-
-
-def _sb_upsert(user_id: str, ticker: str, weight_pct: float = 0.0) -> None:
-    """Upsert a single (user_id, ticker) row.  Silently swallows errors."""
-    try:
-        from components.supabase_client import get_client
-        get_client().table(_SB_TABLE).upsert({
-            "user_id":    user_id,
-            "ticker":     ticker,
-            "weight_pct": round(weight_pct, 2),
-        }).execute()
-    except Exception:
-        pass
-
-
-def _sb_upsert_many(user_id: str, rows: list[dict]) -> None:
-    """Bulk upsert rows for a user.  Silently swallows errors."""
-    if not rows:
-        return
-    try:
-        from components.supabase_client import get_client
-        get_client().table(_SB_TABLE).upsert(rows).execute()
-    except Exception:
-        pass
-
-
-def _sb_delete(user_id: str, ticker: str) -> None:
-    """Delete a single ticker row for the user.  Silently swallows errors."""
-    try:
-        from components.supabase_client import get_client
-        get_client().table(_SB_TABLE).delete().eq("user_id", user_id).eq("ticker", ticker).execute()
-    except Exception:
-        pass
-
-
-def _sb_clear(user_id: str) -> None:
-    """Delete all watchlist rows for the user.  Silently swallows errors."""
-    try:
-        from components.supabase_client import get_client
-        get_client().table(_SB_TABLE).delete().eq("user_id", user_id).execute()
-    except Exception:
-        pass
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Private helpers — localStorage (unauthenticated users only)
-# ══════════════════════════════════════════════════════════════════════════════
 
 def _js_read() -> list[str] | None:
     """
     Read the watchlist from localStorage.
-    Returns None on first render (JS component not yet mounted).
+
+    Returns:
+        list[str]  — the tickers stored in localStorage (may be [])
+        None       — JS component hasn't mounted yet (first render cycle);
+                     callers must NOT cache this result.
     """
     try:
         from streamlit_javascript import st_javascript  # type: ignore
     except ImportError:
         return None
+
     raw = st_javascript(
         f"JSON.parse(localStorage.getItem('{_LS_KEY}') || '[]')",
         key="wl_read",
     )
+    # st_javascript returns 0 (int) before the component mounts on the first render.
+    # Return None so callers can distinguish "not ready" from "genuinely empty".
     if raw is None or raw == 0:
         return None
     if isinstance(raw, list):
@@ -167,28 +75,164 @@ def _js_read() -> list[str] | None:
 
 
 def _js_write(tickers: list[str]) -> None:
-    """Persist the watchlist to localStorage."""
+    """
+    Persist the watchlist to localStorage.
+    Also mirrors to st.session_state so the same render cycle sees the update.
+    """
     try:
         from streamlit_javascript import st_javascript  # type: ignore
     except ImportError:
         return
-    payload     = json.dumps([t.upper() for t in tickers])
+
+    payload = json.dumps([t.upper() for t in tickers])
+    # Escape single quotes inside the JSON string for safety
     safe_payload = payload.replace("'", "\\'")
+    # Note: payload is already valid JSON so we store it directly,
+    # not JSON.stringify again (that would double-encode).
     st_javascript(
         f"localStorage.setItem('{_LS_KEY}', '{safe_payload}'); 1",
         key="wl_write",
     )
+    st.session_state["_watchlist_cache"] = tickers
+    _sync_export(tickers)
+
+
+def _sync_export(tickers: list[str]) -> None:
+    """
+    Write the watchlist to a JSON file so the scheduled briefing agent
+    can read it without needing browser localStorage access.
+    Silently swallows errors — export failure must never break the UI.
+    """
+    try:
+        import os
+        os.makedirs(os.path.dirname(_EXPORT_PATH), exist_ok=True)
+        with open(_EXPORT_PATH, "w") as fh:
+            json.dump(tickers, fh)
+    except Exception:
+        pass
+
+
+def load_watchlist() -> list[str]:
+    """
+    Return the current watchlist as a list of uppercase ticker strings.
+
+    Reads from st.session_state cache first (populated by add/remove),
+    then falls back to localStorage via st_javascript.
+
+    IMPORTANT: only caches the result when _js_read() returns a real value
+    (list, including []).  If _js_read() returns None it means the JS
+    component hasn't mounted yet — caching [] at that point would permanently
+    mask the real localStorage data on the next render cycle.
+    """
+    if "_watchlist_cache" in st.session_state:
+        return list(st.session_state["_watchlist_cache"])
+
+    tickers = _js_read()
+    if tickers is not None:           # real value ([] counts as valid empty list)
+        st.session_state["_watchlist_cache"] = tickers
+        return tickers
+    return []                         # not mounted yet — return [] without caching
+
+
+def add_to_watchlist(ticker: str) -> bool:
+    """
+    Add *ticker* to the watchlist.  Returns True if added, False if already present.
+    Caps the list at _MAX_TICKERS.
+
+    Reads directly from session_state (never calls load_watchlist / _js_read) to
+    avoid a StreamlitDuplicateElementKey error: the page-level load_watchlist()
+    call already registered the 'wl_read' key; calling it again inside a form
+    submission handler would try to register the same key a second time.
+    """
+    ticker = ticker.upper().strip()
+    # Direct session_state access — bypasses _js_read() entirely
+    current = st.session_state.get("_watchlist_cache")
+    if not isinstance(current, list):
+        current = []
+    if ticker in current:
+        return False
+    if len(current) >= _MAX_TICKERS:
+        st.warning(f"Watchlist is full ({_MAX_TICKERS} tickers max). Remove one first.")
+        return False
+    updated = current + [ticker]
+    st.session_state["_watchlist_cache"] = updated
+    _js_write(updated)
+    return True
+
+
+def remove_from_watchlist(ticker: str) -> bool:
+    """
+    Remove *ticker* from the watchlist.  Returns True if removed, False if not found.
+
+    Same session_state-direct pattern as add_to_watchlist — avoids duplicate key.
+    """
+    ticker = ticker.upper().strip()
+    current = st.session_state.get("_watchlist_cache")
+    if not isinstance(current, list):
+        return False
+    if ticker not in current:
+        return False
+    updated = [t for t in current if t != ticker]
+    st.session_state["_watchlist_cache"] = updated
+    _js_write(updated)
+    # Clean the removed ticker out of the weights cache (no JS write needed —
+    # the weights will be reconciled against the live watchlist on next save)
+    w_cache = st.session_state.get("_weights_cache")
+    if isinstance(w_cache, dict) and ticker in w_cache:
+        del w_cache[ticker]
+        st.session_state["_weights_cache"] = w_cache
+    return True
+
+
+def in_watchlist(ticker: str) -> bool:
+    """Return True if *ticker* is in the current watchlist.
+
+    Reads session_state directly — never calls _js_read() — to stay safe
+    inside form submission handlers where 'wl_read' is already registered.
+    """
+    current = st.session_state.get("_watchlist_cache")
+    if not isinstance(current, list):
+        return False
+    return ticker.upper().strip() in current
+
+
+def clear_watchlist() -> None:
+    """Remove all tickers from the watchlist."""
+    st.session_state["_watchlist_cache"] = []
+    _js_write([])
+    # Also clear weights
+    st.session_state["_weights_cache"] = {}
+    _js_write_weights({})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Portfolio weights store
+# ══════════════════════════════════════════════════════════════════════════════
+# Stored separately in localStorage under 'pulse360_weights' as a JSON object:
+#   {"AAPL": 12.5, "MSFT": 8.0, ...}
+#
+# Follows the exact same two-tier pattern as the watchlist store:
+# - load_weights()  — only function that calls _js_read_weights(); reads once at page level
+# - save_weights()  — updates session_state + writes to localStorage
+# - get_weight()    — reads session_state directly; safe in form submission handlers
+# ══════════════════════════════════════════════════════════════════════════════
+
+_WEIGHTS_KEY = "pulse360_weights"
 
 
 def _js_read_weights() -> dict[str, float] | None:
     """
     Read portfolio weights from localStorage.
-    Returns None on first render (JS component not yet mounted).
+
+    Returns:
+        dict[str, float]  — weights keyed by uppercase ticker (may be {})
+        None              — JS component hasn't mounted yet (first render cycle)
     """
     try:
         from streamlit_javascript import st_javascript  # type: ignore
     except ImportError:
         return None
+
     raw = st_javascript(
         f"JSON.parse(localStorage.getItem('{_WEIGHTS_KEY}') || '{{}}')",
         key="wl_weights_read",
@@ -196,6 +240,7 @@ def _js_read_weights() -> dict[str, float] | None:
     if raw is None or raw == 0:
         return None
     if isinstance(raw, dict):
+        # Coerce values to float, skip non-numeric entries
         return {
             str(k).upper().strip(): float(v)
             for k, v in raw.items()
@@ -205,228 +250,64 @@ def _js_read_weights() -> dict[str, float] | None:
 
 
 def _js_write_weights(weights: dict[str, float]) -> None:
-    """Persist portfolio weights to localStorage."""
+    """
+    Persist portfolio weights to localStorage.
+    Also mirrors to st.session_state so the same render cycle sees the update.
+    """
     try:
         from streamlit_javascript import st_javascript  # type: ignore
     except ImportError:
         return
-    payload     = json.dumps({k.upper(): round(float(v), 2) for k, v in weights.items()})
+
+    payload = json.dumps({k.upper(): round(float(v), 2) for k, v in weights.items()})
     safe_payload = payload.replace("'", "\\'")
     st_javascript(
         f"localStorage.setItem('{_WEIGHTS_KEY}', '{safe_payload}'); 1",
         key="wl_weights_write",
     )
+    st.session_state["_weights_cache"] = weights.copy()
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Public API — watchlist
-# ══════════════════════════════════════════════════════════════════════════════
-
-def load_watchlist() -> list[str]:
-    """
-    Return the current watchlist as a list of uppercase ticker strings.
-
-    Authenticated users  → one Supabase query that primes BOTH _watchlist_cache
-                           and _weights_cache (zero extra round trips for weights).
-    Unauthenticated users → localStorage via streamlit-javascript (unchanged).
-
-    Result is cached in st.session_state["_watchlist_cache"] for the render cycle.
-    On first render the JS component may not be mounted yet; returns [] without
-    caching so the real data arrives on the next cycle.
-
-    Source-mismatch detection: if the cached data came from localStorage but the
-    user is now authenticated (or vice-versa), the cache is busted and re-fetched
-    from the correct source.  This handles Streamlit session persistence across
-    deploys and the common case where localStorage data was cached before auth
-    resolved.
-    """
-    user_id       = _get_user_id()
-    cached_source = st.session_state.get("_wl_source")
-
-    if "_watchlist_cache" in st.session_state:
-        # Determine whether the cached data came from the right source:
-        #   • authenticated + cached from localStorage → bust, re-fetch Supabase
-        #   • unauthenticated + cached from Supabase   → bust, re-fetch localStorage
-        source_mismatch = (
-            (user_id     and cached_source != "supabase") or
-            (not user_id and cached_source == "supabase")
-        )
-        if not source_mismatch:
-            return list(st.session_state["_watchlist_cache"])
-        # Bust stale cache before re-fetching
-        st.session_state.pop("_watchlist_cache", None)
-        st.session_state.pop("_weights_cache",   None)
-
-    if user_id:
-        # ── Authenticated: load from Supabase ──────────────────────────────
-        tickers, weights = _sb_load(user_id)
-        st.session_state["_watchlist_cache"] = tickers
-        st.session_state["_wl_source"]       = "supabase"
-        # Prime weights cache so load_weights() skips a second round trip
-        if "_weights_cache" not in st.session_state:
-            st.session_state["_weights_cache"] = weights
-        return tickers
-    else:
-        # ── Unauthenticated: fall back to localStorage ─────────────────────
-        st.session_state["_wl_source"] = "localstorage"
-        tickers = _js_read()
-        if tickers is not None:
-            st.session_state["_watchlist_cache"] = tickers
-            return tickers
-        return []  # JS not mounted yet — don't cache
-
-
-def add_to_watchlist(ticker: str) -> bool:
-    """
-    Add *ticker* to the watchlist.  Returns True if added, False if already present.
-
-    Reads/writes session_state directly — never calls load_watchlist() or
-    _js_read() to avoid StreamlitDuplicateElementKey inside form handlers.
-    """
-    ticker  = ticker.upper().strip()
-    current = st.session_state.get("_watchlist_cache")
-    if not isinstance(current, list):
-        current = []
-    if ticker in current:
-        return False
-    if len(current) >= _MAX_TICKERS:
-        st.warning(f"Watchlist is full ({_MAX_TICKERS} tickers max). Remove one first.")
-        return False
-
-    updated = current + [ticker]
-    st.session_state["_watchlist_cache"] = updated
-
-    user_id = st.session_state.get("_wl_user_id") or _get_user_id()
-    if user_id:
-        _sb_upsert(user_id, ticker, weight_pct=0.0)
-    else:
-        _js_write(updated)
-
-    return True
-
-
-def remove_from_watchlist(ticker: str) -> bool:
-    """
-    Remove *ticker* from the watchlist.  Returns True if removed, False if not found.
-
-    Reads/writes session_state directly — same rationale as add_to_watchlist.
-    """
-    ticker  = ticker.upper().strip()
-    current = st.session_state.get("_watchlist_cache")
-    if not isinstance(current, list) or ticker not in current:
-        return False
-
-    updated = [t for t in current if t != ticker]
-    st.session_state["_watchlist_cache"] = updated
-
-    # Clean the ticker from the weights cache too
-    w_cache = st.session_state.get("_weights_cache")
-    if isinstance(w_cache, dict) and ticker in w_cache:
-        del w_cache[ticker]
-        st.session_state["_weights_cache"] = w_cache
-
-    user_id = st.session_state.get("_wl_user_id") or _get_user_id()
-    if user_id:
-        _sb_delete(user_id, ticker)
-    else:
-        _js_write(updated)
-
-    return True
-
-
-def in_watchlist(ticker: str) -> bool:
-    """
-    Return True if *ticker* is in the current watchlist.
-    Reads session_state directly — safe inside form submission handlers.
-    """
-    current = st.session_state.get("_watchlist_cache")
-    if not isinstance(current, list):
-        return False
-    return ticker.upper().strip() in current
-
-
-def clear_watchlist() -> None:
-    """Remove all tickers and weights from the watchlist."""
-    st.session_state["_watchlist_cache"] = []
-    st.session_state["_weights_cache"]   = {}
-
-    user_id = st.session_state.get("_wl_user_id") or _get_user_id()
-    if user_id:
-        _sb_clear(user_id)
-    else:
-        _js_write([])
-        _js_write_weights({})
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Public API — portfolio weights
-# ══════════════════════════════════════════════════════════════════════════════
 
 def load_weights() -> dict[str, float]:
     """
-    Return the current portfolio weights as {TICKER: weight_pct}.
+    Return the current portfolio weights as a dict of {TICKER: weight_pct}.
 
-    For authenticated users: weights are loaded as part of load_watchlist()
-    (same Supabase query, zero extra round trips).  If load_watchlist() hasn't
-    been called yet, this function calls it now.
-
-    For unauthenticated users: reads from localStorage.
+    Reads from st.session_state cache first, then falls back to localStorage.
+    Returns {} if the JS component hasn't mounted yet (first render cycle).
     """
     if "_weights_cache" in st.session_state:
         return dict(st.session_state["_weights_cache"])
 
-    user_id = _get_user_id()
-    if user_id:
-        # Weights come for free with the watchlist load — trigger it now
-        load_watchlist()
-        return dict(st.session_state.get("_weights_cache", {}))
-    else:
-        weights = _js_read_weights()
-        if weights is not None:
-            st.session_state["_weights_cache"] = weights
-            return weights
-        return {}
+    weights = _js_read_weights()
+    if weights is not None:
+        st.session_state["_weights_cache"] = weights
+        return weights
+    return {}
 
 
 def save_weights(weights: dict[str, float]) -> None:
     """
     Persist all portfolio weights at once.
 
-    Authenticated users  → bulk upserts every watchlist ticker with its weight.
-                           Tickers not in *weights* are upserted with weight 0.
-    Unauthenticated users → writes to localStorage.
+    Call this once after a form submission — do NOT call set_weight()
+    per-ticker in a loop, as each call would try to register a new
+    'wl_weights_write' JS key in the same render cycle.
 
-    Call this once after a form submission — do NOT call per-ticker in a loop,
-    as each call would try to register a new JS key in the same render cycle
-    (unauthenticated path) or generate N separate Supabase calls (authenticated).
+    Args:
+        weights: dict mapping uppercase ticker → weight percentage (0–100)
     """
-    cleaned = {
-        k.upper().strip(): round(float(v), 2)
-        for k, v in weights.items()
-        if v > 0
-    }
+    cleaned = {k.upper().strip(): round(float(v), 2) for k, v in weights.items() if v > 0}
     st.session_state["_weights_cache"] = cleaned
-
-    user_id = st.session_state.get("_wl_user_id") or _get_user_id()
-    if user_id:
-        tickers = st.session_state.get("_watchlist_cache", [])
-        rows = [
-            {
-                "user_id":    user_id,
-                "ticker":     t,
-                "weight_pct": cleaned.get(t, 0.0),
-            }
-            for t in tickers
-        ]
-        _sb_upsert_many(user_id, rows)
-    else:
-        _js_write_weights(cleaned)
+    _js_write_weights(cleaned)
 
 
 def get_weight(ticker: str) -> float:
     """
     Return the portfolio weight for *ticker* (default 0.0).
-    Reads session_state directly — safe inside form submission handlers.
+
+    Reads session_state directly — never calls _js_read_weights() — to stay
+    safe inside form submission handlers where 'wl_weights_read' is already
+    registered.
     """
     current = st.session_state.get("_weights_cache")
     if not isinstance(current, dict):

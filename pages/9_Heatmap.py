@@ -29,7 +29,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from ai.claude_client import extract_tickers_from_screenshot
-from components.pie360_theme import inject_theme
+from components.pulse360_theme import inject_theme
 from components.user_profile import feature_visible
 from components.stock_score_utils import (
 
@@ -44,9 +44,6 @@ from components.stock_score_utils import (
 )
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("9 Heatmap")
 header_with_logo("Heatmap", "Sector & Asset Class Performance Heatmap")
 
 

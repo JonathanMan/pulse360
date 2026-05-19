@@ -24,7 +24,7 @@ from components.alert_engine import (
     load_rules,
     toggle_rule,
 )
-from components.pie360_theme import inject_theme
+from components.pulse360_theme import inject_theme
 
 inject_theme()
 
@@ -266,9 +266,6 @@ The special series `RECESSION_PROB` tracks the blended probability (0-100%)
 from the five-factor recession model. Useful trigger: `crosses_above 25` for
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("12 Alerts")
 header_with_logo("Alerts", "Custom Macro & Market Alerts")
 
 an early warning.

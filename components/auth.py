@@ -26,7 +26,7 @@ from urllib.parse import urlencode
 import streamlit as st
 
 from components.supabase_client import get_client
-from components.pie360_theme import (
+from components.pulse360_theme import (
     BLUE, BORDER, CARD_BG, FG_MUTED, FG_PRIMARY, FG_SEC, PAGE_BG, TEXT_PRI, TEXT_SEC,
 )
 
@@ -701,7 +701,7 @@ def render_login_gate(
     if not is_guest():
         return True
 
-    from components.pie360_theme import (
+    from components.pulse360_theme import (
         BLUE, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT,
     )
 
@@ -867,27 +867,7 @@ def render_login_gate(
                             st.session_state[f"_gate_otp_resend_at_{_k}"]  = time.time()
                             st.rerun()
                         except Exception as exc:
-                            _msg = str(exc).lower()
-                            if "sms_send_failed" in _msg or "sms" in _msg:
-                                st.error(
-                                    "SMS could not be sent. Check the number is correct "
-                                    "and includes the country code."
-                                )
-                            elif "rate" in _msg:
-                                st.error(
-                                    "Too many attempts — please wait a moment before "
-                                    "requesting another code."
-                                )
-                            elif "invalid" in _msg or "not valid" in _msg:
-                                st.error(
-                                    "That phone number isn't recognised. Please include "
-                                    "the country code (e.g. +1 for US)."
-                                )
-                            else:
-                                st.error(
-                                    "Could not send verification code. Please check "
-                                    "the number and try again."
-                                )
+                            st.error(f"Could not send code: {exc}")
                     else:
                         st.error("Phone number looks too short.")
         else:

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from components.user_profile import PROFILES, feature_visible, get_profile, get_profile_key, save_profile
+from components.user_profile import PROFILES, feature_visible, get_profile, get_profile_key
 from components.auth import (
     get_session_user, get_linked_phone_for_email, get_canonical_email_for_phone,
     save_phone_link, _COUNTRY_CODES, _build_e164, _do_send_otp_raw,
@@ -24,15 +24,21 @@ from components.auth import (
 )
 from components.supabase_client import get_client
 
-from components.observability import init_page, log, track, capture_exception
-init_page("Settings")
-
 # ── Page config ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
     .main .block-container { max-width: 860px; padding-top: 1.2rem; }
 
-    /* Profile cards — heights equalised via JS (see eq() below) */
+    /* Profile cards — equal height via flex column */
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        display: flex;
+        flex-direction: column;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"] {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
     .sp-card {
         border: 1px solid #2a2a4a;
         border-radius: 12px;
@@ -41,6 +47,7 @@ st.markdown("""
         background: #0e0e1a;
         transition: border-color .2s, background .2s;
         cursor: pointer;
+        flex: 1;
         display: flex;
         flex-direction: column;
     }
@@ -337,7 +344,7 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             use_container_width=True,
             disabled=is_active,
         ):
-            st.session_state["pie360_profile"] = key
+            st.session_state["pulse360_profile"] = key
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
             st.rerun()

@@ -48,9 +48,6 @@ from components.stock_score_utils import (
 )
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Stock Score")
 header_with_logo("Stock Score", "AI-Powered Stock Scoring & Cycle Alignment")
 
 

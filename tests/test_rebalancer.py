@@ -4,7 +4,7 @@ tests/test_rebalancer.py
 Unit tests for components/rebalancer.py
 
 Run from the workspace root:
-    python -m pytest Pie360/tests/ -v
+    python -m pytest Pulse360/tests/ -v
 """
 
 import sys

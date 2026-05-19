@@ -16,7 +16,7 @@ from models.cycle_classifier import classify_cycle_phase
 from data.fred_client import compute_cfnai_signal
 
 # ── Dark-theme CSS (mirrors Dashboard) ───────────────────────────────────────
-from components.pie360_theme import inject_theme
+from components.pulse360_theme import inject_theme
 inject_theme()
 
 st.markdown("""
@@ -46,9 +46,6 @@ lei_growth   = compute_cfnai_signal(model_inputs["CFNAI"]["data"])
 from data.fred_client import fetch_series
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("6 Buffett")
 header_with_logo("Buffett Indicators", "Valuation, Market Cap-to-GDP & Long-Term Signals")
 
 unrate_result = fetch_series("UNRATE", start_date="2010-01-01")

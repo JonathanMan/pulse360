@@ -1,7 +1,7 @@
 """
 components/user_profile.py
 ============================
-Investor profiling system for Pie360.
+Investor profiling system for Pulse360.
 
 Three tiers:
   Beginner  — new to investing, wants macro context without jargon
@@ -117,7 +117,7 @@ _FEATURE_LEVELS: dict[str, int] = {
 
 def get_profile_key() -> str:
     """Return the current profile key, defaulting to 'Beginner'."""
-    return st.session_state.get("pie360_profile", "Beginner")
+    return st.session_state.get("pulse360_profile", "Beginner")
 
 
 def get_profile() -> dict:
@@ -151,7 +151,6 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
     macro_pages = [
         st.Page("pages/0_Dashboard.py",    title="Dashboard",   icon="📊", default=True),
         st.Page("pages/05_Macro_Pulse.py", title="Macro Pulse", icon="🌐"),
-        st.Page("pages/06_Macro_Playbook.py", title="★ Macro Playbook", icon="📗"),
     ]
 
     portfolio_pages = [
@@ -188,28 +187,3 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
         "Analysis":      analysis_pages,
         "Account":       settings_pages,
     }
-
-
-_PROFILE_LS_KEY = "p360_profile"   # must match app.py constant
-
-
-def save_profile(profile_key: str) -> None:
-    """
-    Persist a profile change so it survives page navigation.
-    Sets session_state immediately and writes to Supabase user_metadata
-    for authenticated users (cross-device persistence).
-    localStorage is written by app.py on the next full render via
-    _save_profile, avoiding st_javascript race conditions in callbacks.
-    """
-    import streamlit as st
-    st.session_state["pie360_profile"] = profile_key
-
-    # Supabase user_metadata (logged-in users only)
-    try:
-        from components.auth import get_session_user
-        from components.supabase_client import get_client
-        if get_session_user():
-            get_client().auth.update_user({"data": {_PROFILE_LS_KEY: profile_key}})
-    except Exception:
-        pass
-

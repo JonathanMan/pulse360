@@ -12,7 +12,6 @@ of whatever combination you have dialled in.
 from __future__ import annotations
 
 import streamlit as st
-from components.fred_utils import safe_get_series as _fred_safe
 import plotly.graph_objects as go
 
 from models.recession_model import (
@@ -26,12 +25,9 @@ from models.recession_model import (
 )
 from ai.claude_client import stream_scenario_analysis
 
-from components.pie360_theme import inject_theme
+from components.pulse360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Simulator")
 header_with_logo("Scenario Simulator", "Model Macro Shocks & Policy Changes")
 
 inject_theme()

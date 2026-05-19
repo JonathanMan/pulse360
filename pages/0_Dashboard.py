@@ -51,12 +51,9 @@ DISCLAIMER = (
 )
 
 # ── Page CSS ──────────────────────────────────────────────────────────────────
-from components.pie360_theme import inject_theme
+from components.pulse360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Dashboard")
 inject_theme()
 st.markdown("""
 <style>
@@ -91,18 +88,6 @@ def _warm_caches() -> None:
         pool.submit(prefetch_all_series)   # populates all FRED @st.cache_data
         pool.submit(fetch_shiller_cape)    # pre-warm Yale CAPE
         pool.submit(fetch_sector_returns)  # pre-warm sector ETF heatmap
-
-# ── Uptime / warmup indicator ─────────────────────────────────────────────────
-# Small dot that confirms the app is fully loaded (not recovering from cold start).
-# The badge disappears after 10 seconds so it doesn't distract.
-_uptime_dot = (
-    '<span style="display:inline-flex;align-items:center;gap:5px;'
-    'font-size:0.68rem;color:#27ae60;opacity:0.7;">'
-    '<span style="width:6px;height:6px;border-radius:50%;'
-    'background:#27ae60;display:inline-block;"></span>'
-    'App live</span>'
-)
-st.markdown(_uptime_dot, unsafe_allow_html=True)
 
 _warm_caches()
 
@@ -163,8 +148,8 @@ st.session_state["traffic_light"]         = model_output.traffic_light
 st.session_state["feature_summary"]       = format_features_for_prompt(model_output.features)
 
 # Populate live values for the alert engine (keyed by FRED series_id)
-st.session_state["pie360_recession_prob"] = model_output.probability
-st.session_state["pie360_live_values"] = {
+st.session_state["pulse360_recession_prob"] = model_output.probability
+st.session_state["pulse360_live_values"] = {
     f.series_id: f.current_value
     for f in model_output.features
     if f.current_value is not None

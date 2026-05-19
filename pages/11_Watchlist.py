@@ -40,12 +40,9 @@ from components.ticker_classifier import classify_all, ASSET_CLASS_COLORS
 from components.rebalancer import (
     CYCLE_PHASES,
     PHASE_RATIONALE,
-    TILT_MULTIPLIERS,
-    TILT_BUCKET_LABELS,
     compute_plan,
     plan_to_dataframe,
 )
-from components.cycle_engine import detect_cycle_phase
 from components.stock_score_utils import (
     DISCLAIMER,
     _COMPLEXITY,
@@ -201,9 +198,6 @@ st.caption(
 from components.auth import render_login_gate  # noqa: E402
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Watchlist")
 header_with_logo("Watchlist", "Track Assets & Monitor Macro Signals")
 
 if not render_login_gate(
@@ -700,14 +694,6 @@ if save_weights_btn:
     st.success("Portfolio weights saved.", icon="💾")
     # Don't st.rerun() — avoid race condition with the localStorage JS write
 
-# ── Auto cycle phase detection ─────────────────────────────────────────────────
-fred_key = st.secrets.get("FRED_API_KEY", "") or ""
-_cycle_result = None
-try:
-    _cycle_result = detect_cycle_phase(fred_key)
-except Exception:
-    pass  # graceful degradation — manual picker still works
-
 # ── Rebalancing Plan ──────────────────────────────────────────────────────────
 _saved_weights = st.session_state.get("_weights_cache", {})
 _saved_total   = sum(float(v) for v in _saved_weights.values()) if _saved_weights else 0.0
@@ -717,33 +703,14 @@ st.markdown("")
 rb_left, rb_right = st.columns([2, 3])
 
 with rb_left:
-    # Pre-populate from auto-detected phase if available
-    _default_phase_idx = 2  # Late / Peak (conservative fallback)
-    if _cycle_result and _cycle_result.phase in CYCLE_PHASES:
-        _default_phase_idx = CYCLE_PHASES.index(_cycle_result.phase)
     cycle_phase = st.selectbox(
         "Current cycle phase",
         options=CYCLE_PHASES,
-        index=_default_phase_idx,
-        help=(
-            "Auto-detected from live FRED data (yield curve, unemployment, "
-            "industrial production, CPI, initial claims). You can override this manually."
-            if _cycle_result and _cycle_result.confidence >= 30
-            else "Select the macro cycle phase that best matches current conditions. "
-                 "Check the Dashboard and Macro Pulse pages for guidance."
-        ),
+        index=2,                  # default: Late / Peak (conservative starting point)
+        help="Select the macro cycle phase that best matches current conditions. "
+             "Check the Dashboard and Macro Pulse pages for guidance.",
         key="rebalancer_cycle_phase",
     )
-    if _cycle_result and _cycle_result.data_quality != "unavailable":
-        _conf_color = "#27ae60" if _cycle_result.confidence >= 60 else (
-            "#c98800" if _cycle_result.confidence >= 30 else "#9ca3af"
-        )
-        st.markdown(
-            f'<div style="font-size:0.7rem;color:{_conf_color};margin-top:4px;">'
-            f'🤖 Auto-detected: <strong>{_cycle_result.phase}</strong> '
-            f'({_cycle_result.confidence_label}, {_cycle_result.confidence}%)</div>',
-            unsafe_allow_html=True,
-        )
 
 with rb_right:
     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
@@ -776,12 +743,6 @@ if _plan:
     _phase = st.session_state.get("_rebalancing_phase", cycle_phase)
     st.markdown("---")
     st.markdown(f"### 📊 Rebalancing Plan — {_phase}")
-
-    # Auto cycle detection card (shown once when plan is rendered)
-    if _cycle_result and _cycle_result.data_quality != "unavailable":
-        _cycle_result.render()
-    elif _cycle_result is None:
-        st.caption("💡 Set `FRED_API_KEY` in Streamlit secrets to enable auto cycle detection.")
 
     # Phase rationale callout
     st.info(PHASE_RATIONALE.get(_phase, ""), icon="🔭")
@@ -901,42 +862,6 @@ if _plan:
         "investment advice. Verify against your own risk tolerance and tax situation "
         "before trading."
     )
-
-    # ── Rebalancing math expander ──────────────────────────────────────────────
-    with st.expander("🔢 Show rebalancing math", expanded=False):
-        tilts = TILT_MULTIPLIERS.get(_phase, {})
-
-        st.markdown(f"""
-**Algorithm — how the {_phase} tilt is computed**
-
-1. Each position is mapped to a *bucket* (Equity-cyclical, Bond, Cash, etc.)
-2. Its current weight is multiplied by the bucket's tilt factor
-3. All raw tilted weights are normalised so the portfolio still sums to 100%
-4. The suggested weight minus the current weight gives **Δ**
-
-| Bucket | Tilt factor | Direction |
-|---|---|---|""")
-
-        # Build one row per bucket, sorted strongest tilt first
-        for bucket, mult in sorted(tilts.items(), key=lambda kv: -kv[1]):
-            label     = TILT_BUCKET_LABELS.get(bucket, bucket)
-            direction = "↑ Overweight" if mult > 1.02 else ("↓ Underweight" if mult < 0.98 else "→ Neutral")
-            st.markdown(f"| {label} | **{mult:.2f}×** | {direction} |")
-
-        st.markdown(f"""
-**Action thresholds** (applied after normalisation)
-
-| |Δ|| Tag | Meaning |
-|---|---|---|
-| ≥ 5% | 🟢 Add / 🔴 Trim | Action Required — rebalance now |
-| 2–5% | 🟡 Minor add/trim | Optional — worth reviewing |
-| < 2% | ⚪ Hold | Within tolerance — no trade needed |
-
-**Calibration note:** Multipliers are set so that a 60/40 portfolio in *Contraction* shifts
-to roughly 45/47/8 (equity/bond/cash), consistent with typical recession playbooks.
-Late/Peak cyclical equities land ~15% below their current weight post-normalisation —
-matching a "reduce overweights, rotate to defensives" tilt.
-""")
 
     # ── AI Memo ───────────────────────────────────────────────────────────────
     st.markdown("---")

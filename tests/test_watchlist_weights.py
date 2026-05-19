@@ -8,7 +8,7 @@ in the pure-logic paths), so we can test them by providing a minimal
 session_state dict mock.
 
 Run from the workspace root:
-    python -m pytest Pie360/tests/ -v
+    python -m pytest Pulse360/tests/ -v
 """
 
 import sys

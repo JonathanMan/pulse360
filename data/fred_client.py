@@ -1,5 +1,5 @@
 """
-FRED data layer for Pie360.
+FRED data layer for Pulse360.
 
 All series are fetched via fredapi with Streamlit caching.
 Each fetch returns a result dict with data, staleness metadata, and error info —

@@ -30,7 +30,7 @@ from ai.portfolio_analyzer import (
 
 # ── Page config & styles ──────────────────────────────────────────────────────
 
-from components.pie360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
+from components.pulse360_theme import inject_theme, BORDER, CARD_BG, PAGE_BG, TEXT_PRI, TEXT_SEC, TEXT_MUT, BLUE
 inject_theme()
 st.markdown(f"""
 <style>
@@ -105,9 +105,6 @@ st.markdown(f"""
 import re as _re
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Portfolio")
 header_with_logo("Portfolio", "Macro-Adjusted Portfolio Analysis")
 
 

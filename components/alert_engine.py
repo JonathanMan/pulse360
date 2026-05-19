@@ -1,5 +1,5 @@
 """
-Pie360 — Alert Engine
+Pulse360 — Alert Engine
 ========================
 Rule-based alert system that watches any FRED series (or the blended
 recession probability) and fires in-app banners + optional email when

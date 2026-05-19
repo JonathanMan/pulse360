@@ -1,5 +1,5 @@
 """
-Pie360 — Historical Phase Returns Engine
+Pulse360 — Historical Phase Returns Engine
 ============================================
 Computes asset-class return statistics (annualised return, win rate, volatility)
 broken down by economic cycle phase.

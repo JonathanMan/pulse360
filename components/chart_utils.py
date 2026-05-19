@@ -1,5 +1,5 @@
 """
-Pie360 — shared chart utilities
+Pulse360 — shared chart utilities
 ===================================
 Shared helpers used by app.py and all tab components.
 
@@ -61,7 +61,7 @@ def dark_layout(
     rangeslider: bool = False,
 ) -> go.Figure:
     """
-    Apply Pie360 dark theme to a Plotly figure.
+    Apply Pulse360 dark theme to a Plotly figure.
 
     Includes:
     - Tableau-style hoverlabel (dark card, white text, left-aligned)

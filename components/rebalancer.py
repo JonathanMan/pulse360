@@ -298,21 +298,6 @@ def plan_to_dataframe(plan: dict[str, dict]) -> pd.DataFrame:
 # ── Cycle phase rationale ─────────────────────────────────────────────────────
 # Short text displayed alongside the plan to explain the tilt logic.
 
-# Public alias — lets the UI layer inspect tilt factors without touching private vars
-TILT_MULTIPLIERS: dict[str, dict[str, float]] = _TILTS
-
-# Friendly display labels for tilt-multiplier bucket keys
-TILT_BUCKET_LABELS: dict[str, str] = {
-    "Equity_cyclical":  "Equity — Cyclical sectors",
-    "Equity_defensive": "Equity — Defensive sectors",
-    "Equity_neutral":   "Equity — Neutral sectors",
-    "Bond":             "Bonds",
-    "Commodity":        "Commodities",
-    "Cash":             "Cash",
-    "Real Estate":      "Real Estate",
-    "Crypto":           "Crypto",
-}
-
 PHASE_RATIONALE: dict[str, str] = {
     "Early / Recovery": (
         "**Early / Recovery** — Risk appetite is returning. Cyclical sectors "

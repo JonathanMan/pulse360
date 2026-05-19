@@ -1,5 +1,5 @@
 """
-Pie360 Recession Probability Model
+Pulse360 Recession Probability Model
 =====================================
 7-factor weighted logit model. Weights match briefing.md §4 exactly.
 Each feature produces a stress score (0 = no stress, 1 = maximum stress)

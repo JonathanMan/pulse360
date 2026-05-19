@@ -20,12 +20,9 @@ from models.backtest import (
 from components.chart_utils import dark_layout, add_nber
 
 # ── Dark-theme CSS ───────────────────────────────────────────────────────────
-from components.pie360_theme import inject_theme
+from components.pulse360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("1 Backtest")
 header_with_logo("Backtest", "Historical Cycle Performance & Strategy Testing")
 
 inject_theme()

@@ -20,12 +20,9 @@ from __future__ import annotations
 import streamlit as st
 
 from ai.claude_client import stream_briefing_section
-from components.pie360_theme import inject_theme
+from components.pulse360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
-
-from components.observability import init_page, log, track, capture_exception
-init_page("Briefing")
 header_with_logo("Daily Briefing", "AI-Generated Macro Summary & Investment Recommendations")
 
 
