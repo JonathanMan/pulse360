@@ -11,6 +11,7 @@ phase/confidence/profile combo (1 hr) so repeat visits are instant.
 from __future__ import annotations
 
 import json
+import re
 import time
 
 import anthropic
@@ -162,10 +163,18 @@ def generate_playbook(result: CycleResult, profile_key: str, force: bool = False
         client = anthropic.Anthropic(api_key=api_key)
         msg = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=650,
+            max_tokens=700,
             messages=[{"role": "user", "content": _build_prompt(result, profile_key)}],
         )
-        playbook = json.loads(msg.content[0].text.strip())
+        raw = msg.content[0].text.strip()
+        # Strip markdown code fences if model wrapped the JSON
+        fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", raw)
+        json_str = fence_match.group(1).strip() if fence_match else raw
+        # Fallback: find first {...} block
+        if not json_str.startswith("{"):
+            brace_match = re.search(r"\{[\s\S]*\}", json_str)
+            json_str = brace_match.group(0) if brace_match else json_str
+        playbook = json.loads(json_str)
         st.session_state[cache_key]        = playbook
         st.session_state[f"{cache_key}_ts"] = time.time()
         log.info("playbook_generated", phase=result.phase, profile=profile_key)
@@ -174,6 +183,7 @@ def generate_playbook(result: CycleResult, profile_key: str, force: bool = False
 
     except Exception as exc:
         capture_exception(exc, context={"phase": result.phase, "profile": profile_key})
+        st.session_state["_pb_last_error"] = str(exc)
         return None
 
 
@@ -279,7 +289,11 @@ if playbook:
     _render_columns(playbook, cycle_result.phase)
     _render_insight(playbook, st.session_state.get(_ck_ts))
 else:
-    st.caption("⚠️ AI generation unavailable (check ANTHROPIC_API_KEY). Showing rules-based defaults.")
+    last_err = st.session_state.get("_pb_last_error", "")
+    if last_err:
+        st.caption(f"⚠️ AI generation failed: {last_err}. Showing rules-based defaults.")
+    else:
+        st.caption("⚠️ AI generation unavailable (check ANTHROPIC_API_KEY). Showing rules-based defaults.")
     defaults = _DEFAULTS.get(cycle_result.phase, {})
     _render_columns(defaults, cycle_result.phase)
     st.markdown(
