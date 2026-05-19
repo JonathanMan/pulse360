@@ -77,7 +77,6 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     # ── Tab 6 – Markets (FRED-sourced; sector ETFs via yfinance) ────────────
     "SP500":            ("S&P 500",                                "daily",     5),
     "NASDAQCOM":        ("NASDAQ Composite",                       "daily",     5),
-    "WILL5000IND":    ("Wilshire 5000",                          "daily",     5),
     "VIXCLS":           ("VIX",                                    "daily",     5),
     # ── Tab 7 – Housing, Consumer & Sentiment ───────────────────────────────
     "HOUST":            ("Housing Starts (000s)",                  "monthly",  45),
@@ -257,8 +256,7 @@ _PREFETCH_TABS: list[str] = [
     "T10Y3M", "T10Y2Y", "FEDFUNDS", "DGS10", "DGS2",
     "NFCI", "BAMLC0A0CM", "BAMLH0A0HYM2", "MORTGAGE30US",
     # Tab 6 – Markets
-    "SP500", "NASDAQCOM", "VIXCLS", "BAMLC0A0CM", "BAMLH0A0HYM2", "WILL5000IND",
-    # Tab 7 – Housing & Consumer
+    "SP500", "NASDAQCOM", "VIXCLS", "BAMLC0A0CM", "BAMLH0A0HYM2",    # Tab 7 – Housing & Consumer
     "HOUST", "PERMIT", "CSUSHPISA", "RSXFS", "RSFSXMV", "UMCSENT", "PSAVERT",
     # Tab 8 – Global
     "DTWEXBGS", "DEXUSEU", "DEXJPUS", "DCOILBRENTEU", "PALLFNFINDEXQ",

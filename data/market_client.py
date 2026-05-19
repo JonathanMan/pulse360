@@ -106,10 +106,13 @@ def fetch_sector_returns(period_days: int = 22) -> pd.DataFrame:
         return ticker, fetch_ticker(ticker, period="6mo")
 
     rows = []
-    with ThreadPoolExecutor(max_workers=len(SECTOR_ETFS)) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {executor.submit(_fetch_one, tkr): tkr for tkr in SECTOR_ETFS}
-        for future in as_completed(futures):
-            ticker, r = future.result()
+        for future in as_completed(futures, timeout=20):
+            try:
+                ticker, r = future.result(timeout=15)
+            except Exception:
+                continue
             sector = SECTOR_ETFS[ticker]
             if r["close"].empty or r["error"]:
                 continue
