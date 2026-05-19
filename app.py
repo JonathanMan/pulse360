@@ -8,8 +8,11 @@ Run locally:  streamlit run app.py
 Deploy:       push to GitHub → connect to Streamlit Cloud → add secrets
 """
 
+import time as _time
+
 import streamlit as st
 from components.pulse360_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
+from components.onboarding import render_onboarding as _render_onboarding_page
 
 # ── Profile persistence helpers ────────────────────────────────────────────────
 _PROFILE_LS_KEY = "p360_profile"
@@ -148,196 +151,10 @@ st.markdown(f"""
 
 
 # ── Onboarding ─────────────────────────────────────────────────────────────────
+# Full implementation lives in components/onboarding.py.
+# app.py just wires the save-profile callback and calls through.
 def _render_onboarding() -> None:
-    """
-    Full-page onboarding shown on first visit.
-    Left column  — profile question + radio + Get Started button.
-    Right column — live nav preview that updates as the user picks a profile.
-    Calls st.stop() to block normal page rendering until done.
-    """
-    from components.user_profile import PROFILES
-
-    # ── Full nav structure: (icon, label, min_level, section) ─────────────────
-    _NAV_ITEMS = [
-        # Macro Context
-        ("📊", "Dashboard",           0, "Macro Context"),
-        ("🌐", "Macro Pulse",         0, "Macro Context"),
-        # My Portfolio
-        ("🗂️", "Investment Analyser", 0, "My Portfolio"),
-        ("⭐", "Watchlist",           0, "My Portfolio"),
-        ("🏆", "Stock Screener",      1, "My Portfolio"),
-        ("📋", "Portfolio Heatmap",   1, "My Portfolio"),
-        # Research
-        ("🔍", "Stock Research",      0, "Research"),
-        ("🔬", "AI Research Desk",    0, "Research"),
-        ("⚖️", "Market Valuation",    0, "Research"),
-        # Analysis
-        ("📈", "What to Own & When",  0, "Analysis"),
-        ("🎛️", "Stress Test",         1, "Analysis"),
-        ("📉", "Model Track Record",  2, "Analysis"),
-        # Account
-        ("⚙️", "Settings",            0, "Account"),
-    ]
-
-    # ── Styles ─────────────────────────────────────────────────────────────────
-    st.markdown(f"""
-<style>
-  .ob-nav-preview {{
-    background: {PAGE_BG};
-    border: 1px solid {BORDER};
-    border-radius: 12px;
-    padding: 16px 18px;
-    height: 100%;
-  }}
-  .ob-nav-header {{
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: {TEXT_SEC};
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    margin: 14px 0 6px 0;
-  }}
-  .ob-nav-header:first-child {{ margin-top: 0; }}
-  .ob-nav-item {{
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 6px 10px;
-    border-radius: 7px;
-    margin-bottom: 2px;
-    font-size: 0.85rem;
-    font-weight: 500;
-  }}
-  .ob-nav-item.available {{
-    color: {TEXT_PRI};
-    background: #e8f1fb;
-  }}
-  .ob-nav-item.locked {{
-    color: {TEXT_MUT};
-    background: transparent;
-  }}
-  .ob-nav-item .ob-lock {{
-    font-size: 0.65rem;
-    margin-left: auto;
-    color: {TEXT_MUT};
-  }}
-  .ob-profile-card {{
-    border: 1px solid {BORDER};
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin: 10px 0 18px 0;
-    background: {CARD_BG};
-  }}
-</style>
-""", unsafe_allow_html=True)
-
-    # ── Page header ────────────────────────────────────────────────────────────
-    st.markdown(f"""
-<div style="text-align:center; padding: 2rem 0 1.2rem 0;">
-  <div style="font-size:2.8rem; margin-bottom:0.3rem;">📊</div>
-  <h1 style="font-size:2.2rem; font-weight:800; color:{TEXT_PRI}; margin:0;">
-    Welcome to Pie360
-  </h1>
-  <p style="font-size:1.1rem; font-weight:600; color:{TEXT_PRI}; margin-top:0.4rem; margin-bottom:0.2rem; letter-spacing:0.02em;">
-    Slice through the noise
-  </p>
-  <p style="color:{TEXT_SEC}; font-size:1rem; margin-top:0.3rem;">
-    AI-Powered Economic Cycle Dashboard &nbsp;·&nbsp; Real-time Business Cycle Monitoring
-  </p>
-</div>
-""", unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    left_col, right_col = st.columns([1, 1], gap="large")
-
-    # ── Left: profile question ─────────────────────────────────────────────────
-    with left_col:
-        st.markdown("#### How would you describe yourself as an investor?")
-        st.caption("Pie360 adapts to your level. You can change this any time from ⚙️ Settings.")
-
-        chosen = st.radio(
-            "Profile",
-            options=list(PROFILES.keys()),
-            format_func=lambda k: f"{PROFILES[k]['icon']}  {PROFILES[k]['label']}",
-            label_visibility="collapsed",
-            key="onboarding_choice",
-        )
-
-        p       = PROFILES[chosen]
-        fg, bg  = {"Beginner": ("#2ecc71","#0e2a1a"),
-                   "Investor": ("#3498db","#0a1e2e"),
-                   "Analyst":  ("#9b59b6","#1a0e2a")}[chosen]
-
-        features_html = "".join(
-            f'<div style="color:{TEXT_PRI};font-size:0.83rem;margin-bottom:4px;">✓ {f}</div>'
-            for f in p["features"]
-        )
-        st.markdown(f"""
-<div class="ob-profile-card">
-  <div style="font-size:0.7rem;color:{TEXT_SEC};text-transform:uppercase;
-              letter-spacing:.05em;font-weight:700;margin-bottom:8px;">
-    What you'll see
-  </div>
-  {features_html}
-  <div style="margin-top:10px;font-size:0.75rem;color:{TEXT_MUT};line-height:1.4;">
-    You can change this any time — no data is lost when switching profiles.
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-        if st.button("Get Started →", type="primary", width='stretch'):
-            st.session_state["pulse360_profile"] = chosen
-            _save_profile(chosen)   # persist so returning users skip this screen
-            for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
-                st.session_state.pop(key, None)
-            st.rerun()
-
-    # ── Right: live nav preview ────────────────────────────────────────────────
-    with right_col:
-        level = PROFILES[chosen]["level"]
-
-        # Build nav item HTML
-        sections_seen: set[str] = set()
-        nav_html = ""
-        for icon, label, min_lvl, section in _NAV_ITEMS:
-            # Section header
-            if section not in sections_seen:
-                sections_seen.add(section)
-                if section:
-                    nav_html += (
-                        f'<div class="ob-nav-header">{section}</div>'
-                    )
-
-            available = level >= min_lvl
-            css_cls   = "available" if available else "locked"
-            lock_tag  = "" if available else '<span class="ob-lock">🔒</span>'
-            nav_html += (
-                f'<div class="ob-nav-item {css_cls}">'
-                f'<span>{icon}</span>'
-                f'<span>{label}</span>'
-                f'{lock_tag}'
-                f'</div>'
-            )
-
-        unlocked = sum(1 for _, _, ml, _ in _NAV_ITEMS if level >= ml)
-        total    = len(_NAV_ITEMS)
-
-        st.markdown(f"""
-<div class="ob-nav-preview">
-  <div style="font-size:0.72rem;font-weight:700;color:{TEXT_SEC};
-              text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">
-    Your navigation
-    <span style="float:right;font-weight:400;color:{TEXT_MUT};text-transform:none;
-                 letter-spacing:0;">{unlocked} of {total} pages</span>
-  </div>
-  {nav_html}
-</div>
-""", unsafe_allow_html=True)
-
-    # Do NOT call st.stop() here — navigation must already be set up above.
-    # We just return; pg.run() is never reached so the page stays blank.
-    return
+    _render_onboarding_page(save_profile_fn=_save_profile)
 
 
 # ── OAuth callback handler — MUST run on every page load ──────────────────────
@@ -552,16 +369,20 @@ with st.sidebar:
         )
 
 
-# ── Alert engine — check rules on every page load ─────────────────────────────
-# We only run the check when the dashboard has already cached live values in
-# session state (key: "pulse360_live_values"), so we never trigger a fresh FRED
-# pull from the router itself.  The Dashboard page populates that key.
+# ── Alert engine — 5-minute debounced check ───────────────────────────────────
+# We only run when the Dashboard has already cached live values in session state
+# (key: "pulse360_live_values"), so we never trigger a fresh FRED pull from the
+# router itself.  A 5-minute cooldown prevents a Supabase query on every click.
+_ALERT_COOLDOWN_S = 300  # seconds between alert checks
 try:
     from components.alert_engine import check_and_render_alerts as _check_alerts
     _live = st.session_state.get("pulse360_live_values")
     _prob = st.session_state.get("pulse360_recession_prob")
-    if _live is not None:
+    _now  = _time.time()
+    _last = st.session_state.get("_alerts_last_checked", 0.0)
+    if _live is not None and (_now - _last) >= _ALERT_COOLDOWN_S:
         _check_alerts(_live, _prob)
+        st.session_state["_alerts_last_checked"] = _now
 except Exception:
     pass  # never let alert failures break page routing
 
