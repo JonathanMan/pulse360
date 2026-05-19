@@ -9,6 +9,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
+import io
+import requests
 import pandas as pd
 import streamlit as st
 import yfinance as yf
@@ -108,9 +110,9 @@ def fetch_sector_returns(period_days: int = 22) -> pd.DataFrame:
     rows = []
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {executor.submit(_fetch_one, tkr): tkr for tkr in SECTOR_ETFS}
-        for future in as_completed(futures, timeout=20):
+        for future in as_completed(futures, timeout=12):
             try:
-                ticker, r = future.result(timeout=15)
+                ticker, r = future.result(timeout=5)
             except Exception:
                 continue
             sector = SECTOR_ETFS[ticker]
@@ -156,7 +158,9 @@ def fetch_shiller_cape() -> dict:
 
     try:
         url = "https://shiller.yale.edu/data/ie_data.xls"
-        df = pd.read_excel(url, sheet_name="Data", skiprows=7, header=0)
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        df = pd.read_excel(io.BytesIO(resp.content), sheet_name="Data", skiprows=7, header=0)
 
         # Locate CAPE column (P/E10 or CAPE)
         cape_col = next(
