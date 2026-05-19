@@ -218,6 +218,44 @@ else:
                         delete_rule(rule_id)
                         st.rerun()
 
+# ── Alert history ─────────────────────────────────────────────────────────────
+
+st.markdown("---")
+with st.expander("🕐 Alert history (last 30 days)", expanded=False):
+    try:
+        from components.supabase_client import get_client, get_user_email
+        import pandas as _pd
+
+        _rows = (
+            get_client()
+            .table("alert_history")
+            .select("rule_name,series_id,operator,threshold,current_value,triggered_at")
+            .eq("user_email", get_user_email())
+            .order("triggered_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+        _data = _rows.data or []
+        if _data:
+            _df = _pd.DataFrame(_data)
+            _df["triggered_at"]  = _pd.to_datetime(_df["triggered_at"]).dt.strftime("%b %d %Y, %H:%M")
+            _df["threshold"]     = _df["threshold"].map(lambda v: f"{v:.2f}")
+            _df["current_value"] = _df["current_value"].map(lambda v: f"{v:.2f}")
+            _df = _df.rename(columns={
+                "rule_name":     "Rule",
+                "series_id":     "Series",
+                "operator":      "Operator",
+                "threshold":     "Threshold",
+                "current_value": "Value at trigger",
+                "triggered_at":  "Fired at",
+            })
+            st.dataframe(_df, hide_index=True, use_container_width=True)
+            st.caption(f"{len(_data)} alert firing(s) on record.")
+        else:
+            st.caption("No alerts have fired yet — history will appear here once a rule triggers.")
+    except Exception as _exc:
+        st.caption(f"History unavailable: {_exc}")
+
 # ── How it works ──────────────────────────────────────────────────────────────
 
 st.markdown("---")
