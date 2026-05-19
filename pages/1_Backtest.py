@@ -160,7 +160,7 @@ fig = add_nber(fig, start_date="1997-01-01")
 
 fig = dark_layout(fig, yaxis_title="Recession Probability (%)")
 fig.update_layout(height=420, yaxis={"range": [0, 100]})
-st.plotly_chart(fig, use_container_width=True, key="bt_main")
+st.plotly_chart(fig, width='stretch', key="bt_main")
 
 st.markdown("---")
 
@@ -199,7 +199,7 @@ if rec_stats:
 
     st.dataframe(
         pd.DataFrame(rows),
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 else:
@@ -255,7 +255,7 @@ fig2.add_hline(y=0.5, line_dash="dot", line_color="#555", line_width=1,
 fig2 = add_nber(fig2, start_date="1997-01-01")
 fig2 = dark_layout(fig2, yaxis_title="Stress Score (0–1)")
 fig2.update_layout(height=380, yaxis={"range": [0, 1]})
-st.plotly_chart(fig2, use_container_width=True, key="bt_stress")
+st.plotly_chart(fig2, width='stretch', key="bt_stress")
 
 st.markdown("---")
 
@@ -277,7 +277,7 @@ if fp_list:
             "end":       "Period End",
             "peak_prob": "Peak Probability (%)",
         }),
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
     st.caption(

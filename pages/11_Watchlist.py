@@ -226,7 +226,7 @@ with st.form("add_ticker_form", clear_on_submit=True):
         )
     with btn_col:
         submitted = st.form_submit_button(
-            "➕ Add", type="primary", use_container_width=True
+            "➕ Add", type="primary", width='stretch'
         )
 
 # Known ETFs / indices that can't be Buffett-scored — warn the user immediately

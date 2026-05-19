@@ -60,7 +60,7 @@ def render_tab3(model_output, phase_output) -> None:
             fig = threshold_line(fig, 4.0, "4% — cycle trough proxy", "#00a35a", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="% Unemployed")
-            st.plotly_chart(fig, use_container_width=True, key="tab3_unrate")
+            st.plotly_chart(fig, width='stretch', key="tab3_unrate")
         chart_meta(unrate, decimals=1)
         if unrate["last_value"] is not None:
             if unrate["last_value"] <= 4.0:
@@ -85,7 +85,7 @@ def render_tab3(model_output, phase_output) -> None:
             fig = threshold_line(fig, 0.5, "0.5 — recession trigger", "#d92626", "dash")
             fig = threshold_line(fig, 0.3, "0.3 — warning zone", "#c98800", "dot")
             fig = dark_layout(fig, yaxis_title="Sahm Indicator (pp)")
-            st.plotly_chart(fig, use_container_width=True, key="tab3_sahm")
+            st.plotly_chart(fig, width='stretch', key="tab3_sahm")
         chart_meta(sahm, decimals=2)
         if sahm["last_value"] is not None:
             if sahm["last_value"] >= 0.5:
@@ -111,7 +111,7 @@ def render_tab3(model_output, phase_output) -> None:
             fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Change (000s)")
-            st.plotly_chart(fig, use_container_width=True, key="tab3_payems")
+            st.plotly_chart(fig, width='stretch', key="tab3_payems")
         chart_meta(payems, decimals=0)
         if not payems["data"].empty and len(payems["data"]) >= 2:
             _pay_mom = payems["data"].diff().iloc[-1] / 1000
@@ -134,7 +134,7 @@ def render_tab3(model_output, phase_output) -> None:
             fig = threshold_line(fig, 300, "300K — elevated threshold", "#d92626", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Claims (000s)")
-            st.plotly_chart(fig, use_container_width=True, key="tab3_ic4w")
+            st.plotly_chart(fig, width='stretch', key="tab3_ic4w")
         chart_meta(ic4w, decimals=0)
         if ic4w["last_value"] is not None:
             if ic4w["last_value"] > 300000:
@@ -154,7 +154,7 @@ def render_tab3(model_output, phase_output) -> None:
         ))
         fig = add_nber(fig, start_date=start)
         fig = dark_layout(fig, yaxis_title="Job Openings (000s)")
-        st.plotly_chart(fig, use_container_width=True, key="tab3_jolts")
+        st.plotly_chart(fig, width='stretch', key="tab3_jolts")
     chart_meta(jolts, decimals=0)
     if jolts["last_value"] is not None:
         _jolts_m = jolts["last_value"] / 1_000_000

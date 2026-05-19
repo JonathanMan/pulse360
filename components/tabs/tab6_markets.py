@@ -74,7 +74,7 @@ def render_tab6(model_output, phase_output) -> None:
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Index (rebased to 100 at start)")
             fig = add_end_labels(fig, fmt=",.0f")
-            st.plotly_chart(fig, use_container_width=True, key="tab6_equity")
+            st.plotly_chart(fig, width='stretch', key="tab6_equity")
         col_a, col_b = st.columns(2)
         with col_a:
             chart_meta(sp500, decimals=0)
@@ -109,7 +109,7 @@ def render_tab6(model_output, phase_output) -> None:
             fig = threshold_line(fig, 30, "30 — high fear", "#d92626", "dash")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="VIX Level")
-            st.plotly_chart(fig, use_container_width=True, key="tab6_vix")
+            st.plotly_chart(fig, width='stretch', key="tab6_vix")
         chart_meta(vix, decimals=1)
 
         if vix["last_value"] is not None:
@@ -149,7 +149,7 @@ def render_tab6(model_output, phase_output) -> None:
         fig = add_nber(fig, start_date=start)
         fig = dark_layout(fig, yaxis_title="OAS (bps)")
         fig = add_end_labels(fig, fmt=",.0f", unit=" bps")
-        st.plotly_chart(fig, use_container_width=True, key="tab6_oas")
+        st.plotly_chart(fig, width='stretch', key="tab6_oas")
 
     col3, col4 = st.columns(2)
     with col3:
@@ -185,7 +185,7 @@ def render_tab6(model_output, phase_output) -> None:
         fig.add_vline(x=0, line_dash="dash", line_color="#555", line_width=1)
         fig = dark_layout(fig, yaxis_title="", title="Sector ETF 1-Month Returns")
         fig.update_layout(height=350, margin={"l": 140})
-        st.plotly_chart(fig, use_container_width=True, key="tab6_sectors")
+        st.plotly_chart(fig, width='stretch', key="tab6_sectors")
         st.caption("Data via yfinance. Returns ≈ 22 trading days (~1 month).")
 
         if not sector_data.empty:
@@ -218,7 +218,7 @@ def render_tab6(model_output, phase_output) -> None:
         fig = threshold_line(fig, long_run_avg, f"Long-run avg: {long_run_avg:.1f}", "#888", "dot")
         fig = threshold_line(fig, 25, "25 — historically elevated", "#d92626", "dot")
         fig = dark_layout(fig, yaxis_title="CAPE Ratio")
-        st.plotly_chart(fig, use_container_width=True, key="tab6_cape")
+        st.plotly_chart(fig, width='stretch', key="tab6_cape")
         st.caption(
             f"Shiller CAPE · Current: **{cape['last_value']:.1f}** · "
             f"Long-run avg: {long_run_avg:.1f} · As of: {cape['last_date']}"

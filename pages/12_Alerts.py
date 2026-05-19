@@ -203,7 +203,7 @@ else:
                     if st.button(
                         toggle_label,
                         key=f"toggle_{rule_id}",
-                        use_container_width=True,
+                        width='stretch',
                     ):
                         toggle_rule(rule_id)
                         st.rerun()
@@ -212,7 +212,7 @@ else:
                     if st.button(
                         "Delete",
                         key=f"del_{rule_id}",
-                        use_container_width=True,
+                        width='stretch',
                         type="secondary",
                     ):
                         delete_rule(rule_id)
@@ -249,7 +249,7 @@ with st.expander("🕐 Alert history (last 30 days)", expanded=False):
                 "current_value": "Value at trigger",
                 "triggered_at":  "Fired at",
             })
-            st.dataframe(_df, hide_index=True, use_container_width=True)
+            st.dataframe(_df, hide_index=True, width='stretch')
             st.caption(f"{len(_data)} alert firing(s) on record.")
         else:
             st.caption("No alerts have fired yet — history will appear here once a rule triggers.")

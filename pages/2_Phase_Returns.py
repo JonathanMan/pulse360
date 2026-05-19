@@ -157,7 +157,7 @@ fig_tl.update_layout(
     margin={"t": 10, "b": 10},
     legend={"orientation": "h", "y": -0.3},
 )
-st.plotly_chart(fig_tl, use_container_width=True, key="phase_timeline")
+st.plotly_chart(fig_tl, width='stretch', key="phase_timeline")
 
 # Phase month counts
 phase_counts = phase_labels.value_counts()
@@ -217,7 +217,7 @@ st.dataframe(
             "selector": "th",
             "props": [("background-color", "#f4f4f4"), ("color", "#0a0a0a"), ("font-weight", "600")]
         }]),
-    use_container_width=True,
+    width='stretch',
 )
 
 # Win rate and volatility in expander
@@ -229,7 +229,7 @@ with st.expander("📐 Win Rate & Volatility by Phase", expanded=False):
             winrate_table.style
                 .format(lambda x: f"{x:.0f}%" if x is not None and not (isinstance(x, float) and np.isnan(x)) else "—")
                 .background_gradient(cmap="RdYlGn", vmin=30, vmax=70, axis=None),
-            use_container_width=True,
+            width='stretch',
         )
     with col_vl:
         st.markdown("**Annualised Volatility (%)**")
@@ -237,7 +237,7 @@ with st.expander("📐 Win Rate & Volatility by Phase", expanded=False):
             vol_table.style
                 .format(lambda x: f"{x:.1f}%" if x is not None and not (isinstance(x, float) and np.isnan(x)) else "—")
                 .background_gradient(cmap="YlOrRd", vmin=5, vmax=40, axis=None),
-            use_container_width=True,
+            width='stretch',
         )
 
 st.markdown("---")
@@ -278,7 +278,7 @@ fig_bar.update_layout(
     height=380,
     legend={"orientation": "h", "y": -0.15},
 )
-st.plotly_chart(fig_bar, use_container_width=True, key="phase_bar")
+st.plotly_chart(fig_bar, width='stretch', key="phase_bar")
 
 st.markdown("---")
 
@@ -322,7 +322,7 @@ for i, (asset_name, series_id) in enumerate(ASSET_CLASSES.items()):
                 "Sample (months)":   s["n_months"],
             })
 
-        st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(detail_rows), width='stretch', hide_index=True)
 
         # Mini return chart for this asset over time, coloured by phase
         asset_ret = results["asset_returns"].get(asset_name)
@@ -340,7 +340,7 @@ for i, (asset_name, series_id) in enumerate(ASSET_CLASSES.items()):
             fig_asset = add_nber(fig_asset, start_date="1997-01-01")
             fig_asset = dark_layout(fig_asset, yaxis_title="Cumulative Return (rebased 100)")
             fig_asset.update_layout(height=260, margin={"t": 10})
-            st.plotly_chart(fig_asset, use_container_width=True, key=f"asset_{i}")
+            st.plotly_chart(fig_asset, width='stretch', key=f"asset_{i}")
 
 st.markdown("---")
 

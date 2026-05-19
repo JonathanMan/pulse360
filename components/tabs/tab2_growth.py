@@ -51,7 +51,7 @@ def render_tab2(model_output, phase_output) -> None:
             ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Index (2017=100)")
-            st.plotly_chart(fig, use_container_width=True, key="tab2_indpro")
+            st.plotly_chart(fig, width='stretch', key="tab2_indpro")
         chart_meta(indpro, decimals=1)
         if indpro["last_value"] is not None and len(indpro["data"]) >= 2:
             _ip_trend = indpro["data"].iloc[-1] - indpro["data"].iloc[-2]
@@ -72,7 +72,7 @@ def render_tab2(model_output, phase_output) -> None:
             fig = threshold_line(fig, 80, "80% — historical ceiling", "#e67e22", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="% of Capacity")
-            st.plotly_chart(fig, use_container_width=True, key="tab2_tcu")
+            st.plotly_chart(fig, width='stretch', key="tab2_tcu")
         chart_meta(tcu, decimals=1)
         if tcu["last_value"] is not None:
             if tcu["last_value"] >= 80:
@@ -116,7 +116,7 @@ def render_tab2(model_output, phase_output) -> None:
         fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
         fig = add_nber(fig, start_date=start)
         fig = dark_layout(fig, yaxis_title="% Month-over-Month")
-        st.plotly_chart(fig, use_container_width=True, key="tab2_durable")
+        st.plotly_chart(fig, width='stretch', key="tab2_durable")
     chart_meta(adxtno, decimals=1)
     if not adxtno["data"].empty and len(adxtno["data"]) >= 2:
         _dg_mom = adxtno["data"].pct_change().iloc[-1] * 100

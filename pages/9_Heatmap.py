@@ -284,7 +284,7 @@ def _render_action_panel(alerts: list[dict], active_regime: str) -> None:
                 }
                 for d in alert["flagged"]
             ]
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
             st.caption(
                 "Note: Scores are the composite Buffett quality framework "
                 "adjusted for the selected macro regime. They reflect "
@@ -400,7 +400,7 @@ with st.expander("Enter your portfolio tickers", expanded=True):
     if uploaded_file is not None:
         img_col, btn_col = st.columns([3, 1])
         with img_col:
-            st.image(uploaded_file, caption=uploaded_file.name, use_container_width=True)
+            st.image(uploaded_file, caption=uploaded_file.name, width='stretch')
         with btn_col:
             st.markdown("<br><br>", unsafe_allow_html=True)
             if st.button("Extract Tickers", type="secondary", width='stretch'):
@@ -452,7 +452,7 @@ with st.expander("Enter your portfolio tickers", expanded=True):
             help="Focus the vulnerability table on a specific scenario",
         )
 
-    run_btn = st.button("Analyse Portfolio", type="primary", use_container_width=False)
+    run_btn = st.button("Analyse Portfolio", type="primary")
 
 # ── Run analysis ───────────────────────────────────────────────────────────────
 if not run_btn and "portfolio_scored" not in st.session_state:
@@ -609,7 +609,7 @@ fig.update_layout(
     font=dict(color="#0a0a0a"),
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')
 
 # Fallback notice
 fallback_tickers = [d["ticker"] for d in scored_list if d.get("fallback")]
@@ -662,7 +662,7 @@ def _highlight_vuln(row):
 
 st.dataframe(
     vuln_df.style.apply(_highlight_vuln, axis=1),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )
 
@@ -695,7 +695,7 @@ with st.expander("📊 Regime Detail — Per-Holding Scores", expanded=False):
         })
 
     detail_df = pd.DataFrame(detail_rows)
-    st.dataframe(detail_df, use_container_width=True, hide_index=True)
+    st.dataframe(detail_df, width='stretch', hide_index=True)
 
 # ── Macro Beta Ranking ─────────────────────────────────────────────────────────
 with st.expander("⚡ Macro Beta — Regime Sensitivity Ranking", expanded=False):
@@ -716,7 +716,7 @@ with st.expander("⚡ Macro Beta — Regime Sensitivity Ranking", expanded=False
         }
         for d in beta_rows
     ])
-    st.dataframe(beta_df, use_container_width=True, hide_index=True)
+    st.dataframe(beta_df, width='stretch', hide_index=True)
 
 # ── CSV Export ─────────────────────────────────────────────────────────────────
 st.markdown("---")

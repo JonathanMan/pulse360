@@ -330,7 +330,7 @@ with st.expander("📡 Indicator signals driving this playbook", expanded=False)
                 "Note":      r.note,
             })
         df = _pd.DataFrame(rows)
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        st.dataframe(df, hide_index=True, width='stretch')
     else:
         st.caption("No indicator data available.")
     st.caption(f"Model confidence: {cycle_result.confidence}% ({cycle_result.confidence_label}) · {cycle_result.summary}")

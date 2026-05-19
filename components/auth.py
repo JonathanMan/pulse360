@@ -345,7 +345,7 @@ def _render_google_signin_button(oauth_url: str, btn_key: str = "default", retur
     st.link_button(
         "Continue with Google",
         oauth_url,
-        use_container_width=True,
+        width='stretch',
         icon="🔵",
     )
 
@@ -471,7 +471,7 @@ def _render_phone_tab() -> None:
                     label_visibility="collapsed",
                 )
             submitted = st.form_submit_button(
-                "Send verification code", type="primary", use_container_width=True
+                "Send verification code", type="primary", width='stretch'
             )
 
         if submitted:
@@ -499,7 +499,7 @@ def _render_phone_tab() -> None:
                 help="Enter the 6-digit code from your SMS",
             )
             submitted = st.form_submit_button(
-                "Verify & sign in", type="primary", use_container_width=True
+                "Verify & sign in", type="primary", width='stretch'
             )
 
         if submitted:
@@ -523,7 +523,7 @@ def _render_phone_tab() -> None:
             st.button(
                 f"Resend code ({_remaining}s)",
                 key="ph_resend",
-                use_container_width=True,
+                width='stretch',
                 disabled=True,
             )
         else:
@@ -900,7 +900,7 @@ def render_login_gate(
                     st.button(
                         f"Resend ({_gate_remaining}s)",
                         key=f"gate_resend_{_k}",
-                        use_container_width=True,
+                        width='stretch',
                         disabled=True,
                     )
                 else:
@@ -968,7 +968,7 @@ def render_login_gate(
                 if st.button(
                     "✓  I've signed in with Google",
                     key=f"_p360_cg_btn_{_k}",
-                    use_container_width=True,
+                    width='stretch',
                 ):
                     st.session_state[_cg_key] = True
                     st.rerun()
@@ -978,7 +978,7 @@ def render_login_gate(
             if st.button(
                 "Sign in with email / password",
                 key=f"gate_toggle_email_{_k}",
-                use_container_width=True,
+                width='stretch',
             ):
                 st.session_state[f"_gate_show_email_{_k}"] = True
                 st.rerun()

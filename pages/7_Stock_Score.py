@@ -224,7 +224,7 @@ if ticker_input:
             if st.button(
                 "✓ In Watchlist",
                 key="wl_remove_btn",
-                use_container_width=True,
+                width='stretch',
                 help=f"Remove {ticker_input} from your watchlist",
             ):
                 remove_from_watchlist(ticker_input)
@@ -234,7 +234,7 @@ if ticker_input:
                 "⭐ Add to Watchlist",
                 key="wl_add_btn",
                 type="primary",
-                use_container_width=True,
+                width='stretch',
                 help=f"Save {ticker_input} to your watchlist",
             ):
                 add_to_watchlist(ticker_input)
@@ -345,7 +345,7 @@ if ticker_input:
                 annotation_text="Below 200MA", annotation_position="top left",
                 annotation_font={"size": 10, "color": "#d92626"},
             )
-        st.plotly_chart(fig_price, use_container_width=True, key="header_price_chart")
+        st.plotly_chart(fig_price, width='stretch', key="header_price_chart")
 
     # ── Compute scores ────────────────────────────────────────────────────────
     with st.spinner("Computing scores…"):
@@ -779,7 +779,7 @@ if ticker_input:
                            font=dict(size=13, color="#ccc")),
                 legend={"orientation": "h", "y": -0.2},
             )
-            st.plotly_chart(fig_p, use_container_width=True, key="stock_score_price_chart")
+            st.plotly_chart(fig_p, width='stretch', key="stock_score_price_chart")
 
     # ── TAB 5: Shareholder Alignment ──────────────────────────────────────────
     with t5:
@@ -829,7 +829,7 @@ if ticker_input:
                     title=dict(text="Shares Outstanding — Annual Trend",
                                font=dict(size=13, color="#ccc")),
                 )
-                st.plotly_chart(fig_sh, use_container_width=True, key="stock_score_shares_chart")
+                st.plotly_chart(fig_sh, width='stretch', key="stock_score_shares_chart")
                 st.caption("Green bars = share count fell or held flat (buybacks/neutral). "
                            "Red bars = share count rose (dilution).")
 
