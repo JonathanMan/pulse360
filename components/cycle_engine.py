@@ -140,7 +140,8 @@ def _score_yield_curve(
 
     latest   = float(series.dropna().iloc[-1])
     # 6-month trend: positive = steepening
-    six_mo   = series.dropna().last("180D")
+    _s = series.dropna()
+    six_mo   = _s[_s.index >= _s.index[-1] - pd.Timedelta(days=180)] if len(_s) else _s
     trend_val = float(six_mo.iloc[-1] - six_mo.iloc[0]) if len(six_mo) >= 2 else 0.0
     trend    = "Steepening" if trend_val > 0.1 else ("Flattening" if trend_val < -0.1 else "Flat")
 
@@ -203,8 +204,11 @@ def _score_unemployment(
         )
 
     latest     = float(series.dropna().iloc[-1])
-    six_mo_ago = series.dropna().last("210D").iloc[0] if len(series.dropna().last("210D")) >= 1 else latest
-    twelve_mo  = series.dropna().last("380D").iloc[0] if len(series.dropna().last("380D")) >= 1 else latest
+    _sd = series.dropna()
+    _6m  = _sd[_sd.index >= _sd.index[-1] - pd.Timedelta(days=210)] if len(_sd) else _sd
+    _12m = _sd[_sd.index >= _sd.index[-1] - pd.Timedelta(days=380)] if len(_sd) else _sd
+    six_mo_ago = float(_6m.iloc[0])  if len(_6m)  >= 1 else latest
+    twelve_mo  = float(_12m.iloc[0]) if len(_12m) >= 1 else latest
     change_6m  = latest - float(six_mo_ago)
     change_12m = latest - float(twelve_mo)
 
@@ -270,7 +274,7 @@ def _score_industrial_production(
         yoy = float((monthly.iloc[-1] / monthly.iloc[-13] - 1) * 100)
 
     # 3-month trend
-    three_mo = monthly.last("100D")
+    three_mo = monthly[monthly.index >= monthly.index[-1] - pd.Timedelta(days=100)] if len(monthly) else monthly
     if len(three_mo) >= 2:
         mom_trend = float(three_mo.iloc[-1] - three_mo.iloc[-2])
         trend = "Rising" if mom_trend > 0.2 else ("Falling" if mom_trend < -0.2 else "Flat")

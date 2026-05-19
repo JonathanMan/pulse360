@@ -170,7 +170,7 @@ st.caption(
 preset_cols = st.columns(len(PRESETS))
 for col, (label, vals) in zip(preset_cols, PRESETS.items()):
     with col:
-        if st.button(label, use_container_width=True):
+        if st.button(label, width='stretch'):
             for k, v in vals.items():
                 st.session_state[f"sim_{k}"] = v
             st.session_state.pop("sim_analysis", None)
@@ -363,7 +363,7 @@ with col_right:
     st.plotly_chart(fig_bar, use_container_width=True, key="sim_contribs")
 
     # ── Analyse button ────────────────────────────────────────────────────────
-    if st.button("🤖 Analyse this scenario", use_container_width=True, key="sim_analyse"):
+    if st.button("🤖 Analyse this scenario", width='stretch', key="sim_analyse"):
         st.session_state["sim_analysis"] = {
             "inputs":       feature_results,
             "probability":  probability,

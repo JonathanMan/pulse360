@@ -680,7 +680,7 @@ st.divider()
 
 col1, col2 = st.columns([2, 1])
 with col2:
-    if st.button("↻ Refresh signals", use_container_width=True):
+    if st.button("↻ Refresh signals", width='stretch'):
         refresh_signals()
         st.session_state.portfolio_review = None  # clear stale review on signal refresh
         st.rerun()
