@@ -241,28 +241,13 @@ _PREFETCH_LONG: list[str] = [
     "BAMLH0A0HYM2", "UNRATE", "USREC",
 ]
 
-# All series rendered by the 8 dashboard tabs (deduped)
+# Series for Dashboard overview row only — tabs fetch their own data lazily
+# (reduces cold-start FRED calls from ~48 to ~11)
 _PREFETCH_TABS: list[str] = [
-    # Tab 1 – Macro
+    # Tab 1 – Macro (default visible tab)
     "A191RL1Q225SBEA", "GDPC1",
-    # Tab 2 – Growth
-    "INDPRO", "TCU", "ADXTNO",
-    # Tab 3 – Labor
-    "UNRATE", "U6RATE", "PAYEMS", "IC4WSA", "CCSA", "JTSJOL", "CES0500000003",
-    # Tab 4 – Inflation
-    "CPIAUCSL", "CPILFESL", "PCEPI", "PCEPILFE",
-    "T5YIE", "T10YIE", "DCOILWTICO", "PPIFIS",
-    # Tab 5 – Monetary
-    "T10Y3M", "T10Y2Y", "FEDFUNDS", "DGS10", "DGS2",
-    "NFCI", "BAMLC0A0CM", "BAMLH0A0HYM2", "MORTGAGE30US",
-    # Tab 6 – Markets
-    "SP500", "NASDAQCOM", "VIXCLS", "BAMLC0A0CM", "BAMLH0A0HYM2",    # Tab 7 – Housing & Consumer
-    "HOUST", "PERMIT", "CSUSHPISA", "RSXFS", "RSFSXMV", "UMCSENT", "PSAVERT",
-    # Tab 8 – Global
-    "DTWEXBGS", "DEXUSEU", "DEXJPUS", "DCOILBRENTEU", "PALLFNFINDEXQ",
-    # Overview row — phase total-return indices, "BAMLHYH0A0HYM2TRIV",
-    # NBER shading used by every tab
-    "USREC",
+    # Overview row extras not already in _PREFETCH_LONG
+    "BAMLHYH0A0HYM2TRIV",
 ]
 
 # Yield-curve snapshot in Tab 5 fetches with its own fixed start date
@@ -296,9 +281,6 @@ def prefetch_all_series(
 
     for sid in set(_PREFETCH_TABS):
         calls.add((sid, tab_start))
-
-    for sid in _PREFETCH_YIELD_CURVE:
-        calls.add((sid, "2023-01-01"))
 
     def _safe_fetch(sid: str, start: str) -> None:
         try:
