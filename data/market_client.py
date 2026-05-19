@@ -189,6 +189,6 @@ def fetch_shiller_cape() -> dict:
 
     except Exception as exc:
         result["error"] = str(exc)
-        logger.error("fetch_shiller_cape: %s", exc)
+        logger.warning("fetch_shiller_cape unavailable (network): %s", exc)
 
     return result
