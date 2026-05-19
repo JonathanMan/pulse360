@@ -303,19 +303,9 @@ def prefetch_all_series(
 
 def fetch_model_inputs() -> dict:
     """
-    Returns a dict of series_id → fetch_series() result for all 7 model inputs.
-    Uses start_date="1990-01-01" for longer history on model calculations.
-    Fetches in parallel so cold-start time is bounded by the slowest series,
-    not the sum of all series.
+    Returns a dict of series_id → fetch_series() result for the 6 recession model inputs.
+    All series are pre-warmed by prefetch_all_series() at cold start, so these
+    calls are guaranteed cache hits — no thread pool needed.
     """
     model_ids = ["T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA", "BAMLH0A0HYM2"]
-    results: dict = {}
-    with ThreadPoolExecutor(max_workers=len(model_ids)) as pool:
-        futures = {
-            pool.submit(fetch_series, sid, "1990-01-01"): sid
-            for sid in model_ids
-        }
-        for fut in as_completed(futures):
-            sid = futures[fut]
-            results[sid] = fut.result()
-    return results
+    return {sid: fetch_series(sid, "1990-01-01") for sid in model_ids}
