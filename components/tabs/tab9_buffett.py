@@ -794,7 +794,7 @@ def render_tab9(model_output, phase_output) -> None:
                     dsell[c] = dsell[c].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
                 st.dataframe(
                     dsell[["Date", "BI (% GDP)", "1Y", "3Y", "5Y"]],
-                    width='stretch', hide_index=True,
+                    use_container_width=True, hide_index=True,
                 )
             else:
                 st.info("No 135%+ episode crossings found in available FRED data.")
@@ -806,7 +806,7 @@ def render_tab9(model_output, phase_output) -> None:
             )
             st.dataframe(
                 pd.DataFrame(_HIST_SELL_ANCHORS),
-                width='stretch', hide_index=True,
+                use_container_width=True, hide_index=True,
             )
 
         # ── Buy Signals ────────────────────────────────────────────────────────
@@ -833,7 +833,7 @@ def render_tab9(model_output, phase_output) -> None:
                     dbuy[c] = dbuy[c].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "—")
                 st.dataframe(
                     dbuy[["Date", "BI (% GDP)", "1Y", "3Y", "5Y"]],
-                    width='stretch', hide_index=True,
+                    use_container_width=True, hide_index=True,
                 )
             else:
                 st.info(
@@ -846,7 +846,7 @@ def render_tab9(model_output, phase_output) -> None:
             st.caption("Approx. S&P 500 total returns from each signal date.")
             st.dataframe(
                 pd.DataFrame(_HIST_BUY_ANCHORS),
-                width='stretch', hide_index=True,
+                use_container_width=True, hide_index=True,
             )
 
         # ── Forward Return by Zone chart ───────────────────────────────────────
@@ -895,7 +895,7 @@ def render_tab9(model_output, phase_output) -> None:
                     xaxis={"tickangle": -20},
                     legend={"orientation": "h", "y": -0.28},
                 )
-                st.plotly_chart(fig_z, width='stretch', key="tab9_zone_returns")
+                st.plotly_chart(fig_z, use_container_width=True, key="tab9_zone_returns")
 
     else:
         st.info("S&P 500 data unavailable — forward return analysis skipped.")
@@ -961,7 +961,7 @@ def render_tab9(model_output, phase_output) -> None:
         yaxis ={"range": [0, min(300, max(ratio.values) * 1.15)]},
         xaxis ={"range": x_range},
     )
-    st.plotly_chart(fig, width='stretch', key="tab9_buffett_main")
+    st.plotly_chart(fig, use_container_width=True, key="tab9_buffett_main")
 
     # ── Market cap vs GDP divergence chart ────────────────────────────────────
     st.markdown("##### Market Cap vs GDP — Divergence (Rebased to 100 at Start)")
@@ -990,7 +990,7 @@ def render_tab9(model_output, phase_output) -> None:
     fig2 = add_nber(fig2, start_date="1945-01-01")
     fig2 = dark_layout(fig2, yaxis_title="Index (1945 = 100)")
     fig2.update_layout(height=300, xaxis={"range": x_range})
-    st.plotly_chart(fig2, width='stretch', key="tab9_buffett_diverge")
+    st.plotly_chart(fig2, use_container_width=True, key="tab9_buffett_diverge")
 
     st.markdown("---")
 
@@ -1101,7 +1101,7 @@ def render_tab9(model_output, phase_output) -> None:
             xaxis ={"range": x_range},
             legend={"orientation": "h", "y": -0.10},
         )
-        st.plotly_chart(fig_c, width='stretch', key="tab9_corrections_overlay")
+        st.plotly_chart(fig_c, use_container_width=True, key="tab9_corrections_overlay")
 
         # ── Lag analysis ──────────────────────────────────────────────────────
         st.markdown("##### Avg Time: Buffett Breach → Next Market Correction")
@@ -1158,7 +1158,7 @@ def render_tab9(model_output, phase_output) -> None:
                     "Lag (months)":      r["Lag (months)"],
                 })
             df = pd.DataFrame(df_rows)
-            st.dataframe(df, width='stretch', hide_index=True)
+            st.dataframe(df, use_container_width=True, hide_index=True)
 
             # Callout
             color = "#d92626" if avg_lag < 6 else "#c98800" if avg_lag < 18 else "#00a35a"
@@ -1613,7 +1613,7 @@ def render_tab9(model_output, phase_output) -> None:
                     },
                     legend={"orientation": "h", "y": -0.28},
                 )
-                st.plotly_chart(fig_dca, width='stretch', key="tab9_dca_chart")
+                st.plotly_chart(fig_dca, use_container_width=True, key="tab9_dca_chart")
 
         else:
             st.info("Insufficient data to compute DCA analysis.")

@@ -61,7 +61,7 @@ def render_tab8(model_output, phase_output) -> None:
             )
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Index (Jan 2006 = 100)")
-            st.plotly_chart(fig, width='stretch', key="tab8_usd_broad")
+            st.plotly_chart(fig, use_container_width=True, key="tab8_usd_broad")
         chart_meta(usd_broad, decimals=2)
 
         if usd_broad["last_value"] is not None and not usd_broad["data"].empty:
@@ -89,7 +89,7 @@ def render_tab8(model_output, phase_output) -> None:
             )
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="USD per EUR")
-            st.plotly_chart(fig, width='stretch', key="tab8_eurusd")
+            st.plotly_chart(fig, use_container_width=True, key="tab8_eurusd")
         chart_meta(eur_usd, decimals=4)
 
         if eur_usd["last_value"] is not None:
@@ -115,7 +115,7 @@ def render_tab8(model_output, phase_output) -> None:
             ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="JPY per USD")
-            st.plotly_chart(fig, width='stretch', key="tab8_jpyusd")
+            st.plotly_chart(fig, use_container_width=True, key="tab8_jpyusd")
         chart_meta(jpy_usd, decimals=2)
 
         if jpy_usd["last_value"] is not None:
@@ -139,7 +139,7 @@ def render_tab8(model_output, phase_output) -> None:
             ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="USD / barrel")
-            st.plotly_chart(fig, width='stretch', key="tab8_brent")
+            st.plotly_chart(fig, use_container_width=True, key="tab8_brent")
         chart_meta(brent, decimals=2)
 
         if brent["last_value"] is not None:
@@ -165,7 +165,7 @@ def render_tab8(model_output, phase_output) -> None:
         ))
         fig = add_nber(fig, start_date=start)
         fig = dark_layout(fig, yaxis_title="Index (current = 100)")
-        st.plotly_chart(fig, width='stretch', key="tab8_commodity")
+        st.plotly_chart(fig, use_container_width=True, key="tab8_commodity")
     chart_meta(commodity, decimals=1)
 
     if commodity["last_value"] is not None and len(commodity["data"]) >= 5:

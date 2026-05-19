@@ -215,7 +215,7 @@ def _contributions_table(model_output: RecessionModelOutput) -> None:
             "Signal":           f.signal_description[:65] + stale_flag,
             "As of":            str(f.last_date) if f.last_date else "N/A",
         })
-    st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
 # ---------------------------------------------------------------------------
@@ -500,7 +500,7 @@ def render_overview_row(
             st.markdown("**Recession Probability**")
             st.plotly_chart(
                 _recession_gauge(model_output.probability, model_output.traffic_light),
-                width='stretch',
+                use_container_width=True,
                 key="overview_gauge",
             )
             if prob_delta is not None:
@@ -581,7 +581,7 @@ def render_overview_row(
     with st.expander("📊 Recession Model — Feature Contributions", expanded=False):
         st.plotly_chart(
             _contributions_chart(model_output),
-            width='stretch',
+            use_container_width=True,
             key="overview_contributions",
         )
         _contributions_table(model_output)

@@ -383,7 +383,7 @@ For funds: drop a brochure or factsheet page — Claude will extract holdings, s
         preview_cols = st.columns(min(len(uploaded_images), 3))
         for i, img_file in enumerate(uploaded_images):
             with preview_cols[i % 3]:
-                st.image(img_file, width='stretch', caption=img_file.name)
+                st.image(img_file, use_container_width=True, caption=img_file.name)
 
         st.markdown("")
 
@@ -537,7 +537,7 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
                 st.markdown("**Detected positions:**")
                 st.dataframe(
                     preview_df,
-                    width='stretch',
+                    use_container_width=True,
                     hide_index          = True,
                 )
 

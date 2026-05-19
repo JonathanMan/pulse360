@@ -56,7 +56,7 @@ def render_tab7(model_output, phase_output) -> None:
             ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Thousands of Units (SAAR)")
-            st.plotly_chart(fig, width='stretch', key="tab7_houst")
+            st.plotly_chart(fig, use_container_width=True, key="tab7_houst")
         chart_meta(houst, decimals=0)
 
         if houst["last_value"] is not None:
@@ -80,7 +80,7 @@ def render_tab7(model_output, phase_output) -> None:
             ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Thousands of Units (SAAR)")
-            st.plotly_chart(fig, width='stretch', key="tab7_permit")
+            st.plotly_chart(fig, use_container_width=True, key="tab7_permit")
         chart_meta(permit, decimals=0)
 
         if permit["last_value"] is not None:
@@ -109,7 +109,7 @@ def render_tab7(model_output, phase_output) -> None:
                 fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
                 fig = add_nber(fig, start_date=start)
                 fig = dark_layout(fig, yaxis_title="YoY %")
-                st.plotly_chart(fig, width='stretch', key="tab7_cshpi")
+                st.plotly_chart(fig, use_container_width=True, key="tab7_cshpi")
         chart_meta(cs_hpi, decimals=1)
 
         if not cs_hpi["data"].empty:
@@ -142,7 +142,7 @@ def render_tab7(model_output, phase_output) -> None:
                           annotation_font_color="#d92626", annotation_font_size=10)
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Index Level")
-            st.plotly_chart(fig, width='stretch', key="tab7_sentiment")
+            st.plotly_chart(fig, use_container_width=True, key="tab7_sentiment")
         chart_meta(umcsent, decimals=1)
 
         if umcsent["last_value"] is not None:
@@ -181,7 +181,7 @@ def render_tab7(model_output, phase_output) -> None:
                 fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
                 fig = add_nber(fig, start_date=start)
                 fig = dark_layout(fig, yaxis_title="YoY %")
-                st.plotly_chart(fig, width='stretch', key="tab7_retail")
+                st.plotly_chart(fig, use_container_width=True, key="tab7_retail")
         col_rs1, col_rs2 = st.columns(2)
         with col_rs1:
             chart_meta(rsxfs, decimals=1)
@@ -212,7 +212,7 @@ def render_tab7(model_output, phase_output) -> None:
             ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="% of Disposable Income")
-            st.plotly_chart(fig, width='stretch', key="tab7_savings")
+            st.plotly_chart(fig, use_container_width=True, key="tab7_savings")
         chart_meta(psavert, decimals=1)
 
         if psavert["last_value"] is not None:

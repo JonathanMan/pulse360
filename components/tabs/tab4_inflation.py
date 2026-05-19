@@ -76,7 +76,7 @@ def render_tab4(model_output, phase_output) -> None:
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="YoY %")
             fig = add_end_labels(fig, fmt=".1f", unit="%")
-            st.plotly_chart(fig, width='stretch', key="tab4_cpi")
+            st.plotly_chart(fig, use_container_width=True, key="tab4_cpi")
         col_a, col_b = st.columns(2)
         with col_a:
             chart_meta(cpi, decimals=1)
@@ -125,7 +125,7 @@ def render_tab4(model_output, phase_output) -> None:
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="YoY %")
             fig = add_end_labels(fig, fmt=".1f", unit="%")
-            st.plotly_chart(fig, width='stretch', key="tab4_pce")
+            st.plotly_chart(fig, use_container_width=True, key="tab4_pce")
         col_c, col_d = st.columns(2)
         with col_c:
             chart_meta(pce, decimals=1)
@@ -172,7 +172,7 @@ def render_tab4(model_output, phase_output) -> None:
         fig = threshold_line(fig, 2.5, "2.5% — elevated", "#c98800", "dot")
         fig = dark_layout(fig, yaxis_title="Implied Inflation (%)")
         fig = add_end_labels(fig, fmt=".2f", unit="%")
-        st.plotly_chart(fig, width='stretch', key="tab4_breakeven")
+        st.plotly_chart(fig, use_container_width=True, key="tab4_breakeven")
 
     col5, col6 = st.columns(2)
     with col5:
@@ -205,7 +205,7 @@ def render_tab4(model_output, phase_output) -> None:
             ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="USD / barrel")
-            st.plotly_chart(fig, width='stretch', key="tab4_wti")
+            st.plotly_chart(fig, use_container_width=True, key="tab4_wti")
         chart_meta(wti, decimals=2)
         if wti["last_value"] is not None:
             _wv = wti["last_value"]
@@ -230,7 +230,7 @@ def render_tab4(model_output, phase_output) -> None:
             fig = threshold_line(fig, 2.0, "2%", "#c98800", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="YoY %")
-            st.plotly_chart(fig, width='stretch', key="tab4_ppi")
+            st.plotly_chart(fig, use_container_width=True, key="tab4_ppi")
         chart_meta(ppi, decimals=1)
         if not ppi["data"].empty:
             _ppi_yoy = (ppi["data"].pct_change(periods=12) * 100).dropna()

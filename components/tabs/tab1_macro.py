@@ -51,7 +51,7 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
             ))
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Billions (2017 $)")
-            st.plotly_chart(fig, width='stretch', key="tab1_gdp_lvl")
+            st.plotly_chart(fig, use_container_width=True, key="tab1_gdp_lvl")
         chart_meta(gdp_lvl)
         # ── Action item ──────────────────────────────────────────────────────
         if not gdp_lvl["data"].empty and len(gdp_lvl["data"]) >= 2:
@@ -72,7 +72,7 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
             fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="% QoQ Annualised")
-            st.plotly_chart(fig, width='stretch', key="tab1_gdp_gr")
+            st.plotly_chart(fig, use_container_width=True, key="tab1_gdp_gr")
         chart_meta(gdp_gr)
         # ── Action item ──────────────────────────────────────────────────────
         _gr_val = gdp_gr["last_value"]
@@ -100,7 +100,7 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
         )
         fig = add_nber(fig, start_date=start)
         fig = dark_layout(fig, yaxis_title="Index Level")
-        st.plotly_chart(fig, width='stretch', key="tab1_cfnai")
+        st.plotly_chart(fig, use_container_width=True, key="tab1_cfnai")
     chart_meta(lei_res)
     # ── Action item ──────────────────────────────────────────────────────────
     _cfnai_val = lei_res["last_value"]

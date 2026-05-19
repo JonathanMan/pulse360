@@ -308,7 +308,7 @@ with col_right:
         paper_bgcolor = "rgba(0,0,0,0)",
         font         = {"color": "#0a0a0a"},
     )
-    st.plotly_chart(fig_gauge, width='stretch', key="sim_gauge")
+    st.plotly_chart(fig_gauge, use_container_width=True, key="sim_gauge")
     st.caption(
         "The gauge shows the blended recession probability for your current slider settings. "
         "🟢 Green (0–25%) = expansion-friendly conditions; "
@@ -360,7 +360,7 @@ with col_right:
         yaxis         = {"color": "#0a0a0a", "automargin": True, "tickfont": {"size": 11}},
         showlegend    = False,
     )
-    st.plotly_chart(fig_bar, width='stretch', key="sim_contribs")
+    st.plotly_chart(fig_bar, use_container_width=True, key="sim_contribs")
 
     # ── Analyse button ────────────────────────────────────────────────────────
     if st.button("🤖 Analyse this scenario", width='stretch', key="sim_analyse"):

@@ -87,7 +87,7 @@ def render_tab5(model_output, phase_output) -> None:
             name="Yield Curve",
         ))
         fig = dark_layout(fig, yaxis_title="Yield (%)")
-        st.plotly_chart(fig, width='stretch', key="tab5_yield_curve")
+        st.plotly_chart(fig, use_container_width=True, key="tab5_yield_curve")
         st.caption(
             "Red markers = inverted segment (short rate > preceding maturity). "
             f"Fed Funds target: {fedfunds['last_value']:.2f}% · "
@@ -139,7 +139,7 @@ def render_tab5(model_output, phase_output) -> None:
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Spread (pp)")
             fig = add_end_labels(fig, fmt="+.2f", unit="pp")
-            st.plotly_chart(fig, width='stretch', key="tab5_spreads")
+            st.plotly_chart(fig, use_container_width=True, key="tab5_spreads")
         col_a, col_b = st.columns(2)
         with col_a:
             chart_meta(t10y3m, decimals=2)
@@ -189,7 +189,7 @@ def render_tab5(model_output, phase_output) -> None:
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="Yield / Rate (%)")
             fig = add_end_labels(fig, fmt=".2f", unit="%")
-            st.plotly_chart(fig, width='stretch', key="tab5_rates")
+            st.plotly_chart(fig, use_container_width=True, key="tab5_rates")
         chart_meta(fedfunds, decimals=2)
         if fedfunds["last_value"] is not None and dgs10["last_value"] is not None:
             _gap = fedfunds["last_value"] - dgs10["last_value"]
@@ -219,7 +219,7 @@ def render_tab5(model_output, phase_output) -> None:
             fig = threshold_line(fig, 0.5, "0.5 — tightening", "#c98800", "dot")
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="NFCI Index")
-            st.plotly_chart(fig, width='stretch', key="tab5_nfci")
+            st.plotly_chart(fig, use_container_width=True, key="tab5_nfci")
         chart_meta(nfci, decimals=2)
         if nfci["last_value"] is not None:
             _nv = nfci["last_value"]
@@ -258,7 +258,7 @@ def render_tab5(model_output, phase_output) -> None:
             fig = add_nber(fig, start_date=start)
             fig = dark_layout(fig, yaxis_title="OAS (bps)")
             fig = add_end_labels(fig, fmt=",.0f", unit=" bps")
-            st.plotly_chart(fig, width='stretch', key="tab5_oas")
+            st.plotly_chart(fig, use_container_width=True, key="tab5_oas")
         col_e, col_f = st.columns(2)
         with col_e:
             chart_meta(hy_oas, decimals=0)
@@ -286,7 +286,7 @@ def render_tab5(model_output, phase_output) -> None:
         ))
         fig = add_nber(fig, start_date=start)
         fig = dark_layout(fig, yaxis_title="Rate (%)")
-        st.plotly_chart(fig, width='stretch', key="tab5_mortgage")
+        st.plotly_chart(fig, use_container_width=True, key="tab5_mortgage")
     chart_meta(mortgage, decimals=2)
     if mortgage["last_value"] is not None:
         _mv = mortgage["last_value"]

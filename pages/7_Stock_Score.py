@@ -345,7 +345,7 @@ if ticker_input:
                 annotation_text="Below 200MA", annotation_position="top left",
                 annotation_font={"size": 10, "color": "#d92626"},
             )
-        st.plotly_chart(fig_price, width='stretch', key="header_price_chart")
+        st.plotly_chart(fig_price, use_container_width=True, key="header_price_chart")
 
     # ── Compute scores ────────────────────────────────────────────────────────
     with st.spinner("Computing scores…"):
@@ -779,7 +779,7 @@ if ticker_input:
                            font=dict(size=13, color="#ccc")),
                 legend={"orientation": "h", "y": -0.2},
             )
-            st.plotly_chart(fig_p, width='stretch', key="stock_score_price_chart")
+            st.plotly_chart(fig_p, use_container_width=True, key="stock_score_price_chart")
 
     # ── TAB 5: Shareholder Alignment ──────────────────────────────────────────
     with t5:
@@ -829,7 +829,7 @@ if ticker_input:
                     title=dict(text="Shares Outstanding — Annual Trend",
                                font=dict(size=13, color="#ccc")),
                 )
-                st.plotly_chart(fig_sh, width='stretch', key="stock_score_shares_chart")
+                st.plotly_chart(fig_sh, use_container_width=True, key="stock_score_shares_chart")
                 st.caption("Green bars = share count fell or held flat (buybacks/neutral). "
                            "Red bars = share count rose (dilution).")
 
