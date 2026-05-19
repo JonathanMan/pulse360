@@ -309,3 +309,51 @@ def fetch_model_inputs() -> dict:
     """
     model_ids = ["T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA", "BAMLH0A0HYM2"]
     return {sid: fetch_series(sid, "1990-01-01") for sid in model_ids}
+
+
+# ---------------------------------------------------------------------------
+# Compatibility API — drop-in replacement for components.fred_utils
+# ---------------------------------------------------------------------------
+
+def safe_get_series(
+    series_id: str,
+    fred_key: str = "",       # accepted for compat, ignored — uses st.secrets
+    *,
+    warn: bool = True,
+    observation_start: Optional[str] = None,
+    start_date: Optional[str] = None,
+    observation_end: Optional[str] = None,
+    end_date: Optional[str] = None,
+    **_ignored,
+) -> pd.Series:
+    """
+    Thin wrapper around fetch_series() returning just the pd.Series.
+    Drop-in for components.fred_utils.safe_get_series — fred_key is ignored,
+    API key is always read from st.secrets.FRED_API_KEY.
+    """
+    result = fetch_series(
+        series_id,
+        start_date=observation_start or start_date or "2000-01-01",
+        end_date=observation_end or end_date,
+    )
+    if result["error"] and warn:
+        logger.warning("safe_get_series(%s): %s", series_id, result["error"])
+    return result["data"]
+
+
+def safe_get_series_multi(
+    series: dict,
+    fred_key: str = "",
+    *,
+    warn: bool = True,
+    **kwargs,
+) -> dict:
+    """
+    Fetch multiple FRED series. Returns {label: pd.Series}.
+    series: {label: series_id} mapping.
+    Drop-in for components.fred_utils.safe_get_series_multi.
+    """
+    return {
+        label: safe_get_series(sid, fred_key, warn=warn, **kwargs)
+        for label, sid in series.items()
+    }
