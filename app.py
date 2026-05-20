@@ -441,6 +441,14 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
 
+    # Sync sidebar selectbox widget state with the canonical profile key BEFORE
+    # the widget renders. Streamlit uses the stored widget-key value on every
+    # rerun rather than the index= arg, so if Settings just changed
+    # pulse360_profile without touching sidebar_profile_switch the selectbox
+    # would show the old value and immediately revert the switch.
+    if st.session_state.get("sidebar_profile_switch") != profile_key:
+        st.session_state["sidebar_profile_switch"] = profile_key
+
     # Profile switcher (compact selectbox)
     new_profile = st.selectbox(
         "Switch profile",
