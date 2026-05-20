@@ -177,7 +177,7 @@ def generate_playbook(result: CycleResult, profile_key: str, force: bool = False
         playbook = json.loads(json_str)
         st.session_state[cache_key]        = playbook
         st.session_state[f"{cache_key}_ts"] = time.time()
-        log.info("playbook_generated", phase=result.phase, profile=profile_key)
+        log.info("playbook_generated", "AI playbook generated", phase=result.phase, profile=profile_key)
         track("playbook_generated", {"phase": result.phase, "profile": profile_key})
         return playbook
 
