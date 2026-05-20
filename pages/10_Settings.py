@@ -355,7 +355,8 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
                 _save_profile_db(_ue, key)
             # Queue localStorage write — flushed by app.py on next render (no rerun race)
             st.session_state["_p360_pending_profile_save"] = key
-            st.rerun()
+            # Use switch_page (not rerun) so st.navigation() rebuilds with the new profile nav
+            st.switch_page("pages/10_Settings.py")
 
 # Equalise card heights via JS — measures after render and sets min-height on all
 # .sp-card elements so the row looks uniform regardless of content length.
