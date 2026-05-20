@@ -346,6 +346,11 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             disabled=is_active,
         ):
             st.session_state["pulse360_profile"] = key
+            # Sync sidebar selectbox widget state so app.py doesn't overwrite us.
+            # Streamlit uses stored widget state (not the index= arg) on the next
+            # render — if we don't update it here, the sidebar detects a mismatch
+            # and immediately reverts pulse360_profile back to the old value.
+            st.session_state["sidebar_profile_switch"] = key
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
             # Persist to user_profiles TABLE (anon key works; no JWT needed).
@@ -355,8 +360,7 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
                 _save_profile_db(_ue, key)
             # Queue localStorage write — flushed by app.py on next render (no rerun race)
             st.session_state["_p360_pending_profile_save"] = key
-            # Use switch_page (not rerun) so st.navigation() rebuilds with the new profile nav
-            st.switch_page("pages/10_Settings.py")
+            st.rerun()
 
 # Equalise card heights via JS — measures after render and sets min-height on all
 # .sp-card elements so the row looks uniform regardless of content length.
