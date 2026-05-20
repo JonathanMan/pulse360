@@ -41,13 +41,14 @@ def _require(key: str) -> str:
 
 ANTHROPIC_KEY    = _require("ANTHROPIC_API_KEY")
 FRED_KEY         = _require("FRED_API_KEY")
-SUPABASE_URL     = _require("SUPABASE_URL")
-SUPABASE_KEY     = _require("SUPABASE_KEY")
 RESEND_KEY       = _require("RESEND_API_KEY")
+# Supabase creds are not used by this script — kept as optional for future use
+SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY     = os.environ.get("SUPABASE_KEY", "")
 CONFLUENCE_TOKEN = os.environ.get("CONFLUENCE_API_TOKEN", "")
 
 BRIEFING_EMAIL = os.environ.get("BRIEFING_EMAIL", "jonathancyman@gmail.com")
-RESEND_FROM    = os.environ.get("RESEND_FROM", "briefing@pie360.app")
+RESEND_FROM    = os.environ.get("RESEND_FROM", "onboarding@resend.dev")
 
 # Confluence config (mono360.atlassian.net)
 CONFLUENCE_BASE    = "https://mono360.atlassian.net/wiki"
@@ -475,8 +476,12 @@ def main() -> None:
     signals_summary = result.summary or "No detailed signal breakdown available."
     if result.signals:
         lines = []
-        for sid, sig in result.signals.items():
-            lines.append(f"  {sid}: {sig.signal} — {sig.description}")
+        for sig in result.signals.values():
+            lines.append(
+                f"  {sig.name}: {sig.formatted} ({sig.trend})"
+                + (f" → {sig.implied_phase}" if sig.implied_phase else "")
+                + (f" — {sig.note}" if sig.note else "")
+            )
         signals_summary = "\n".join(lines)
 
     # 3. Generate briefing
