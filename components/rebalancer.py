@@ -323,3 +323,17 @@ PHASE_RATIONALE: dict[str, str] = {
         "eventual recovery."
     ),
 }
+
+# ── Public aliases (used by pages/11_Watchlist.py and components/tabs/) ──────
+TILT_MULTIPLIERS: dict[str, dict[str, float]] = _TILTS
+
+TILT_BUCKET_LABELS: dict[str, str] = {
+    "Equity_cyclical":  "Equity – Cyclical",
+    "Equity_defensive": "Equity – Defensive",
+    "Equity_neutral":   "Equity – Neutral",
+    "Bond":             "Bonds",
+    "Commodity":        "Commodities",
+    "Cash":             "Cash & T-bills",
+    "Real Estate":      "Real Estate / REITs",
+    "Crypto":           "Crypto",
+}
