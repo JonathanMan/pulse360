@@ -452,7 +452,7 @@ with st.expander("Enter your portfolio tickers", expanded=True):
             help="Focus the vulnerability table on a specific scenario",
         )
 
-    run_btn = st.button("Analyse Portfolio", type="primary")
+    run_btn = st.button("Analyse Portfolio", type="primary", use_container_width=False)
 
 # ── Run analysis ───────────────────────────────────────────────────────────────
 if not run_btn and "portfolio_scored" not in st.session_state:

@@ -306,25 +306,6 @@ def send_email_alert(rule: dict, current_value: float) -> bool:
 
 # ── Main check function ───────────────────────────────────────────────────────
 
-def _log_trigger(rule: dict, current_value: float) -> None:
-    """
-    Append a fired-alert record to the alert_history Supabase table.
-    Best-effort — never raises so a DB error can't break alert rendering.
-    """
-    try:
-        get_client().table("alert_history").insert({
-            "user_email":    get_user_email(),
-            "rule_id":       rule.get("id", ""),
-            "rule_name":     rule.get("name", ""),
-            "series_id":     rule.get("series_id", ""),
-            "operator":      rule.get("operator", ""),
-            "threshold":     float(rule.get("threshold", 0)),
-            "current_value": float(current_value),
-        }).execute()
-    except Exception as exc:
-        logger.debug("alert_engine: _log_trigger failed (non-critical): %s", exc)
-
-
 def check_rules(
     live_values: dict[str, float],
     recession_probability: float | None = None,
@@ -363,7 +344,6 @@ def check_rules(
                 triggered.append({**rule, "current_value": current})
                 rule["last_triggered"] = today
                 send_email_alert(rule, current)
-                _log_trigger(rule, current)   # persist to alert_history table
 
         rule["last_value"] = current
 

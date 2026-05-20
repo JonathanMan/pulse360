@@ -145,23 +145,6 @@ _TILTS: dict[str, dict[str, float]] = {
     },
 }
 
-# ── Public aliases (imported by pages/11_Watchlist.py) ───────────────────────
-
-#: Public view of the tilt multiplier table — keyed by cycle phase, then bucket.
-TILT_MULTIPLIERS: dict[str, dict[str, float]] = _TILTS
-
-#: Human-readable labels for each bucket key used in TILT_MULTIPLIERS.
-TILT_BUCKET_LABELS: dict[str, str] = {
-    "Equity_cyclical":  "Equity – Cyclical",
-    "Equity_defensive": "Equity – Defensive",
-    "Equity_neutral":   "Equity – Neutral",
-    "Bond":             "Bonds",
-    "Commodity":        "Commodities",
-    "Cash":             "Cash & T-bills",
-    "Real Estate":      "Real Estate / REITs",
-    "Crypto":           "Crypto",
-}
-
 # ── Action thresholds ─────────────────────────────────────────────────────────
 
 _ACTION_REQUIRED_THRESHOLD = 5.0    # |delta| ≥ this → Action Required

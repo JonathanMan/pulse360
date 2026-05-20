@@ -389,7 +389,7 @@ For funds: drop a brochure or factsheet page — Claude will extract holdings, s
 
         if st.button(
             "🤖 Analyse my portfolio",
-            width='stretch',
+            use_container_width = True,
             type                = "primary",
             key                 = "btn_analyse_screenshot",
         ):
@@ -537,7 +537,7 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
                 st.markdown("**Detected positions:**")
                 st.dataframe(
                     preview_df,
-                    use_container_width=True,
+                    use_container_width = True,
                     hide_index          = True,
                 )
 
@@ -560,7 +560,7 @@ Works best with <b>IBKR, Schwab, Fidelity</b> and most standard broker exports.
 
                 if st.button(
                     "🤖 Analyse my portfolio",
-                    width='stretch',
+                    use_container_width = True,
                     type                = "primary",
                     key                 = "btn_analyse_csv",
                 ):

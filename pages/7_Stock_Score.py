@@ -224,7 +224,7 @@ if ticker_input:
             if st.button(
                 "✓ In Watchlist",
                 key="wl_remove_btn",
-                width='stretch',
+                use_container_width=True,
                 help=f"Remove {ticker_input} from your watchlist",
             ):
                 remove_from_watchlist(ticker_input)
@@ -234,7 +234,7 @@ if ticker_input:
                 "⭐ Add to Watchlist",
                 key="wl_add_btn",
                 type="primary",
-                width='stretch',
+                use_container_width=True,
                 help=f"Save {ticker_input} to your watchlist",
             ):
                 add_to_watchlist(ticker_input)

@@ -341,7 +341,7 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             btn_label,
             key=f"profile_btn_{key}",
             type=btn_type,
-            width='stretch',
+            use_container_width=True,
             disabled=is_active,
         ):
             st.session_state["pulse360_profile"] = key

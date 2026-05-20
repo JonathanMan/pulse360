@@ -688,7 +688,7 @@ with col2:
 with col1:
     run_review = st.button(
         "Run full macro-adjusted portfolio review ↗",
-        width='stretch',
+        use_container_width=True,
         type="primary",
     )
 
