@@ -1,7 +1,7 @@
 """
 tests/conftest.py
 ==================
-Shared fixtures and mocks for Pulse360's test suite.
+Shared fixtures and mocks for Pie360's test suite.
 
 Streamlit and Supabase are mocked globally so tests can import
 app modules without needing live credentials or a running server.

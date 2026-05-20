@@ -72,19 +72,47 @@ from components.pulse360_theme import page_header, card_wrap, eyebrow, info_bann
 - **Backtest + Simulator** (`pages/1_Backtest.py`, `pages/3_Simulator.py`) — colours migrated but no dedicated visual QA pass yet
 
 ## Dev workflow
-1. Edit CSS in `components/pulse360_theme.py` (or page inline styles)
-2. Save → browser auto-reloads at `localhost:8501`
-3. Confirm visually
-4. Commit and push:
+1. Edit files in `~/Downloads/pulse360/`
+2. Run locally: `python3 -m streamlit run app.py` → `http://localhost:8501`
+3. Confirm visually / test
+4. Commit and push from Mac Terminal (sandbox cannot push):
 ```bash
-git add <files>
-git commit -m "style: <what you changed>"
-git push origin master
+git -C ~/Downloads/pulse360 add <files>
+git -C ~/Downloads/pulse360 commit -m "<type>: <what you changed>"
+git -C ~/Downloads/pulse360 push origin master
 ```
 5. Streamlit Cloud autodeploys in ~1–2 min
 
+> ⚠️ **Do NOT use `deploy_macro_pulse.sh` for individual file changes.** It rsyncs with `--delete` from the parent Google Drive folder and will delete any repo file that isn't also in that folder. For new files, copy them there too:
+> ```bash
+> cp ~/Downloads/pulse360/components/<file>.py \
+>    "/Users/jonathanman/Library/CloudStorage/GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/components/<file>.py"
+> ```
+
 ## Commit convention
-`style: <description>` for all CSS/visual changes
+`style: <description>` for CSS/visual changes  
+`fix: <description>` for bug fixes  
+`feat: <description>` for new features
+
+## Streamlit gotchas (hard-won lessons)
+
+### Widget state sync (profile switcher)
+`app.py` sidebar has `st.selectbox(key="sidebar_profile_switch")`. If any page changes `pulse360_profile` in session state and reruns, Streamlit uses the **stored widget-key state** (old value) rather than `index=`. This caused the sidebar to silently revert every profile switch.
+
+**Fix in `app.py` (before the selectbox call):**
+```python
+if st.session_state.get("sidebar_profile_switch") != profile_key:
+    st.session_state["sidebar_profile_switch"] = profile_key
+```
+You cannot set widget key state *after* the widget renders — Streamlit throws `StreamlitAPIException`. Always sync in `app.py` before the `st.selectbox()` call.
+
+### `st.rerun()` ordering
+`st.rerun()` is a hard stop — it exits immediately. Render all UI elements **before** any `sleep()` / `rerun()` call, never after.
+
+### `st_javascript` (localStorage)
+- Returns `0` (int) on first render before JS mounts — never cache that value
+- Never call `st.rerun()` immediately after a localStorage write (race condition)
+- Same `key=` cannot be registered twice per render cycle
 
 ## Confluence docs (mono360.atlassian.net — PULSE360 space)
 - Change log + validation: `/wiki/spaces/PULSE360/pages/23101690`

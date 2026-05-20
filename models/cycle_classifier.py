@@ -1,5 +1,5 @@
 """
-Pulse360 Cycle Phase Classifier
+Pie360 Cycle Phase Classifier
 =================================
 6-state rule-based classifier. Requires ≥2 confirming indicators to assign
 a phase — never flips on a single noisy print.

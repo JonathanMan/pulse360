@@ -1,4 +1,4 @@
-# Pulse360 — Testing Guide
+# Pie360 — Testing Guide
 
 ## 1. Automated Tests (run before every deploy)
 

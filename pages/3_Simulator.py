@@ -321,7 +321,7 @@ with col_right:
     st.markdown(
         f'<div style="text-align:center; margin: -12px 0 16px; '
         f'background:{phase_color}22; border:1px solid {phase_color}55; '
-        f'border-radius:8px; padding:8px; font-weight:600; color:#0a0a0a; font-size:1rem;">'
+        f'border-radius:0; padding:8px; font-weight:600; color:#0a0a0a; font-size:1rem;">'
         f'{phase_name}</div>',
         unsafe_allow_html=True,
     )

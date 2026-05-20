@@ -1,7 +1,7 @@
 """
 components/user_profile.py
 ============================
-Investor profiling system for Pulse360.
+Investor profiling system for Pie360.
 
 Three tiers:
   Beginner  — new to investing, wants macro context without jargon

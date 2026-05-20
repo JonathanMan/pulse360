@@ -4,24 +4,17 @@ tests/test_ticker_classifier.py
 Unit tests for components/ticker_classifier.py
 
 Run from the workspace root:
-    python -m pytest Pulse360/tests/ -v
+    python -m pytest Pie360/tests/ -v
 """
 
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# Stub out streamlit before importing ticker_classifier
-import unittest.mock as mock
-import sys
+# conftest.py already stubs streamlit — don't override it here or it breaks
+# the session_state mock used by other test modules in the same pytest run.
 
-# Provide a minimal streamlit stub so ticker_classifier imports cleanly
-streamlit_stub = mock.MagicMock()
-streamlit_stub.cache_data = lambda **kw: (lambda fn: fn)  # passthrough decorator
-streamlit_stub.secrets = {}
-sys.modules["streamlit"] = streamlit_stub
-
-from ticker_classifier import (
+from components.ticker_classifier import (
     TICKER_LOOKUP,
     SECTOR_TO_ASSET_CLASS,
     ASSET_CLASS_COLORS,
