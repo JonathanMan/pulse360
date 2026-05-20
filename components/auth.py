@@ -526,6 +526,8 @@ def _render_phone_tab() -> None:
                 use_container_width=True,
                 disabled=True,
             )
+            time.sleep(1)
+            st.rerun()
         else:
             if st.button("Resend code", key="ph_resend", width='stretch'):
                 st.session_state[_OTP_RESEND_AT] = time.time()
@@ -903,6 +905,8 @@ def render_login_gate(
                         use_container_width=True,
                         disabled=True,
                     )
+                    time.sleep(1)
+                    st.rerun()
                 else:
                     if st.button("Resend code", key=f"gate_resend_{_k}", width='stretch'):
                         st.session_state[f"_gate_otp_resend_at_{_k}"] = time.time()

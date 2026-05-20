@@ -58,7 +58,24 @@ def _try_restore_profile() -> bool:
     """
     from components.user_profile import PROFILES as _PROFILES
 
-    # ── 1. Supabase (synchronous, only for logged-in users) ───────────────────
+    # ── 1. user_profiles TABLE (anon key, works for all logged-in users) ─────
+    # This is the canonical store — profile_store.save_profile() writes here
+    # whenever the user switches profile in Settings.
+    try:
+        from components.auth import get_session_user
+        from components.supabase_client import get_user_email
+        from components.profile_store import load_profile as _load_profile_db
+        if get_session_user():
+            _ue = get_user_email()
+            if _ue:
+                _saved = _load_profile_db(_ue)
+                if _saved in _PROFILES:
+                    st.session_state["pulse360_profile"] = _saved
+                    return True
+    except Exception:
+        pass
+
+    # ── 2. Supabase auth user_metadata (legacy fallback) ─────────────────────
     try:
         from components.auth import get_session_user
         from components.supabase_client import get_client
@@ -73,7 +90,7 @@ def _try_restore_profile() -> bool:
     except Exception:
         pass
 
-    # ── 2. localStorage (async — returns 0 on first render) ──────────────────
+    # ── 3. localStorage (async — returns 0 on first render) ──────────────────
     if st.session_state.get("_p360_ls_checked"):
         return False   # already confirmed nothing in localStorage
 
@@ -363,6 +380,11 @@ pg = st.navigation(nav_sections)
 _post_auth_dest = st.session_state.pop("_post_auth_redirect", None)
 if _post_auth_dest and get_session_user():
     st.switch_page(_post_auth_dest)
+
+# ── Flush pending localStorage profile write (Settings page profile switch) ───
+_pending_profile = st.session_state.pop("_p360_pending_profile_save", None)
+if _pending_profile:
+    _save_profile(_pending_profile)   # writes localStorage without triggering rerun
 
 # ── Restore saved profile (skips onboarding for returning users) ──────────────
 if "pulse360_profile" not in st.session_state:
