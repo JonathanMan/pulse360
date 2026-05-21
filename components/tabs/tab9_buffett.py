@@ -24,7 +24,7 @@ def _hex_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 from ai.claude_client import get_buffett_analysis
-from components.chart_utils import add_nber, dark_layout, render_action_item
+from components.chart_utils import add_nber, apply_chart_theme, render_action_item
 from data.fred_client import fetch_series
 
 DISCLAIMER = (
@@ -889,7 +889,7 @@ def render_tab9(model_output, phase_output) -> None:
                     ))
 
                 fig_z.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
-                fig_z = dark_layout(fig_z, yaxis_title="Median Forward Return (%)")
+                fig_z = apply_chart_theme(fig_z, yaxis_title="Median Forward Return (%)")
                 fig_z.update_layout(
                     height=380, barmode="group",
                     xaxis={"tickangle": -20},
@@ -955,7 +955,7 @@ def render_tab9(model_output, phase_output) -> None:
         )
 
     fig = add_nber(fig, start_date="1945-01-01")
-    fig = dark_layout(fig, yaxis_title="Market Cap / GDP (%)")
+    fig = apply_chart_theme(fig, yaxis_title="Market Cap / GDP (%)")
     fig.update_layout(
         height=440,
         yaxis ={"range": [0, min(300, max(ratio.values) * 1.15)]},
@@ -988,7 +988,7 @@ def render_tab9(model_output, phase_output) -> None:
         hovertemplate="%{x|%b %Y}: <b>%{y:.0f}</b><extra></extra>",
     ))
     fig2 = add_nber(fig2, start_date="1945-01-01")
-    fig2 = dark_layout(fig2, yaxis_title="Index (1945 = 100)")
+    fig2 = apply_chart_theme(fig2, yaxis_title="Index (1945 = 100)")
     fig2.update_layout(height=300, xaxis={"range": x_range})
     st.plotly_chart(fig2, use_container_width=True, key="tab9_buffett_diverge")
 
@@ -1083,7 +1083,7 @@ def render_tab9(model_output, phase_output) -> None:
             )
 
         fig_c = add_nber(fig_c, start_date="1945-01-01")
-        fig_c = dark_layout(fig_c, yaxis_title="Buffett Indicator (%)")
+        fig_c = apply_chart_theme(fig_c, yaxis_title="Buffett Indicator (%)")
         fig_c.update_layout(
             height=500,
             yaxis={
@@ -1598,7 +1598,7 @@ def render_tab9(model_output, phase_output) -> None:
                     annotation_font_size=9,
                 )
 
-                fig_dca = dark_layout(fig_dca, yaxis_title="Median 5Y Return (%)")
+                fig_dca = apply_chart_theme(fig_dca, yaxis_title="Median 5Y Return (%)")
                 fig_dca.update_layout(
                     height=420,
                     barmode="group",

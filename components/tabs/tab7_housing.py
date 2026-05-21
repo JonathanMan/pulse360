@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    dark_layout, add_nber, chart_meta, time_window_start, yoy_pct, render_implications, render_action_item
+    apply_chart_theme, add_nber, chart_meta, time_window_start, yoy_pct, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
 
@@ -55,7 +55,7 @@ def render_tab7(model_output, phase_output) -> None:
                 fill="tozeroy", fillcolor="rgba(52,152,219,0.08)",
             ))
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="Thousands of Units (SAAR)")
+            fig = apply_chart_theme(fig, yaxis_title="Thousands of Units (SAAR)")
             st.plotly_chart(fig, use_container_width=True, key="tab7_houst")
         chart_meta(houst, decimals=0)
 
@@ -79,7 +79,7 @@ def render_tab7(model_output, phase_output) -> None:
                 fill="tozeroy", fillcolor="rgba(46,204,113,0.08)",
             ))
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="Thousands of Units (SAAR)")
+            fig = apply_chart_theme(fig, yaxis_title="Thousands of Units (SAAR)")
             st.plotly_chart(fig, use_container_width=True, key="tab7_permit")
         chart_meta(permit, decimals=0)
 
@@ -108,7 +108,7 @@ def render_tab7(model_output, phase_output) -> None:
                 ))
                 fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
                 fig = add_nber(fig, start_date=start)
-                fig = dark_layout(fig, yaxis_title="YoY %")
+                fig = apply_chart_theme(fig, yaxis_title="YoY %")
                 st.plotly_chart(fig, use_container_width=True, key="tab7_cshpi")
         chart_meta(cs_hpi, decimals=1)
 
@@ -141,7 +141,7 @@ def render_tab7(model_output, phase_output) -> None:
                           line_width=1, annotation_text="60 — pessimistic",
                           annotation_font_color="#d92626", annotation_font_size=10)
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="Index Level")
+            fig = apply_chart_theme(fig, yaxis_title="Index Level")
             st.plotly_chart(fig, use_container_width=True, key="tab7_sentiment")
         chart_meta(umcsent, decimals=1)
 
@@ -180,7 +180,7 @@ def render_tab7(model_output, phase_output) -> None:
                         ))
                 fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
                 fig = add_nber(fig, start_date=start)
-                fig = dark_layout(fig, yaxis_title="YoY %")
+                fig = apply_chart_theme(fig, yaxis_title="YoY %")
                 st.plotly_chart(fig, use_container_width=True, key="tab7_retail")
         col_rs1, col_rs2 = st.columns(2)
         with col_rs1:
@@ -211,7 +211,7 @@ def render_tab7(model_output, phase_output) -> None:
                 fill="tozeroy", fillcolor="rgba(155,89,182,0.08)",
             ))
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="% of Disposable Income")
+            fig = apply_chart_theme(fig, yaxis_title="% of Disposable Income")
             st.plotly_chart(fig, use_container_width=True, key="tab7_savings")
         chart_meta(psavert, decimals=1)
 

@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from ai.claude_client import get_investment_implications
-from components.chart_utils import add_nber, chart_meta, dark_layout, time_window_start, render_implications, render_action_item
+from components.chart_utils import add_nber, chart_meta, apply_chart_theme, time_window_start, render_implications, render_action_item
 from data.fred_client import fetch_series
 
 
@@ -50,7 +50,7 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
                 name="Real GDP",
             ))
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="Billions (2017 $)")
+            fig = apply_chart_theme(fig, yaxis_title="Billions (2017 $)")
             st.plotly_chart(fig, use_container_width=True, key="tab1_gdp_lvl")
         chart_meta(gdp_lvl)
         # ── Action item ──────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
             ))
             fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="% QoQ Annualised")
+            fig = apply_chart_theme(fig, yaxis_title="% QoQ Annualised")
             st.plotly_chart(fig, use_container_width=True, key="tab1_gdp_gr")
         chart_meta(gdp_gr)
         # ── Action item ──────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ def render_tab1(model_output, phase_output, lei_growth: Optional[float] = None) 
             annotation_text="Long-run avg", annotation_font_color="#666",
         )
         fig = add_nber(fig, start_date=start)
-        fig = dark_layout(fig, yaxis_title="Index Level")
+        fig = apply_chart_theme(fig, yaxis_title="Index Level")
         st.plotly_chart(fig, use_container_width=True, key="tab1_cfnai")
     chart_meta(lei_res)
     # ── Action item ──────────────────────────────────────────────────────────

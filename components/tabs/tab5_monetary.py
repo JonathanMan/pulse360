@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    dark_layout, add_nber, add_end_labels, chart_meta,
+    apply_chart_theme, add_nber, add_end_labels, chart_meta,
     hover_tmpl, time_window_start, threshold_line, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
@@ -86,7 +86,7 @@ def render_tab5(model_output, phase_output) -> None:
             marker={"color": colors, "size": 8},
             name="Yield Curve",
         ))
-        fig = dark_layout(fig, yaxis_title="Yield (%)")
+        fig = apply_chart_theme(fig, yaxis_title="Yield (%)")
         st.plotly_chart(fig, use_container_width=True, key="tab5_yield_curve")
         st.caption(
             "Red markers = inverted segment (short rate > preceding maturity). "
@@ -137,7 +137,7 @@ def render_tab5(model_output, phase_output) -> None:
                 ))
             fig = threshold_line(fig, 0, "0 — inversion threshold", "#d92626", "dash")
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="Spread (pp)")
+            fig = apply_chart_theme(fig, yaxis_title="Spread (pp)")
             fig = add_end_labels(fig, fmt="+.2f", unit="pp")
             st.plotly_chart(fig, use_container_width=True, key="tab5_spreads")
         col_a, col_b = st.columns(2)
@@ -187,7 +187,7 @@ def render_tab5(model_output, phase_output) -> None:
                     ),
                 ))
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="Yield / Rate (%)")
+            fig = apply_chart_theme(fig, yaxis_title="Yield / Rate (%)")
             fig = add_end_labels(fig, fmt=".2f", unit="%")
             st.plotly_chart(fig, use_container_width=True, key="tab5_rates")
         chart_meta(fedfunds, decimals=2)
@@ -218,7 +218,7 @@ def render_tab5(model_output, phase_output) -> None:
             fig = threshold_line(fig, 0, "0 — neutral conditions", "#888", "dash")
             fig = threshold_line(fig, 0.5, "0.5 — tightening", "#c98800", "dot")
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="NFCI Index")
+            fig = apply_chart_theme(fig, yaxis_title="NFCI Index")
             st.plotly_chart(fig, use_container_width=True, key="tab5_nfci")
         chart_meta(nfci, decimals=2)
         if nfci["last_value"] is not None:
@@ -256,7 +256,7 @@ def render_tab5(model_output, phase_output) -> None:
                 ))
             fig = threshold_line(fig, 500, "500 bps HY — stress signal", "#d92626", "dot")
             fig = add_nber(fig, start_date=start)
-            fig = dark_layout(fig, yaxis_title="OAS (bps)")
+            fig = apply_chart_theme(fig, yaxis_title="OAS (bps)")
             fig = add_end_labels(fig, fmt=",.0f", unit=" bps")
             st.plotly_chart(fig, use_container_width=True, key="tab5_oas")
         col_e, col_f = st.columns(2)
@@ -285,7 +285,7 @@ def render_tab5(model_output, phase_output) -> None:
             name="30Y Mortgage Rate",
         ))
         fig = add_nber(fig, start_date=start)
-        fig = dark_layout(fig, yaxis_title="Rate (%)")
+        fig = apply_chart_theme(fig, yaxis_title="Rate (%)")
         st.plotly_chart(fig, use_container_width=True, key="tab5_mortgage")
     chart_meta(mortgage, decimals=2)
     if mortgage["last_value"] is not None:
