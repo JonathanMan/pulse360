@@ -25,6 +25,8 @@ from datetime import date
 
 import anthropic
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import streamlit as st
 
 from components.watchlist_store import (
@@ -832,6 +834,67 @@ if _plan:
     )
     st.markdown(_plan_thead + _plan_rows_html + "</tbody></table></div>",
                 unsafe_allow_html=True)
+
+    # ── Current vs Suggested donut charts ─────────────────────────────────────
+    from collections import defaultdict
+
+    _curr_by_ac: dict[str, float] = defaultdict(float)
+    _sugg_by_ac: dict[str, float] = defaultdict(float)
+    for _t, _p in _plan.items():
+        _curr_by_ac[_p["asset_class"]] += _p["current"]
+        _sugg_by_ac[_p["asset_class"]] += _p["suggested"]
+
+    _ac_labels = sorted(set(_curr_by_ac) | set(_sugg_by_ac))
+    _ac_colors = [ASSET_CLASS_COLORS.get(ac, "#888888") for ac in _ac_labels]
+
+    _fig_pie = make_subplots(
+        rows=1, cols=2,
+        specs=[[{"type": "pie"}, {"type": "pie"}]],
+        subplot_titles=["Current", "Suggested →"],
+    )
+    _fig_pie.add_trace(go.Pie(
+        labels=_ac_labels,
+        values=[_curr_by_ac.get(ac, 0) for ac in _ac_labels],
+        hole=0.55,
+        marker_colors=_ac_colors,
+        textinfo="percent",
+        textfont=dict(family="Geist Mono, monospace", size=11),
+        hovertemplate="%{label}: %{value:.1f}%<extra></extra>",
+        showlegend=True,
+    ), row=1, col=1)
+    _fig_pie.add_trace(go.Pie(
+        labels=_ac_labels,
+        values=[_sugg_by_ac.get(ac, 0) for ac in _ac_labels],
+        hole=0.55,
+        marker_colors=_ac_colors,
+        textinfo="percent",
+        textfont=dict(family="Geist Mono, monospace", size=11),
+        hovertemplate="%{label}: %{value:.1f}%<extra></extra>",
+        showlegend=False,
+    ), row=1, col=2)
+    _fig_pie.update_layout(
+        height=280,
+        margin=dict(l=0, r=0, t=40, b=0),
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(family="Geist, sans-serif", size=12, color="#0a0a0a"),
+        legend=dict(
+            orientation="h",
+            x=0.5, xanchor="center",
+            y=-0.08,
+            font=dict(family="Geist, sans-serif", size=11, color="#495057"),
+        ),
+    )
+    # Style the subplot title annotations (Plotly adds them automatically)
+    for _ann in _fig_pie.layout.annotations:
+        _ann.font = dict(family="Geist Mono, monospace", size=11, color="#6a6a6a")
+    st.markdown(
+        '<p style="font-size:0.75rem;font-weight:600;color:#6a6a6a;'
+        'text-transform:uppercase;letter-spacing:.06em;margin:16px 0 4px 0;">'
+        'Asset Class Allocation</p>',
+        unsafe_allow_html=True,
+    )
+    st.plotly_chart(_fig_pie, use_container_width=True, config={"displayModeBar": False})
 
     # ── CSV export ────────────────────────────────────────────────────────────
     df = plan_to_dataframe(_plan)
