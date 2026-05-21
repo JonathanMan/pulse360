@@ -246,28 +246,15 @@ the crossing edge.
 
 **Email**
 
-To receive email alerts, configure your SMTP credentials in
-`.streamlit/secrets.toml`:
-
-```toml
-[smtp]
-host     = "smtp.gmail.com"
-port     = 587
-username = "your@gmail.com"
-password = "your_app_password"
-```
-
-For Gmail, use an [App Password](https://myaccount.google.com/apppasswords)
-rather than your main account password.
+Alert emails are sent via **Resend** — the same service used for daily
+briefings. No extra setup needed if `RESEND_API_KEY` is already in your
+Streamlit Cloud secrets. The email is sent to the address you enter when
+creating the alert rule.
 
 **Recession Probability**
 
-The special series `RECESSION_PROB` tracks the blended probability (0-100%)
+The special series `RECESSION_PROB` tracks the blended probability (0–100%)
 from the five-factor recession model. Useful trigger: `crosses_above 25` for
-
-from assets.logo_helper import header_with_logo
-header_with_logo("Alerts", "Custom Macro & Market Alerts")
-
 an early warning.
 """)
 
