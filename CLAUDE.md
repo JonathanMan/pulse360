@@ -70,6 +70,19 @@ from components.pulse360_theme import page_header, card_wrap, eyebrow, info_bann
 ## Known remaining items
 - **Visual QA** — smoke-test against reference screenshots in `~/Downloads/design_handoff_pulse360/screenshots/` (key refs: `01-dashboard.png`, `07-briefing.png`)
 - **Backtest + Simulator** (`pages/1_Backtest.py`, `pages/3_Simulator.py`) — colours migrated but no dedicated visual QA pass yet
+- **Mobile QA** — TESTING.md section 3 has never been run; test at 390px width (sidebar collapse, gate cards, Macro Pulse card scroll, chart overflow)
+
+## Pending ops tasks (not code — owner: Jonathan)
+- **Resend domain verification** — `pie360.app` domain added in Resend dashboard (DNS records shown). Add these records at your DNS registrar:
+  - `TXT resend._domainkey` → DKIM key (copy from resend.com/domains)
+  - `MX send` → `feedback[...].ses.com` priority 10
+  - `TXT send` → `v=spf1 i[...]om ~all`
+  - `TXT _dmarc` → `v=DMARC1; p=none;` (optional)
+  - Once Resend shows domain as verified, add to **Streamlit Cloud → Settings → Secrets**:
+    ```
+    RESEND_FROM = "briefing@pie360.app"
+    ```
+  - No code change needed — `ai/email_briefing.py` and `components/alert_engine.py` already read `st.secrets.get("RESEND_FROM", "onboarding@resend.dev")`
 
 ## Dev workflow
 1. Edit files in `~/Downloads/pulse360/`
