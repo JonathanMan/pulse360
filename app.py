@@ -400,6 +400,13 @@ if "pulse360_profile" not in st.session_state:
     _render_onboarding()
     # _render_onboarding() returns here; pg.run() below is never reached.
 
+# ── Analytics — log every page navigation ─────────────────────────────────────
+try:
+    from components.analytics import log_page_view as _log_page_view
+    _log_page_view(pg.title)
+except Exception:
+    pass  # never let analytics break routing
+
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     profile = get_profile()

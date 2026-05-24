@@ -181,6 +181,14 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
         st.Page("pages/10_Settings.py", title="Settings", icon="⚙️"),
     ]
 
+    # Admin page — only visible to admin users (gated inside the page itself too)
+    try:
+        from components.analytics import is_admin
+        if is_admin():
+            settings_pages.append(st.Page("pages/13_Admin.py", title="Admin", icon="🛠️"))
+    except Exception:
+        pass
+
     return {
         "Macro Context": macro_pages,
         "My Portfolio":  portfolio_pages,
