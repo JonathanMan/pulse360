@@ -1,6 +1,7 @@
 """
 Pulse360 — shared chart utilities
 ===================================
+# cache-bust: 2026-05-25
 Shared helpers used by app.py and all tab components.
 
 Exports:
