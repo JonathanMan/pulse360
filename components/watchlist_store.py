@@ -43,7 +43,7 @@ _MAX_TICKERS = 50
 # Path where the scheduled briefing agent reads the watchlist
 _EXPORT_PATH = (
     "/Users/jonathanman/Library/CloudStorage/"
-    "GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pie360/watchlist.json"
+    "GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/watchlist.json"
 )
 
 

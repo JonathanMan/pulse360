@@ -1,10 +1,10 @@
 """
-Pie360 — shared chart utilities
+Pulse360 — shared chart utilities
 ===================================
 Shared helpers used by app.py and all tab components.
 
 Exports:
-    apply_chart_theme(fig, ...)          → go.Figure   (light theme + hover + rangeselector)
+    dark_layout(fig, ...)          → go.Figure   (light theme + hover + rangeselector)
     add_nber(fig, start_date)      → go.Figure   (NBER recession shading)
     add_end_labels(fig, ...)       → go.Figure   (direct line labels, no legend)
     chart_meta(result, decimals)   → None        (renders metadata + percentile + deltas)
@@ -53,7 +53,7 @@ _RANGESELECTOR = {
 }
 
 
-def apply_chart_theme(
+def dark_layout(
     fig: go.Figure,
     title: str = "",
     yaxis_title: str = "",
@@ -61,7 +61,7 @@ def apply_chart_theme(
     rangeslider: bool = False,
 ) -> go.Figure:
     """
-    Apply Pie360 Terminal Light v2 theme to a Plotly figure.
+    Apply Pulse360 dark theme to a Plotly figure.
 
     Includes:
     - Tableau-style hoverlabel (dark card, white text, left-aligned)
@@ -486,7 +486,7 @@ def chart_meta(result: dict, decimals: int = 2) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Time window selector  (default: 10Y — feeds rangeselector in apply_chart_theme)
+# Time window selector  (default: 10Y — feeds rangeselector in dark_layout)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def time_window_start(key: str = "window") -> str:

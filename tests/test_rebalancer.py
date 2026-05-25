@@ -4,7 +4,7 @@ tests/test_rebalancer.py
 Unit tests for components/rebalancer.py
 
 Run from the workspace root:
-    python -m pytest Pie360/tests/ -v
+    python -m pytest Pulse360/tests/ -v
 """
 
 import sys
@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # rebalancer.py imports pandas but not streamlit — safe to test standalone
-from components.rebalancer import (
+from rebalancer import (
     CYCLE_PHASES,
     PHASE_RATIONALE,
     _action_tag,

@@ -60,50 +60,40 @@ st.markdown("""
 <style>
 .pb-banner {
     display:flex; align-items:center; gap:20px;
-    padding:20px 24px; border-radius:0; margin-bottom:24px;
+    padding:20px 24px; border-radius:14px; margin-bottom:24px;
     border:1.5px solid;
 }
 .pb-icon  { font-size:2.8rem; }
 .pb-label { font-size:0.62rem; font-weight:700; letter-spacing:.12em;
-            text-transform:uppercase; margin-bottom:3px;
-            font-family:'Geist Mono',monospace; }
+            text-transform:uppercase; margin-bottom:3px; }
 .pb-name  { font-size:1.6rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:2px; }
-.pb-meta  { font-size:0.78rem; color:#6a6a6a;
-            font-family:'Geist Mono',monospace; }
+.pb-meta  { font-size:0.78rem; opacity:0.65; }
 
 .pb-col-hdr {
     font-size:0.65rem; font-weight:700; letter-spacing:.1em;
     text-transform:uppercase; margin-bottom:10px;
     padding-bottom:6px; border-bottom:1.5px solid currentColor;
-    font-family:'Geist Mono',monospace;
 }
-/* Terminal Light v2: light tinted backgrounds, dark signal text */
-.pb-item  { padding:8px 12px; border-radius:0; margin-bottom:6px;
+.pb-item  { padding:8px 12px; border-radius:8px; margin-bottom:6px;
             font-size:0.85rem; font-weight:500;
             display:flex; align-items:center; gap:8px; }
-.pb-own   { background:#edfbf4; color:#00a35a; border:1px solid #c0ecd9; }
-.pb-cut   { background:#fff2f2; color:#d92626; border:1px solid #f5c2c2; }
-.pb-watch { background:#eff6ff; color:#1f6feb; border:1px solid #bfdbfe; }
+.pb-own   { background:#1a3a2a; color:#4ade80; border:1px solid #2d5a3d; }
+.pb-cut   { background:#3a1a1a; color:#f87171; border:1px solid #5a2d2d; }
+.pb-watch { background:#1a2a3a; color:#60a5fa; border:1px solid #2d4a5a; }
 
 .pb-insight {
-    background:#ffffff; border:1px solid #ececec;
-    border-radius:0; padding:18px 22px; margin-top:20px;
-    font-size:0.88rem; line-height:1.65; color:#0a0a0a;
+    background:#13132a; border:1px solid #2a2a4a;
+    border-radius:12px; padding:18px 22px; margin-top:20px;
+    font-size:0.88rem; line-height:1.65; color:#d4d4d8;
 }
 .pb-insight-lbl {
     font-size:0.6rem; font-weight:700; letter-spacing:.12em;
-    text-transform:uppercase; color:#7c4dff; margin-bottom:8px;
-    font-family:'Geist Mono',monospace;
+    text-transform:uppercase; color:#6c63ff; margin-bottom:8px;
 }
 .pb-risk {
-    background:#fffbeb; border:1px solid #fde68a;
-    border-radius:0; padding:10px 14px; margin-top:12px;
-    font-size:0.82rem; color:#c98800;
-}
-.pb-learner-tip {
-    background:#f4f4f4; border:1px solid #ececec;
-    border-radius:0; padding:10px 14px; margin-bottom:14px;
-    font-size:0.8rem; color:#6a6a6a; line-height:1.5;
+    background:#2a1f0a; border:1px solid #4a3a1a;
+    border-radius:8px; padding:10px 14px; margin-top:12px;
+    font-size:0.82rem; color:#fbbf24;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -187,7 +177,7 @@ def generate_playbook(result: CycleResult, profile_key: str, force: bool = False
         playbook = json.loads(json_str)
         st.session_state[cache_key]        = playbook
         st.session_state[f"{cache_key}_ts"] = time.time()
-        log.info("playbook_generated", "AI playbook generated", phase=result.phase, profile=profile_key)
+        log.info("playbook_generated", phase=result.phase, profile=profile_key)
         track("playbook_generated", {"phase": result.phase, "profile": profile_key})
         return playbook
 
@@ -195,44 +185,6 @@ def generate_playbook(result: CycleResult, profile_key: str, force: bool = False
         capture_exception(exc, context={"phase": result.phase, "profile": profile_key})
         st.session_state["_pb_last_error"] = str(exc)
         return None
-
-
-# ── Profile metadata ──────────────────────────────────────────────────────────
-_PROFILE_META: dict[str, dict] = {
-    "Curious Learner": {
-        "tip": (
-            "💡 <strong>What is this page?</strong> Based on where we are in the economic cycle, "
-            "this playbook suggests which types of investments to favour, hold less of, or keep "
-            "an eye on. It's a starting point for thinking — not personalised financial advice."
-        ),
-        "own_hdr":   ("📈 Consider Owning",   "#00a35a"),
-        "cut_hdr":   ("📉 Consider Reducing", "#d92626"),
-        "watch_hdr": ("👁 Worth Watching",    "#1f6feb"),
-        "insight_lbl": "💬 What This Means",
-        "signals_open": False,
-    },
-    "Active Investor": {
-        "tip": None,
-        "own_hdr":   ("📈 Overweight",   "#00a35a"),
-        "cut_hdr":   ("📉 Underweight",  "#d92626"),
-        "watch_hdr": ("👁 Watch Closely","#1f6feb"),
-        "insight_lbl": "🤖 AI Synthesis",
-        "signals_open": False,
-    },
-    "Pro Analyst": {
-        "tip": None,
-        "own_hdr":   ("📈 Long / Overweight",          "#00a35a"),
-        "cut_hdr":   ("📉 Short / Underweight",         "#d92626"),
-        "watch_hdr": ("👁 Key Indicators to Monitor",  "#1f6feb"),
-        "insight_lbl": "🤖 AI Synthesis — Regime Analysis",
-        "signals_open": True,   # expand indicator table by default for analysts
-    },
-}
-_DEFAULT_PROFILE_META = _PROFILE_META["Active Investor"]
-
-
-def _profile_meta(profile_key: str) -> dict:
-    return _PROFILE_META.get(profile_key, _DEFAULT_PROFILE_META)
 
 
 # ── Render helpers ────────────────────────────────────────────────────────────
@@ -259,53 +211,36 @@ def _render_banner(result: CycleResult) -> None:
 """, unsafe_allow_html=True)
 
 
-def _render_columns(playbook: dict, phase: str, profile_key: str = "Active Investor") -> None:
+def _render_columns(playbook: dict, phase: str) -> None:
     defaults = _DEFAULTS.get(phase, {})
     own    = playbook.get("own",    defaults.get("own",    []))
     reduce = playbook.get("reduce", defaults.get("reduce", []))
     watch  = playbook.get("watch",  defaults.get("watch",  []))
 
-    meta = _profile_meta(profile_key)
-
-    # Curious Learner: brief glossary tip before the columns
-    if meta["tip"]:
-        st.markdown(f'<div class="pb-learner-tip">{meta["tip"]}</div>', unsafe_allow_html=True)
-
-    own_label,   own_color   = meta["own_hdr"]
-    cut_label,   cut_color   = meta["cut_hdr"]
-    watch_label, watch_color = meta["watch_hdr"]
-
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        st.markdown(
-            f'<div class="pb-col-hdr" style="color:{own_color};">{own_label}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="pb-col-hdr" style="color:#4ade80;">📈 Overweight</div>',
+                    unsafe_allow_html=True)
         for item in own:
             st.markdown(f'<div class="pb-item pb-own">✓ {item}</div>', unsafe_allow_html=True)
 
     with c2:
-        st.markdown(
-            f'<div class="pb-col-hdr" style="color:{cut_color};">{cut_label}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="pb-col-hdr" style="color:#f87171;">📉 Underweight</div>',
+                    unsafe_allow_html=True)
         for item in reduce:
             st.markdown(f'<div class="pb-item pb-cut">↓ {item}</div>', unsafe_allow_html=True)
 
     with c3:
-        st.markdown(
-            f'<div class="pb-col-hdr" style="color:{watch_color};">{watch_label}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="pb-col-hdr" style="color:#60a5fa;">👁 Watch Closely</div>',
+                    unsafe_allow_html=True)
         for item in watch:
             st.markdown(f'<div class="pb-item pb-watch">◉ {item}</div>', unsafe_allow_html=True)
 
 
-def _render_insight(playbook: dict, ts: float | None, profile_key: str = "Active Investor") -> None:
+def _render_insight(playbook: dict, ts: float | None) -> None:
     insight = playbook.get("insight", "")
     risk    = playbook.get("risk", "")
-    lbl     = _profile_meta(profile_key)["insight_lbl"]
 
     age = ""
     if ts:
@@ -316,7 +251,7 @@ def _render_insight(playbook: dict, ts: float | None, profile_key: str = "Active
 
     st.markdown(f"""
 <div class="pb-insight">
-  <div class="pb-insight-lbl">{lbl}{age}</div>
+  <div class="pb-insight-lbl">🤖 AI Synthesis{age}</div>
   {insight}
   {risk_html}
 </div>
@@ -351,8 +286,8 @@ if playbook is None:
 
 # Render playbook
 if playbook:
-    _render_columns(playbook, cycle_result.phase, profile_key)
-    _render_insight(playbook, st.session_state.get(_ck_ts), profile_key)
+    _render_columns(playbook, cycle_result.phase)
+    _render_insight(playbook, st.session_state.get(_ck_ts))
 else:
     last_err = st.session_state.get("_pb_last_error", "")
     if last_err:
@@ -360,10 +295,9 @@ else:
     else:
         st.caption("⚠️ AI generation unavailable (check ANTHROPIC_API_KEY). Showing rules-based defaults.")
     defaults = _DEFAULTS.get(cycle_result.phase, {})
-    _render_columns(defaults, cycle_result.phase, profile_key)
-    lbl = _profile_meta(profile_key)["insight_lbl"]
+    _render_columns(defaults, cycle_result.phase)
     st.markdown(
-        f'<div class="pb-insight"><div class="pb-insight-lbl">{lbl}</div>{cycle_result.summary}</div>',
+        f'<div class="pb-insight"><div class="pb-insight-lbl">Summary</div>{cycle_result.summary}</div>',
         unsafe_allow_html=True,
     )
 
@@ -381,9 +315,7 @@ with sc:
 
 # Indicator signals — simple table, avoids calling cycle_result.render() which
 # has nested-expander and HTML issues in Streamlit 1.50.
-# Pro Analyst: expanded by default so signals are immediately visible.
-_signals_open = _profile_meta(profile_key)["signals_open"]
-with st.expander("📡 Indicator signals driving this playbook", expanded=_signals_open):
+with st.expander("📡 Indicator signals driving this playbook", expanded=False):
     if cycle_result.signals:
         import pandas as _pd
         from components.cycle_engine import _PHASE_COLORS as _PC

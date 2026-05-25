@@ -87,3 +87,85 @@ CREATE TABLE IF NOT EXISTS alert_rules (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ar_user_email ON alert_rules (user_email);
+
+
+-- ----------------------------------------------------------------------------
+-- 4. friendships
+--    Tracks friend connections between users.
+--    status: 'pending' | 'accepted' | 'rejected'
+--    Unique constraint prevents duplicate requests in either direction.
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS friendships (
+    id              BIGSERIAL       PRIMARY KEY,
+    requester_email TEXT            NOT NULL,
+    recipient_email TEXT            NOT NULL,
+    status          TEXT            NOT NULL DEFAULT 'pending',
+    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    UNIQUE (requester_email, recipient_email)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fs_requester ON friendships (requester_email);
+CREATE INDEX IF NOT EXISTS idx_fs_recipient ON friendships (recipient_email);
+CREATE INDEX IF NOT EXISTS idx_fs_status    ON friendships (status);
+
+-- Auto-stamp updated_at
+CREATE OR REPLACE FUNCTION _friendships_set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$;
+
+DROP TRIGGER IF EXISTS friendships_updated_at ON friendships;
+CREATE TRIGGER friendships_updated_at
+    BEFORE UPDATE ON friendships
+    FOR EACH ROW EXECUTE FUNCTION _friendships_set_updated_at();
+
+
+-- ----------------------------------------------------------------------------
+-- 5. invite_tokens
+--    One-time shareable invite links.
+--    token: uuid4 string, expires 7 days after creation.
+--    used_by: set when the invite is consumed (NULL = unused).
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS invite_tokens (
+    token           TEXT            PRIMARY KEY,
+    created_by      TEXT            NOT NULL,
+    used_by         TEXT,
+    expires_at      TIMESTAMPTZ     NOT NULL,
+    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_it_created_by ON invite_tokens (created_by);
+
+
+-- ----------------------------------------------------------------------------
+-- 6. portfolio_snapshots
+--    User-published portfolio snapshots for friend comparison.
+--    Users explicitly "publish" their watchlist+weights here.
+--    Privacy flags control what friends can see.
+--    holdings_json: [{"ticker": "AAPL", "weight": 30.5}, ...]
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+    user_email          TEXT        PRIMARY KEY,
+    display_name        TEXT,
+    holdings_json       JSONB,
+    cycle_phase         TEXT,
+    recession_prob      DOUBLE PRECISION,
+    share_holdings      BOOLEAN     NOT NULL DEFAULT FALSE,
+    share_performance   BOOLEAN     NOT NULL DEFAULT FALSE,
+    share_risk_metrics  BOOLEAN     NOT NULL DEFAULT FALSE,
+    published_at        TIMESTAMPTZ,
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Auto-stamp updated_at
+CREATE OR REPLACE FUNCTION _snapshots_set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$;
+
+DROP TRIGGER IF EXISTS portfolio_snapshots_updated_at ON portfolio_snapshots;
+CREATE TRIGGER portfolio_snapshots_updated_at
+    BEFORE UPDATE ON portfolio_snapshots
+    FOR EACH ROW EXECUTE FUNCTION _snapshots_set_updated_at();

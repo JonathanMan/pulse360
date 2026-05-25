@@ -1,17 +1,22 @@
 """
-Pie360 — Email Briefing Module
+Pulse360 — Email Briefing Module
 ===================================
 Composes the daily macro briefing as a clean HTML email and sends it
-via Resend (https://resend.com).
+via a pluggable transport layer.
 
 Two entry points:
   • compose_briefing_html()  → converts briefing markdown to styled HTML email
-  • send_briefing_email()    → sends via Resend
+  • send_briefing_email()    → sends via whichever transport is configured
 
-Required secrets (in .streamlit/secrets.toml and Streamlit Cloud):
-  RESEND_API_KEY = "re_xxxxxxxxxxxx"
-  RESEND_FROM    = "briefing@pie360.app"      # or "onboarding@resend.dev" for free tier
-  BRIEFING_EMAIL = "jonathancyman@gmail.com"
+Transport options (uncomment the one you want in _send_via_transport below):
+  1. Gmail SMTP  — needs GMAIL_ADDRESS + GMAIL_APP_PASSWORD in st.secrets
+  2. Resend API  — needs RESEND_API_KEY in st.secrets  (pip install resend)
+  3. SendGrid    — needs SENDGRID_API_KEY in st.secrets (pip install sendgrid)
+
+To activate a transport:
+  1. Add the credentials to .streamlit/secrets.toml
+  2. Uncomment the relevant block in _send_via_transport()
+  3. Comment out the NotImplementedError line
 
 Usage (in 0_Dashboard.py sidebar):
     from ai.email_briefing import send_briefing_email, compose_briefing_html
@@ -159,7 +164,7 @@ _EMAIL_TEMPLATE = """\
   </div>
 
   <div class="footer">
-    Pie360 · Personal macro dashboard · <a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app" style="color:#555">Open app</a>
+    Pie360 · Personal macro dashboard · <a href="https://pulse360.streamlit.app" style="color:#555">Open app</a>
   </div>
 
 </div>
@@ -172,7 +177,7 @@ _EMAIL_TEMPLATE = """\
 
 def _md_to_html(md: str) -> str:
     """
-    Convert Pie360 briefing markdown to email-safe HTML.
+    Convert Pulse360 briefing markdown to email-safe HTML.
     Handles: ## headings, bullet lists, **bold**, *italic*, --- dividers,
     and the standard disclaimer block.
     Deliberately minimal — only what the briefing format actually uses.
@@ -263,7 +268,7 @@ def compose_briefing_html(
     date_str: Optional[str] = None,
 ) -> str:
     """
-    Convert a Pie360 briefing markdown string into a styled HTML email.
+    Convert a Pulse360 briefing markdown string into a styled HTML email.
 
     Args:
         briefing_md:           Output of get_daily_briefing() — markdown string
@@ -320,21 +325,83 @@ def send_briefing_email(
 
 
 def _send_via_transport(to: str, subject: str, html: str) -> tuple[bool, str]:
-    """Send via Resend. Requires RESEND_API_KEY in st.secrets."""
+    """
+    Pluggable transport. Uncomment one of the blocks below to activate it,
+    then add the matching credentials to .streamlit/secrets.toml.
+    """
     import streamlit as st
 
-    if "RESEND_API_KEY" not in st.secrets:
-        raise NotImplementedError(
-            "RESEND_API_KEY not found in secrets. "
-            "Add it to .streamlit/secrets.toml and Streamlit Cloud secrets."
-        )
+    # ── Option 1: Gmail SMTP ──────────────────────────────────────────────────
+    # Prerequisites:
+    #   1. Enable 2FA on your Google account
+    #   2. Create an App Password at myaccount.google.com/apppasswords
+    #   3. Add to .streamlit/secrets.toml:
+    #        GMAIL_ADDRESS      = "you@gmail.com"
+    #        GMAIL_APP_PASSWORD = "xxxx xxxx xxxx xxxx"
+    #        BRIEFING_EMAIL     = "you@gmail.com"   # recipient (can be same)
+    #
+    # if "GMAIL_ADDRESS" in st.secrets:
+    #     import smtplib
+    #     from email.mime.multipart import MIMEMultipart
+    #     from email.mime.text import MIMEText
+    #     msg = MIMEMultipart("alternative")
+    #     msg["Subject"] = subject
+    #     msg["From"]    = st.secrets["GMAIL_ADDRESS"]
+    #     msg["To"]      = to
+    #     msg.attach(MIMEText(html, "html"))
+    #     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    #         server.login(st.secrets["GMAIL_ADDRESS"], st.secrets["GMAIL_APP_PASSWORD"])
+    #         server.sendmail(st.secrets["GMAIL_ADDRESS"], to, msg.as_string())
+    #     return True, f"Briefing sent to {to} via Gmail ✓"
 
-    import resend
-    resend.api_key = st.secrets["RESEND_API_KEY"]
-    resend.Emails.send({
-        "from":    st.secrets.get("RESEND_FROM", "onboarding@resend.dev"),
-        "to":      [to],
-        "subject": subject,
-        "html":    html,
-    })
-    return True, f"Briefing sent to {to} ✓"
+    # ── Option 2: Resend API ──────────────────────────────────────────────────
+    # Prerequisites:
+    #   1. Sign up at resend.com (free tier: 100 emails/day, 3k/month)
+    #   2. Create an API key
+    #   3. pip install resend  (already in requirements.txt)
+    #   4. Add to .streamlit/secrets.toml and Streamlit Cloud secrets:
+    #        RESEND_API_KEY = "re_xxxxxxxxxxxx"
+    #        RESEND_FROM    = "onboarding@resend.dev"   # free-tier sender
+    #        BRIEFING_EMAIL = "jonathancyman@gmail.com"
+    #
+    if "RESEND_API_KEY" in st.secrets:
+        import resend
+        resend.api_key = st.secrets["RESEND_API_KEY"]
+        resend.Emails.send({
+            "from":    st.secrets.get("RESEND_FROM", "onboarding@resend.dev"),
+            "to":      [to],
+            "subject": subject,
+            "html":    html,
+        })
+        return True, f"Briefing sent to {to} via Resend ✓"
+
+    # ── Option 3: SendGrid ────────────────────────────────────────────────────
+    # Prerequisites:
+    #   1. Sign up at sendgrid.com (free tier: 100 emails/day)
+    #   2. Create an API key with "Mail Send" permission
+    #   3. pip install sendgrid
+    #   4. Add to .streamlit/secrets.toml:
+    #        SENDGRID_API_KEY  = "SG.xxxxxxxxxxxx"
+    #        SENDGRID_FROM     = "you@yourdomain.com"
+    #        BRIEFING_EMAIL    = "you@gmail.com"
+    #
+    # if "SENDGRID_API_KEY" in st.secrets:
+    #     from sendgrid import SendGridAPIClient
+    #     from sendgrid.helpers.mail import Mail
+    #     message = Mail(
+    #         from_email    = st.secrets.get("SENDGRID_FROM", "pulse360@yourdomain.com"),
+    #         to_emails     = to,
+    #         subject       = subject,
+    #         html_content  = html,
+    #     )
+    #     sg = SendGridAPIClient(st.secrets["SENDGRID_API_KEY"])
+    #     sg.send(message)
+    #     return True, f"Briefing sent to {to} via SendGrid ✓"
+
+    # ── No transport configured ───────────────────────────────────────────────
+    raise NotImplementedError(
+        "No email transport configured. "
+        "Open ai/email_briefing.py and uncomment one of the transport blocks "
+        "(Gmail SMTP, Resend, or SendGrid), then add the matching credentials "
+        "to .streamlit/secrets.toml."
+    )

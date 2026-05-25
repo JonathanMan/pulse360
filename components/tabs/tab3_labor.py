@@ -11,7 +11,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
-from components.chart_utils import apply_chart_theme, add_nber, chart_meta, time_window_start, threshold_line, yoy_pct, render_implications, render_action_item
+from components.chart_utils import dark_layout, add_nber, chart_meta, time_window_start, threshold_line, yoy_pct, render_implications, render_action_item
 from ai.claude_client import get_investment_implications
 
 
@@ -59,7 +59,7 @@ def render_tab3(model_output, phase_output) -> None:
                 ))
             fig = threshold_line(fig, 4.0, "4% — cycle trough proxy", "#00a35a", "dot")
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="% Unemployed")
+            fig = dark_layout(fig, yaxis_title="% Unemployed")
             st.plotly_chart(fig, use_container_width=True, key="tab3_unrate")
         chart_meta(unrate, decimals=1)
         if unrate["last_value"] is not None:
@@ -84,7 +84,7 @@ def render_tab3(model_output, phase_output) -> None:
             ))
             fig = threshold_line(fig, 0.5, "0.5 — recession trigger", "#d92626", "dash")
             fig = threshold_line(fig, 0.3, "0.3 — warning zone", "#c98800", "dot")
-            fig = apply_chart_theme(fig, yaxis_title="Sahm Indicator (pp)")
+            fig = dark_layout(fig, yaxis_title="Sahm Indicator (pp)")
             st.plotly_chart(fig, use_container_width=True, key="tab3_sahm")
         chart_meta(sahm, decimals=2)
         if sahm["last_value"] is not None:
@@ -110,7 +110,7 @@ def render_tab3(model_output, phase_output) -> None:
             ))
             fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="Change (000s)")
+            fig = dark_layout(fig, yaxis_title="Change (000s)")
             st.plotly_chart(fig, use_container_width=True, key="tab3_payems")
         chart_meta(payems, decimals=0)
         if not payems["data"].empty and len(payems["data"]) >= 2:
@@ -133,7 +133,7 @@ def render_tab3(model_output, phase_output) -> None:
             ))
             fig = threshold_line(fig, 300, "300K — elevated threshold", "#d92626", "dot")
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="Claims (000s)")
+            fig = dark_layout(fig, yaxis_title="Claims (000s)")
             st.plotly_chart(fig, use_container_width=True, key="tab3_ic4w")
         chart_meta(ic4w, decimals=0)
         if ic4w["last_value"] is not None:
@@ -153,7 +153,7 @@ def render_tab3(model_output, phase_output) -> None:
             fill="tozeroy", fillcolor="rgba(26,188,156,0.08)",
         ))
         fig = add_nber(fig, start_date=start)
-        fig = apply_chart_theme(fig, yaxis_title="Job Openings (000s)")
+        fig = dark_layout(fig, yaxis_title="Job Openings (000s)")
         st.plotly_chart(fig, use_container_width=True, key="tab3_jolts")
     chart_meta(jolts, decimals=0)
     if jolts["last_value"] is not None:

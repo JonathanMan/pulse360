@@ -11,7 +11,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
-from components.chart_utils import apply_chart_theme, add_nber, chart_meta, time_window_start, threshold_line, render_implications, render_action_item
+from components.chart_utils import dark_layout, add_nber, chart_meta, time_window_start, threshold_line, render_implications, render_action_item
 from ai.claude_client import get_investment_implications
 
 
@@ -50,7 +50,7 @@ def render_tab2(model_output, phase_output) -> None:
                 name="Industrial Production",
             ))
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="Index (2017=100)")
+            fig = dark_layout(fig, yaxis_title="Index (2017=100)")
             st.plotly_chart(fig, use_container_width=True, key="tab2_indpro")
         chart_meta(indpro, decimals=1)
         if indpro["last_value"] is not None and len(indpro["data"]) >= 2:
@@ -71,7 +71,7 @@ def render_tab2(model_output, phase_output) -> None:
             ))
             fig = threshold_line(fig, 80, "80% — historical ceiling", "#e67e22", "dot")
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="% of Capacity")
+            fig = dark_layout(fig, yaxis_title="% of Capacity")
             st.plotly_chart(fig, use_container_width=True, key="tab2_tcu")
         chart_meta(tcu, decimals=1)
         if tcu["last_value"] is not None:
@@ -115,7 +115,7 @@ def render_tab2(model_output, phase_output) -> None:
         ))
         fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
         fig = add_nber(fig, start_date=start)
-        fig = apply_chart_theme(fig, yaxis_title="% Month-over-Month")
+        fig = dark_layout(fig, yaxis_title="% Month-over-Month")
         st.plotly_chart(fig, use_container_width=True, key="tab2_durable")
     chart_meta(adxtno, decimals=1)
     if not adxtno["data"].empty and len(adxtno["data"]) >= 2:

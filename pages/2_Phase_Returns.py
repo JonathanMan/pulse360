@@ -20,7 +20,7 @@ from models.phase_returns import (
     PHASES,
     ASSET_CLASSES,
 )
-from components.chart_utils import apply_chart_theme, add_nber
+from components.chart_utils import dark_layout, add_nber
 
 from components.pulse360_theme import inject_theme
 
@@ -148,7 +148,7 @@ for phase in PHASES:
             hovertemplate=f"{phase} · %{{x|%b %Y}}<extra></extra>",
         ))
 
-fig_tl = apply_chart_theme(fig_tl, yaxis_title="")
+fig_tl = dark_layout(fig_tl, yaxis_title="")
 fig_tl.update_layout(
     barmode="stack",
     bargap=0,
@@ -272,7 +272,7 @@ for phase in PHASES:
     ))
 
 fig_bar.add_hline(y=0, line_color="#555", line_width=1)
-fig_bar = apply_chart_theme(fig_bar, yaxis_title="Annualised Return (%)")
+fig_bar = dark_layout(fig_bar, yaxis_title="Annualised Return (%)")
 fig_bar.update_layout(
     barmode="group",
     height=380,
@@ -338,7 +338,7 @@ for i, (asset_name, series_id) in enumerate(ASSET_CLASSES.items()):
                 hovertemplate="%{x|%b %Y}: <b>%{y:.0f}</b><extra></extra>",
             ))
             fig_asset = add_nber(fig_asset, start_date="1997-01-01")
-            fig_asset = apply_chart_theme(fig_asset, yaxis_title="Cumulative Return (rebased 100)")
+            fig_asset = dark_layout(fig_asset, yaxis_title="Cumulative Return (rebased 100)")
             fig_asset.update_layout(height=260, margin={"t": 10})
             st.plotly_chart(fig_asset, use_container_width=True, key=f"asset_{i}")
 

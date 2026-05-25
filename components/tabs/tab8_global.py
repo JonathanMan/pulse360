@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    apply_chart_theme, add_nber, chart_meta, time_window_start, render_implications, render_action_item
+    dark_layout, add_nber, chart_meta, time_window_start, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
 
@@ -60,7 +60,7 @@ def render_tab8(model_output, phase_output) -> None:
                 annotation_font_color="#666", annotation_font_size=10,
             )
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="Index (Jan 2006 = 100)")
+            fig = dark_layout(fig, yaxis_title="Index (Jan 2006 = 100)")
             st.plotly_chart(fig, use_container_width=True, key="tab8_usd_broad")
         chart_meta(usd_broad, decimals=2)
 
@@ -88,7 +88,7 @@ def render_tab8(model_output, phase_output) -> None:
                 annotation_font_color="#888", annotation_font_size=10,
             )
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="USD per EUR")
+            fig = dark_layout(fig, yaxis_title="USD per EUR")
             st.plotly_chart(fig, use_container_width=True, key="tab8_eurusd")
         chart_meta(eur_usd, decimals=4)
 
@@ -114,7 +114,7 @@ def render_tab8(model_output, phase_output) -> None:
                 name="USD/JPY",
             ))
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="JPY per USD")
+            fig = dark_layout(fig, yaxis_title="JPY per USD")
             st.plotly_chart(fig, use_container_width=True, key="tab8_jpyusd")
         chart_meta(jpy_usd, decimals=2)
 
@@ -138,7 +138,7 @@ def render_tab8(model_output, phase_output) -> None:
                 fill="tozeroy", fillcolor="rgba(231,76,60,0.06)",
             ))
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="USD / barrel")
+            fig = dark_layout(fig, yaxis_title="USD / barrel")
             st.plotly_chart(fig, use_container_width=True, key="tab8_brent")
         chart_meta(brent, decimals=2)
 
@@ -164,7 +164,7 @@ def render_tab8(model_output, phase_output) -> None:
             fill="tozeroy", fillcolor="rgba(26,188,156,0.06)",
         ))
         fig = add_nber(fig, start_date=start)
-        fig = apply_chart_theme(fig, yaxis_title="Index (current = 100)")
+        fig = dark_layout(fig, yaxis_title="Index (current = 100)")
         st.plotly_chart(fig, use_container_width=True, key="tab8_commodity")
     chart_meta(commodity, decimals=1)
 

@@ -39,7 +39,7 @@ from ai.claude_client import (
     stream_chat_response,
 )
 from ai.email_briefing import compose_briefing_html, send_briefing_email
-from components.chart_utils import apply_chart_theme, add_nber, chart_meta
+from components.chart_utils import dark_layout, add_nber, chart_meta
 from models.backtest import run_historical_backtest
 from data.market_client import fetch_shiller_cape, fetch_sector_returns
 

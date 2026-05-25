@@ -22,8 +22,7 @@ from components.auth import (
     save_phone_link, _COUNTRY_CODES, _build_e164, _do_send_otp_raw,
     get_google_oauth_url,
 )
-from components.supabase_client import get_client, get_user_email
-from components.profile_store import save_profile as _save_profile_db
+from components.supabase_client import get_client
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.markdown("""
@@ -342,19 +341,12 @@ for idx, (key, prof) in enumerate(PROFILES.items()):
             btn_label,
             key=f"profile_btn_{key}",
             type=btn_type,
-            width='stretch',
+            use_container_width=True,
             disabled=is_active,
         ):
             st.session_state["pulse360_profile"] = key
             for clear_key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(clear_key, None)
-            # Persist to user_profiles TABLE (anon key works; no JWT needed).
-            # _try_restore_profile() will read this on any future session restart.
-            _ue = get_user_email()
-            if _ue:
-                _save_profile_db(_ue, key)
-            # Queue localStorage write — flushed by app.py on next render (no rerun race)
-            st.session_state["_p360_pending_profile_save"] = key
             st.rerun()
 
 # Equalise card heights via JS — measures after render and sets min-height on all

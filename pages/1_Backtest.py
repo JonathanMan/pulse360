@@ -17,7 +17,7 @@ from models.backtest import (
     compute_recession_stats,
     compute_false_positive_periods,
 )
-from components.chart_utils import apply_chart_theme, add_nber
+from components.chart_utils import dark_layout, add_nber
 
 # ── Dark-theme CSS ───────────────────────────────────────────────────────────
 from components.pulse360_theme import inject_theme
@@ -158,7 +158,7 @@ fig.add_hline(y=50, line_dash="dash", line_color="#d92626", line_width=1,
 # NBER recession shading
 fig = add_nber(fig, start_date="1997-01-01")
 
-fig = apply_chart_theme(fig, yaxis_title="Recession Probability (%)")
+fig = dark_layout(fig, yaxis_title="Recession Probability (%)")
 fig.update_layout(height=420, yaxis={"range": [0, 100]})
 st.plotly_chart(fig, use_container_width=True, key="bt_main")
 
@@ -253,7 +253,7 @@ for col in stress_cols:
 fig2.add_hline(y=0.5, line_dash="dot", line_color="#555", line_width=1,
                annotation_text="0.5 — neutral", annotation_font_color="#555")
 fig2 = add_nber(fig2, start_date="1997-01-01")
-fig2 = apply_chart_theme(fig2, yaxis_title="Stress Score (0–1)")
+fig2 = dark_layout(fig2, yaxis_title="Stress Score (0–1)")
 fig2.update_layout(height=380, yaxis={"range": [0, 1]})
 st.plotly_chart(fig2, use_container_width=True, key="bt_stress")
 

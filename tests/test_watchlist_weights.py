@@ -8,7 +8,7 @@ in the pure-logic paths), so we can test them by providing a minimal
 session_state dict mock.
 
 Run from the workspace root:
-    python -m pytest Pie360/tests/ -v
+    python -m pytest Pulse360/tests/ -v
 """
 
 import sys
@@ -16,14 +16,37 @@ import os
 import json
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# conftest.py already stubs streamlit and streamlit_javascript — don't
-# override them here or it corrupts the shared session_state mock used by
-# other test modules running in the same pytest session.
+import unittest.mock as mock
 
-import streamlit as st  # the conftest stub
+# ── Streamlit stub ────────────────────────────────────────────────────────────
+# Provide a minimal st stub so watchlist_store imports cleanly without a
+# running Streamlit server.
 
-# Import after conftest has set up stubs
-from components.watchlist_store import (
+_session_state: dict = {}
+
+class _FakeSessionState(dict):
+    """dict subclass that also supports attribute-style access."""
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+    def __setattr__(self, key, value):
+        self[key] = value
+    def __delattr__(self, key):
+        del self[key]
+
+_session_state = _FakeSessionState()
+
+streamlit_stub       = mock.MagicMock()
+streamlit_stub.session_state = _session_state
+streamlit_stub.cache_data    = lambda **kw: (lambda fn: fn)
+streamlit_stub.warning       = lambda *a, **kw: None
+sys.modules["streamlit"]             = streamlit_stub
+sys.modules["streamlit_javascript"]  = mock.MagicMock()
+
+# Import AFTER stubbing
+from watchlist_store import (
     load_weights,
     save_weights,
     get_weight,
@@ -31,13 +54,10 @@ from components.watchlist_store import (
     remove_from_watchlist,
 )
 
-# Alias for readability in tests that reference _session_state directly
-_session_state = st.session_state
-
 
 def _reset():
     """Clear session state between tests."""
-    st.session_state.clear()
+    _session_state.clear()
 
 
 # ── load_weights ──────────────────────────────────────────────────────────────

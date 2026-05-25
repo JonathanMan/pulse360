@@ -1,5 +1,5 @@
 """
-Market data layer for Pie360 — yfinance-backed.
+Market data layer for Pulse360 — yfinance-backed.
 
 Covers equity indices, VIX, sector ETF heatmap, and Shiller CAPE.
 FRED handles all macro series; yfinance handles market data not on FRED.

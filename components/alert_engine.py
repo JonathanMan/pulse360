@@ -1,5 +1,5 @@
 """
-Pie360 — Alert Engine
+Pulse360 — Alert Engine
 ========================
 Rule-based alert system that watches any FRED series (or the blended
 recession probability) and fires in-app banners + optional email when
@@ -33,8 +33,11 @@ Public API:
 from __future__ import annotations
 
 import logging
+import smtplib
 import uuid
 from datetime import date, datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Any
 
 import streamlit as st
@@ -213,10 +216,14 @@ def evaluate_rule(rule: dict, current_value: float) -> bool:
 
 def send_email_alert(rule: dict, current_value: float) -> bool:
     """
-    Send an alert email via Resend.
+    Send an email alert via SMTP TLS.
 
-    Requires RESEND_API_KEY in st.secrets (same key used by the daily briefing).
-    Optional: RESEND_FROM  — defaults to "onboarding@resend.dev".
+    Reads credentials from st.secrets["smtp"]:
+        host     = "smtp.gmail.com"
+        port     = 587
+        username = "sender@example.com"
+        password = "app_password"
+        from_addr = "Pie360 Alerts <sender@example.com>"   (optional)
 
     Returns True on success, False on any failure (never raises).
     """
@@ -225,22 +232,27 @@ def send_email_alert(rule: dict, current_value: float) -> bool:
         return False
 
     try:
-        if "RESEND_API_KEY" not in st.secrets:
-            logger.info("alert_engine: RESEND_API_KEY not configured — skipping email")
-            return False
+        cfg = st.secrets.get("smtp", {})
+        host     = cfg.get("host", "")
+        port     = int(cfg.get("port", 587))
+        username = cfg.get("username", "")
+        password = cfg.get("password", "")
+        from_addr = cfg.get("from_addr", username)
 
-        import resend
-        resend.api_key = st.secrets["RESEND_API_KEY"]
+        if not (host and username and password):
+            logger.info("alert_engine: SMTP not configured — skipping email")
+            return False
 
         series_label = SERIES_PRESETS.get(rule["series_id"], rule["series_id"])
         op_label     = OPERATOR_LABELS.get(rule["operator"], rule["operator"])
         subject      = f"🚨 Pie360 Alert: {rule['name']}"
         body_html    = f"""
 <html><body style="font-family:sans-serif;color:#0a0a0a;max-width:560px;margin:auto;">
-  <div style="background:#0a0a0a;padding:18px 24px;">
-    <h2 style="color:#fff;margin:0;font-size:1.1rem;">📊 Pie360 Alert Fired</h2>
+  <div style="background:#0a0a0a;padding:18px 24px;border-radius:8px 8px 0 0;">
+    <h2 style="color:#fff;margin:0;">📊 Pie360 Alert Fired</h2>
   </div>
-  <div style="background:#f4f4f4;padding:20px 24px;border:1px solid #ececec;border-top:none;">
+  <div style="background:#f4f4f4;padding:20px 24px;border-radius:0 0 8px 8px;
+              border:1px solid #ececec;border-top:none;">
     <h3 style="margin-top:0;color:#0a0a0a;">{rule['name']}</h3>
     <table style="border-collapse:collapse;width:100%;margin-bottom:14px;">
       <tr>
@@ -267,20 +279,22 @@ def send_email_alert(rule: dict, current_value: float) -> bool:
     <p style="font-size:0.82rem;color:#6a6a6a;border-top:1px solid #ececec;
               padding-top:12px;margin-bottom:0;">
       This is an automated alert from <strong>Pie360</strong>. Not personalised
-      investment advice. Manage your alerts on the
-      <a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app/Alerts"
-         style="color:#1f6feb;">Alerts page</a>.
+      investment advice. Manage your alerts in the Alerts page of the dashboard.
     </p>
   </div>
 </body></html>
 """
-        from_addr = st.secrets.get("RESEND_FROM", "onboarding@resend.dev")
-        resend.Emails.send({
-            "from":    from_addr,
-            "to":      [recipient],
-            "subject": subject,
-            "html":    body_html,
-        })
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = from_addr
+        msg["To"]      = recipient
+        msg.attach(MIMEText(body_html, "html"))
+
+        with smtplib.SMTP(host, port, timeout=10) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(username, password)
+            server.sendmail(from_addr, [recipient], msg.as_string())
 
         logger.info("alert_engine: email sent to %s for rule '%s'", recipient, rule["name"])
         return True

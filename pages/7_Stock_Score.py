@@ -23,7 +23,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.chart_utils import apply_chart_theme
+from components.chart_utils import dark_layout
 from components.user_profile import feature_visible
 from components.watchlist_store import add_to_watchlist, in_watchlist, remove_from_watchlist
 from components.stock_score_utils import (
@@ -327,7 +327,7 @@ if ticker_input:
         else:
             tech_label, tech_color = "", "#888"
 
-        fig_price = apply_chart_theme(fig_price, yaxis_title="Price (USD)")
+        fig_price = dark_layout(fig_price, yaxis_title="Price (USD)")
         fig_price.update_layout(
             height=400,
             title=dict(
@@ -772,7 +772,7 @@ if ticker_input:
                 name="50-day MA", line={"color": "#c98800", "width": 1.5, "dash": "dot"},
                 hovertemplate="50MA: $%{y:.2f}<extra></extra>",
             ))
-            fig_p = apply_chart_theme(fig_p, yaxis_title="Price (USD)")
+            fig_p = dark_layout(fig_p, yaxis_title="Price (USD)")
             fig_p.update_layout(
                 height=360,
                 title=dict(text=f"{ticker_input} — Price vs Moving Averages (2Y)",
@@ -823,7 +823,7 @@ if ticker_input:
                     hovertemplate="<b>%{x}</b>: %{y:.3f}B shares<extra></extra>",
                     name="Shares Outstanding",
                 ))
-                fig_sh = apply_chart_theme(fig_sh, yaxis_title="Shares Outstanding (B)")
+                fig_sh = dark_layout(fig_sh, yaxis_title="Shares Outstanding (B)")
                 fig_sh.update_layout(
                     height=280,
                     title=dict(text="Shares Outstanding — Annual Trend",

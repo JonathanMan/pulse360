@@ -1,7 +1,7 @@
 """
 components/user_profile.py
 ============================
-Investor profiling system for Pie360.
+Investor profiling system for Pulse360.
 
 Three tiers:
   Beginner  — new to investing, wants macro context without jargon
@@ -180,14 +180,6 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
         st.Page("pages/12_Alerts.py",   title="Alerts",   icon="🔔"),
         st.Page("pages/10_Settings.py", title="Settings", icon="⚙️"),
     ]
-
-    # Admin page — only visible to admin users (gated inside the page itself too)
-    try:
-        from components.analytics import is_admin
-        if is_admin():
-            settings_pages.append(st.Page("pages/13_Admin.py", title="Admin", icon="🛠️"))
-    except Exception:
-        pass
 
     return {
         "Macro Context": macro_pages,

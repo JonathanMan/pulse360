@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 from data.fred_client import fetch_series
 from data.market_client import fetch_sector_returns, fetch_shiller_cape
 from components.chart_utils import (
-    apply_chart_theme, add_nber, add_end_labels, chart_meta,
+    dark_layout, add_nber, add_end_labels, chart_meta,
     hover_tmpl, time_window_start, threshold_line, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
@@ -72,7 +72,7 @@ def render_tab6(model_output, phase_output) -> None:
                     ),
                 ))
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="Index (rebased to 100 at start)")
+            fig = dark_layout(fig, yaxis_title="Index (rebased to 100 at start)")
             fig = add_end_labels(fig, fmt=",.0f")
             st.plotly_chart(fig, use_container_width=True, key="tab6_equity")
         col_a, col_b = st.columns(2)
@@ -108,7 +108,7 @@ def render_tab6(model_output, phase_output) -> None:
             fig = threshold_line(fig, 20, "20 — elevated volatility", "#c98800", "dot")
             fig = threshold_line(fig, 30, "30 — high fear", "#d92626", "dash")
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="VIX Level")
+            fig = dark_layout(fig, yaxis_title="VIX Level")
             st.plotly_chart(fig, use_container_width=True, key="tab6_vix")
         chart_meta(vix, decimals=1)
 
@@ -147,7 +147,7 @@ def render_tab6(model_output, phase_output) -> None:
             ))
         fig = threshold_line(fig, 500, "500 bps HY — stress signal", "#d92626", "dot")
         fig = add_nber(fig, start_date=start)
-        fig = apply_chart_theme(fig, yaxis_title="OAS (bps)")
+        fig = dark_layout(fig, yaxis_title="OAS (bps)")
         fig = add_end_labels(fig, fmt=",.0f", unit=" bps")
         st.plotly_chart(fig, use_container_width=True, key="tab6_oas")
 
@@ -183,7 +183,7 @@ def render_tab6(model_output, phase_output) -> None:
             name="1-Month Return %",
         ))
         fig.add_vline(x=0, line_dash="dash", line_color="#555", line_width=1)
-        fig = apply_chart_theme(fig, yaxis_title="", title="Sector ETF 1-Month Returns")
+        fig = dark_layout(fig, yaxis_title="", title="Sector ETF 1-Month Returns")
         fig.update_layout(height=350, margin={"l": 140})
         st.plotly_chart(fig, use_container_width=True, key="tab6_sectors")
         st.caption("Data via yfinance. Returns ≈ 22 trading days (~1 month).")
@@ -217,7 +217,7 @@ def render_tab6(model_output, phase_output) -> None:
         long_run_avg = float(cape_series.mean())
         fig = threshold_line(fig, long_run_avg, f"Long-run avg: {long_run_avg:.1f}", "#888", "dot")
         fig = threshold_line(fig, 25, "25 — historically elevated", "#d92626", "dot")
-        fig = apply_chart_theme(fig, yaxis_title="CAPE Ratio")
+        fig = dark_layout(fig, yaxis_title="CAPE Ratio")
         st.plotly_chart(fig, use_container_width=True, key="tab6_cape")
         st.caption(
             f"Shiller CAPE · Current: **{cape['last_value']:.1f}** · "

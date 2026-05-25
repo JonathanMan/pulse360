@@ -1,5 +1,5 @@
 """
-Pie360 — Navigation Router
+Pulse360 — Navigation Router
 ==============================
 Entry point for Streamlit Cloud. Defines all pages explicitly via
 st.navigation() so page discovery works regardless of repo layout.
@@ -58,24 +58,7 @@ def _try_restore_profile() -> bool:
     """
     from components.user_profile import PROFILES as _PROFILES
 
-    # ── 1. user_profiles TABLE (anon key, works for all logged-in users) ─────
-    # This is the canonical store — profile_store.save_profile() writes here
-    # whenever the user switches profile in Settings.
-    try:
-        from components.auth import get_session_user
-        from components.supabase_client import get_user_email
-        from components.profile_store import load_profile as _load_profile_db
-        if get_session_user():
-            _ue = get_user_email()
-            if _ue:
-                _saved = _load_profile_db(_ue)
-                if _saved in _PROFILES:
-                    st.session_state["pulse360_profile"] = _saved
-                    return True
-    except Exception:
-        pass
-
-    # ── 2. Supabase auth user_metadata (legacy fallback) ─────────────────────
+    # ── 1. Supabase (synchronous, only for logged-in users) ───────────────────
     try:
         from components.auth import get_session_user
         from components.supabase_client import get_client
@@ -90,7 +73,7 @@ def _try_restore_profile() -> bool:
     except Exception:
         pass
 
-    # ── 3. localStorage (async — returns 0 on first render) ──────────────────
+    # ── 2. localStorage (async — returns 0 on first render) ──────────────────
     if st.session_state.get("_p360_ls_checked"):
         return False   # already confirmed nothing in localStorage
 
@@ -381,11 +364,6 @@ _post_auth_dest = st.session_state.pop("_post_auth_redirect", None)
 if _post_auth_dest and get_session_user():
     st.switch_page(_post_auth_dest)
 
-# ── Flush pending localStorage profile write (Settings page profile switch) ───
-_pending_profile = st.session_state.pop("_p360_pending_profile_save", None)
-if _pending_profile:
-    _save_profile(_pending_profile)   # writes localStorage without triggering rerun
-
 # ── Restore saved profile (skips onboarding for returning users) ──────────────
 if "pulse360_profile" not in st.session_state:
     if _try_restore_profile():
@@ -399,13 +377,6 @@ if "pulse360_profile" not in st.session_state:
 if "pulse360_profile" not in st.session_state:
     _render_onboarding()
     # _render_onboarding() returns here; pg.run() below is never reached.
-
-# ── Analytics — log every page navigation ─────────────────────────────────────
-try:
-    from components.analytics import log_page_view as _log_page_view
-    _log_page_view(pg.title)
-except Exception:
-    pass  # never let analytics break routing
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -447,14 +418,6 @@ with st.sidebar:
   <div class="pb-desc">{profile["description"]}</div>
 </div>
 """, unsafe_allow_html=True)
-
-    # Sync sidebar selectbox widget state with the canonical profile key BEFORE
-    # the widget renders. Streamlit uses the stored widget-key value on every
-    # rerun rather than the index= arg, so if Settings just changed
-    # pulse360_profile without touching sidebar_profile_switch the selectbox
-    # would show the old value and immediately revert the switch.
-    if st.session_state.get("sidebar_profile_switch") != profile_key:
-        st.session_state["sidebar_profile_switch"] = profile_key
 
     # Profile switcher (compact selectbox)
     new_profile = st.selectbox(

@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 
 from data.fred_client import fetch_series
 from components.chart_utils import (
-    apply_chart_theme, add_nber, add_end_labels, chart_meta,
+    dark_layout, add_nber, add_end_labels, chart_meta,
     hover_tmpl, time_window_start, threshold_line, yoy_pct, render_implications, render_action_item
 )
 from ai.claude_client import get_investment_implications
@@ -74,7 +74,7 @@ def render_tab4(model_output, phase_output) -> None:
                 ))
             fig = threshold_line(fig, 2.0, "2% Fed target", "#00a35a", "dash")
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="YoY %")
+            fig = dark_layout(fig, yaxis_title="YoY %")
             fig = add_end_labels(fig, fmt=".1f", unit="%")
             st.plotly_chart(fig, use_container_width=True, key="tab4_cpi")
         col_a, col_b = st.columns(2)
@@ -123,7 +123,7 @@ def render_tab4(model_output, phase_output) -> None:
                 ))
             fig = threshold_line(fig, 2.0, "2% Fed target", "#00a35a", "dash")
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="YoY %")
+            fig = dark_layout(fig, yaxis_title="YoY %")
             fig = add_end_labels(fig, fmt=".1f", unit="%")
             st.plotly_chart(fig, use_container_width=True, key="tab4_pce")
         col_c, col_d = st.columns(2)
@@ -170,7 +170,7 @@ def render_tab4(model_output, phase_output) -> None:
             ))
         fig = threshold_line(fig, 2.0, "2% Fed target", "#00a35a", "dash")
         fig = threshold_line(fig, 2.5, "2.5% — elevated", "#c98800", "dot")
-        fig = apply_chart_theme(fig, yaxis_title="Implied Inflation (%)")
+        fig = dark_layout(fig, yaxis_title="Implied Inflation (%)")
         fig = add_end_labels(fig, fmt=".2f", unit="%")
         st.plotly_chart(fig, use_container_width=True, key="tab4_breakeven")
 
@@ -204,7 +204,7 @@ def render_tab4(model_output, phase_output) -> None:
                 fill="tozeroy", fillcolor="rgba(230,126,34,0.08)",
             ))
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="USD / barrel")
+            fig = dark_layout(fig, yaxis_title="USD / barrel")
             st.plotly_chart(fig, use_container_width=True, key="tab4_wti")
         chart_meta(wti, decimals=2)
         if wti["last_value"] is not None:
@@ -229,7 +229,7 @@ def render_tab4(model_output, phase_output) -> None:
             fig.add_hline(y=0, line_dash="dash", line_color="#555", line_width=1)
             fig = threshold_line(fig, 2.0, "2%", "#c98800", "dot")
             fig = add_nber(fig, start_date=start)
-            fig = apply_chart_theme(fig, yaxis_title="YoY %")
+            fig = dark_layout(fig, yaxis_title="YoY %")
             st.plotly_chart(fig, use_container_width=True, key="tab4_ppi")
         chart_meta(ppi, decimals=1)
         if not ppi["data"].empty:

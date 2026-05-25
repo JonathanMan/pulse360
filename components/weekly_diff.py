@@ -1,5 +1,5 @@
 """
-Pie360 — Weekly Diff Component
+Pulse360 — Weekly Diff Component
 ===================================
 Renders a collapsible "What changed" panel on the Dashboard showing:
 
