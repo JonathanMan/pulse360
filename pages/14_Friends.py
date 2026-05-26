@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from components.pie360_theme import (
+from components.pulse360_theme import (
     inject_theme, page_header,
     BORDER, CARD_BG, FG_MUTED, FG_PRIMARY, FG_SEC, PAGE_BG,
     SUBTLE_BG, SUCCESS, WARNING, DANGER, CHART_BLUE,
