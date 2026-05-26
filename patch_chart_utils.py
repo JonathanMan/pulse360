@@ -4,7 +4,7 @@ patch_chart_utils.py
 ====================
 Applies Terminal Light v2 changes to components/chart_utils.py.
 
-Run from the root of the pulse360 repo:
+Run from the root of the pie360 repo:
     python3 patch_chart_utils.py
 
 Makes three targeted string replacements:

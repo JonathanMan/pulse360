@@ -9,7 +9,7 @@ Deploy:       push to GitHub → connect to Streamlit Cloud → add secrets
 """
 
 import streamlit as st
-from components.pulse360_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
+from components.pie360_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
 
 # ── Profile persistence helpers ────────────────────────────────────────────────
 _PROFILE_LS_KEY = "p360_profile"
@@ -68,7 +68,7 @@ def _try_restore_profile() -> bool:
                 meta = resp.user.user_metadata or {}
                 saved = meta.get(_PROFILE_LS_KEY)
                 if saved in _PROFILES:
-                    st.session_state["pulse360_profile"] = saved
+                    st.session_state["pie360_profile"] = saved
                     return True
     except Exception:
         pass
@@ -84,7 +84,7 @@ def _try_restore_profile() -> bool:
             key="_p360_ls_read",
         )
         if isinstance(raw, str) and raw in _PROFILES:
-            st.session_state["pulse360_profile"] = raw
+            st.session_state["pie360_profile"] = raw
             return True
         if raw == 0:
             # JS hasn't executed yet — returning False causes a brief blank frame;
@@ -287,7 +287,7 @@ def _render_onboarding() -> None:
 """, unsafe_allow_html=True)
 
         if st.button("Get Started →", type="primary", width='stretch'):
-            st.session_state["pulse360_profile"] = chosen
+            st.session_state["pie360_profile"] = chosen
             _save_profile(chosen)   # persist so returning users skip this screen
             for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
                 st.session_state.pop(key, None)
@@ -365,7 +365,7 @@ if _post_auth_dest and get_session_user():
     st.switch_page(_post_auth_dest)
 
 # ── Restore saved profile (skips onboarding for returning users) ──────────────
-if "pulse360_profile" not in st.session_state:
+if "pie360_profile" not in st.session_state:
     if _try_restore_profile():
         st.rerun()   # profile found — skip onboarding on next render
     # If _try_restore_profile() returned False we either:
@@ -374,14 +374,14 @@ if "pulse360_profile" not in st.session_state:
     #  (b) confirmed no saved profile — show onboarding intentionally
 
 # ── Run onboarding if no profile set (returns early, pg.run() is skipped) ─────
-if "pulse360_profile" not in st.session_state:
+if "pie360_profile" not in st.session_state:
     _render_onboarding()
     # _render_onboarding() returns here; pg.run() below is never reached.
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     profile = get_profile()
-    profile_key = st.session_state.get("pulse360_profile", "Beginner")
+    profile_key = st.session_state.get("pie360_profile", "Beginner")
 
     # Profile badge + switcher
     st.markdown(f"""
@@ -429,7 +429,7 @@ with st.sidebar:
         key="sidebar_profile_switch",
     )
     if new_profile != profile_key:
-        st.session_state["pulse360_profile"] = new_profile
+        st.session_state["pie360_profile"] = new_profile
         _save_profile(new_profile)   # persist profile change
         for key in ["portfolio_scored", "heatmap_prefill", "heatmap_extract_msg"]:
             st.session_state.pop(key, None)
@@ -554,12 +554,12 @@ with st.sidebar:
 
 # ── Alert engine — check rules on every page load ─────────────────────────────
 # We only run the check when the dashboard has already cached live values in
-# session state (key: "pulse360_live_values"), so we never trigger a fresh FRED
+# session state (key: "pie360_live_values"), so we never trigger a fresh FRED
 # pull from the router itself.  The Dashboard page populates that key.
 try:
     from components.alert_engine import check_and_render_alerts as _check_alerts
-    _live = st.session_state.get("pulse360_live_values")
-    _prob = st.session_state.get("pulse360_recession_prob")
+    _live = st.session_state.get("pie360_live_values")
+    _prob = st.session_state.get("pie360_recession_prob")
     if _live is not None:
         _check_alerts(_live, _prob)
 except Exception:

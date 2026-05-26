@@ -389,7 +389,7 @@ def _send_via_transport(to: str, subject: str, html: str) -> tuple[bool, str]:
     #     from sendgrid import SendGridAPIClient
     #     from sendgrid.helpers.mail import Mail
     #     message = Mail(
-    #         from_email    = st.secrets.get("SENDGRID_FROM", "pulse360@yourdomain.com"),
+    #         from_email    = st.secrets.get("SENDGRID_FROM", "pie360@yourdomain.com"),
     #         to_emails     = to,
     #         subject       = subject,
     #         html_content  = html,

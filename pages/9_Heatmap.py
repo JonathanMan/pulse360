@@ -29,7 +29,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from ai.claude_client import extract_tickers_from_screenshot
-from components.pulse360_theme import inject_theme
+from components.pie360_theme import inject_theme
 from components.user_profile import feature_visible
 from components.stock_score_utils import (
 
@@ -742,7 +742,7 @@ export_df.to_csv(csv_buf, index=False)
 st.download_button(
     label="📥 Export Heatmap as CSV",
     data=csv_buf.getvalue(),
-    file_name="pulse360_portfolio_heatmap.csv",
+    file_name="pie360_portfolio_heatmap.csv",
     mime="text/csv",
     help="Download regime scores for all holdings",
 )

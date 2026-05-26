@@ -4,7 +4,7 @@ components/watchlist_store.py
 Browser-persistent watchlist using localStorage via streamlit-javascript.
 
 The watchlist is stored in the browser's localStorage under the key
-'pulse360_watchlist' as a JSON array of uppercase ticker strings:
+'pie360_watchlist' as a JSON array of uppercase ticker strings:
   ["AAPL", "MSFT", "GOOGL"]
 
 Persistence model
@@ -37,7 +37,8 @@ from __future__ import annotations
 import json
 import streamlit as st
 
-_LS_KEY = "pulse360_watchlist"
+_LS_KEY = "pie360_watchlist"
+_LS_KEY_LEGACY = "pulse360_watchlist"   # renamed 2026-05-26; migration runs on first read
 _MAX_TICKERS = 50
 
 # Path where the scheduled briefing agent reads the watchlist
@@ -62,7 +63,17 @@ def _js_read() -> list[str] | None:
         return None
 
     raw = st_javascript(
-        f"JSON.parse(localStorage.getItem('{_LS_KEY}') || '[]')",
+        f"""(() => {{
+            // Migrate from legacy key on first load
+            if (!localStorage.getItem('{_LS_KEY}')) {{
+                var legacy = localStorage.getItem('{_LS_KEY_LEGACY}');
+                if (legacy) {{
+                    localStorage.setItem('{_LS_KEY}', legacy);
+                    localStorage.removeItem('{_LS_KEY_LEGACY}');
+                }}
+            }}
+            return JSON.parse(localStorage.getItem('{_LS_KEY}') || '[]');
+        }})()""",
         key="wl_read",
     )
     # st_javascript returns 0 (int) before the component mounts on the first render.
@@ -208,7 +219,7 @@ def clear_watchlist() -> None:
 # ══════════════════════════════════════════════════════════════════════════════
 # Portfolio weights store
 # ══════════════════════════════════════════════════════════════════════════════
-# Stored separately in localStorage under 'pulse360_weights' as a JSON object:
+# Stored separately in localStorage under 'pie360_weights' as a JSON object:
 #   {"AAPL": 12.5, "MSFT": 8.0, ...}
 #
 # Follows the exact same two-tier pattern as the watchlist store:
@@ -217,7 +228,8 @@ def clear_watchlist() -> None:
 # - get_weight()    — reads session_state directly; safe in form submission handlers
 # ══════════════════════════════════════════════════════════════════════════════
 
-_WEIGHTS_KEY = "pulse360_weights"
+_WEIGHTS_KEY = "pie360_weights"
+_WEIGHTS_KEY_LEGACY = "pulse360_weights"  # renamed 2026-05-26; migration runs on first read
 
 
 def _js_read_weights() -> dict[str, float] | None:
@@ -234,7 +246,17 @@ def _js_read_weights() -> dict[str, float] | None:
         return None
 
     raw = st_javascript(
-        f"JSON.parse(localStorage.getItem('{_WEIGHTS_KEY}') || '{{}}')",
+        f"""(() => {{
+            // Migrate from legacy key on first load
+            if (!localStorage.getItem('{_WEIGHTS_KEY}')) {{
+                var legacy = localStorage.getItem('{_WEIGHTS_KEY_LEGACY}');
+                if (legacy) {{
+                    localStorage.setItem('{_WEIGHTS_KEY}', legacy);
+                    localStorage.removeItem('{_WEIGHTS_KEY_LEGACY}');
+                }}
+            }}
+            return JSON.parse(localStorage.getItem('{_WEIGHTS_KEY}') || '{{}}');
+        }})()""",
         key="wl_weights_read",
     )
     if raw is None or raw == 0:

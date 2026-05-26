@@ -117,7 +117,7 @@ _FEATURE_LEVELS: dict[str, int] = {
 
 def get_profile_key() -> str:
     """Return the current profile key, defaulting to 'Beginner'."""
-    return st.session_state.get("pulse360_profile", "Beginner")
+    return st.session_state.get("pie360_profile", "Beginner")
 
 
 def get_profile() -> dict:

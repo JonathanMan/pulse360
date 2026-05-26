@@ -51,7 +51,7 @@ DISCLAIMER = (
 )
 
 # ── Page CSS ──────────────────────────────────────────────────────────────────
-from components.pulse360_theme import inject_theme
+from components.pie360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
 inject_theme()
@@ -148,8 +148,8 @@ st.session_state["traffic_light"]         = model_output.traffic_light
 st.session_state["feature_summary"]       = format_features_for_prompt(model_output.features)
 
 # Populate live values for the alert engine (keyed by FRED series_id)
-st.session_state["pulse360_recession_prob"] = model_output.probability
-st.session_state["pulse360_live_values"] = {
+st.session_state["pie360_recession_prob"] = model_output.probability
+st.session_state["pie360_live_values"] = {
     f.series_id: f.current_value
     for f in model_output.features
     if f.current_value is not None

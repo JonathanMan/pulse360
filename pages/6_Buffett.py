@@ -16,7 +16,7 @@ from models.cycle_classifier import classify_cycle_phase
 from data.fred_client import compute_cfnai_signal
 
 # ── Dark-theme CSS (mirrors Dashboard) ───────────────────────────────────────
-from components.pulse360_theme import inject_theme
+from components.pie360_theme import inject_theme
 inject_theme()
 
 st.markdown("""

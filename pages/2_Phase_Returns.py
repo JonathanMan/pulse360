@@ -22,7 +22,7 @@ from models.phase_returns import (
 )
 from components.chart_utils import dark_layout, add_nber
 
-from components.pulse360_theme import inject_theme
+from components.pie360_theme import inject_theme
 
 from assets.logo_helper import header_with_logo
 header_with_logo("Phase Returns", "Asset Returns by Economic Cycle Phase")

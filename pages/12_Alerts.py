@@ -24,7 +24,7 @@ from components.alert_engine import (
     load_rules,
     toggle_rule,
 )
-from components.pulse360_theme import inject_theme
+from components.pie360_theme import inject_theme
 
 inject_theme()
 
