@@ -96,11 +96,14 @@ git -C ~/Downloads/pulse360 push origin master
 ```
 5. Streamlit Cloud autodeploys in ~1–2 min
 
-> ⚠️ **Do NOT use `deploy_macro_pulse.sh` for individual file changes.** It rsyncs with `--delete` from the parent Google Drive folder and will delete any repo file that isn't also in that folder. For new files, copy them there too:
+> ⚠️ **Do NOT use `deploy_macro_pulse.sh` for new files.** It rsyncs with `--delete` from `pulse360-app/` (NOT `Pulse360/`) and will delete any repo file that isn't in `pulse360-app/`. After adding new files via direct git, copy them to `pulse360-app/` so future deploys don't wipe them:
 > ```bash
 > cp ~/Downloads/pulse360/components/<file>.py \
->    "/Users/jonathanman/Library/CloudStorage/GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/components/<file>.py"
+>    "/Users/jonathanman/Library/CloudStorage/GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/pulse360-app/components/<file>.py"
+> cp ~/Downloads/pulse360/pages/<file>.py \
+>    "/Users/jonathanman/Library/CloudStorage/GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/pulse360-app/pages/<file>.py"
 > ```
+> **For new files: always use direct git first, then copy to `pulse360-app/`.** The deploy script has a timing issue where newly-copied files result in "Nothing to commit" on the first run.
 
 ## Commit convention
 `style: <description>` for CSS/visual changes  
