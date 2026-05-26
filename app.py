@@ -419,12 +419,6 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
 
-    # Sync widget state BEFORE rendering — prevents sidebar from reverting profile
-    # changes made by other pages (e.g. Settings). Streamlit ignores index= for
-    # keyed widgets that already have a value in session_state.
-    if st.session_state.get("sidebar_profile_switch") != profile_key:
-        st.session_state["sidebar_profile_switch"] = profile_key
-
     # Profile switcher (compact selectbox)
     new_profile = st.selectbox(
         "Switch profile",
