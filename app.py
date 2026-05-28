@@ -10,6 +10,7 @@ Deploy:       push to GitHub → connect to Streamlit Cloud → add secrets
 
 import streamlit as st
 from components.pie360_theme import inject_theme, BLUE, BORDER, TEXT_PRI, TEXT_SEC, TEXT_MUT, CARD_BG, PAGE_BG
+from components.observability import init_app as _init_observability
 
 # ── Profile persistence helpers ────────────────────────────────────────────────
 _PROFILE_LS_KEY = "p360_profile"
@@ -104,8 +105,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Global Taplox theme (light mode) ─────────────────────────────────────────
+# ── Global theme + observability ─────────────────────────────────────────────
 inject_theme()
+_init_observability()   # bootstraps Sentry once for all pages (no-op if SENTRY_DSN unset)
 
 # ── Onboarding card styles (light variants) ───────────────────────────────────
 st.markdown(f"""

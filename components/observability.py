@@ -268,10 +268,24 @@ def track(
 
 # ── 4. Page-view auto-tracker ─────────────────────────────────────────────────
 
+def init_app() -> None:
+    """
+    Call once in app.py (the navigation router) immediately after inject_theme().
+    - Initialises Sentry globally so all pages benefit from error capture
+    - Does NOT fire a page_view event (use init_page() per page for that)
+    - Safe to call multiple times — Sentry init is guarded by _sentry_initialised
+
+    Usage (app.py):
+        from components.observability import init_app
+        init_app()
+    """
+    _init_sentry()
+
+
 def init_page(page_name: str) -> None:
     """
     Call once at the top of each page after imports.
-    - Initialises Sentry (no-op if SENTRY_DSN not set)
+    - Initialises Sentry (no-op if SENTRY_DSN not set, no-op if already done)
     - Fires a "page_view" analytics event (deduplicated per session per page)
     - Returns immediately; all I/O is non-blocking
 
