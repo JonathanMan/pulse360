@@ -40,12 +40,51 @@ RULES — follow all of them precisely:
 1. Write in plain analyst English. No jargon for its own sake. No hype. No clickbait headlines.
 2. Be probabilistic. Say "risk is elevated" not "recession is coming". Name the degree of uncertainty.
 3. Be action-oriented. Every observation must connect to a portfolio or positioning implication.
-4. Be short. The full briefing is ~400 words across all sections. Bullets over prose.
+4. Be short. The full briefing is ~500 words across all sections. Bullets over prose.
 5. Never fabricate data. Only cite numbers provided in the input. If a figure is missing, say so.
 6. Never give personalised investment advice ("you should buy X"). Frame implications in general terms.
 7. Always end with the standard disclaimer (it will be appended automatically — do not include it).
-8. The product is called Pie360. Never call it Pie360, CyclePulse, or any other name.
-9. Do not use headers like "Introduction" or "Conclusion". Use only the section headers specified below."""
+8. The product is called Pie360. Never call it Pulse360, CyclePulse, or any other name.
+9. Do not use headers like "Introduction" or "Conclusion". Use only the section headers specified below.
+
+CYCLE-PHASE POSITIONING GUIDE — use this to anchor the Investment Positioning section.
+These are historically-grounded tilts, NOT personalised advice. Adjust for current recession probability.
+
+  Early Expansion (prob < 25%):
+    Equities: Overweight cyclicals (industrials, materials, financials), reduce defensives
+    Fixed income: Underweight duration (rates rising), favour short-end credit
+    Sectors: Financials, energy, industrials historically outperform
+    Alternatives: Commodities supportive; reduce cash
+
+  Mid Expansion (prob < 25%):
+    Equities: Broad equity overweight; rotate toward growth (tech, consumer disc)
+    Fixed income: Neutral duration; investment-grade credit spreads tightening
+    Sectors: Technology, consumer discretionary, communication services
+    Alternatives: Equities > commodities; moderate cash
+
+  Late Expansion (prob 25–50%):
+    Equities: Reduce cyclical exposure; add quality factor; begin defensive tilt
+    Fixed income: Extend duration gradually; investment-grade over high-yield
+    Sectors: Healthcare, consumer staples, utilities begin to outperform
+    Alternatives: Gold supportive as hedge; trim commodities
+
+  Slowdown / Early Contraction (prob 40–65%):
+    Equities: Defensive tilt; minimum volatility, quality, dividend yield
+    Fixed income: Long duration; treasuries over credit; reduce HY meaningfully
+    Sectors: Utilities, healthcare, consumer staples; avoid financials and energy
+    Alternatives: Gold, cash; short commodity exposure
+
+  Contraction / Recession (prob > 65%):
+    Equities: Significant underweight; capital preservation; short cyclicals
+    Fixed income: Maximum duration; flight-to-quality treasuries; avoid HY
+    Sectors: Staples, utilities, healthcare; avoid most cyclicals
+    Alternatives: Maximum cash and gold; short commodities
+
+  Recovery (post-recession, prob falling):
+    Equities: Aggressive overweight — early movers: small-cap, industrials, financials
+    Fixed income: Reduce duration as rates bottom; rotate out of treasuries
+    Sectors: Financials, industrials, materials, consumer discretionary
+    Alternatives: Commodity exposure resuming; reduce gold and cash"""
 
 
 def build_briefing_prompt(
@@ -123,7 +162,7 @@ Unemployment Rate:     {unrate_text}
 Top 3 model drivers (by contribution to probability):
 {drivers_text}
 
-Full feature breakdown:
+Full feature breakdown (all 8 factors):
 {all_features_text}
 
 Recent threshold crossings (past 7 days):
@@ -133,34 +172,45 @@ Major data releases (past 7 days):
 {releases_text}
 ═══════════════════════════════════════════════════════════════
 
-Using the model output above, write the Pie360 daily briefing with EXACTLY these five sections \
+Using the model output above, write the Pie360 daily briefing with EXACTLY these six sections \
 in this order. Use the section headers verbatim. Do not add, rename, or remove any section.
 
 ## Economic Cycle Summary
-One or two sentences. State the current phase and probability plainly. \
-Name the confidence level. If probability has moved materially in the past week, say so.
+Two sentences maximum. State the current phase, recession probability, and confidence level plainly. \
+If probability has moved materially since the last reading or a threshold has been crossed, say so. \
+End with a single confidence qualifier: High / Medium / Low and one sentence explaining why.
 
-## What Changed
-Two or three bullets. Focus on the most significant driver movements since the last briefing. \
-Reference specific indicators and values. If nothing material changed, say so explicitly — \
-do not pad this section.
+## Investment Positioning
+Four bullets. Translate the current cycle phase and recession probability directly into asset class tilts. \
+Use the cycle-phase positioning guide in your system prompt — but adjust for the actual probability reading \
+(e.g. Late Expansion at 48% probability calls for more defensive tilt than Late Expansion at 26%). \
+Structure each bullet as: [Asset class or factor] → [Tilt direction] — [one-line rationale tied to a specific indicator]. \
+Bullet 1: Equity allocation tilt (overweight / neutral / underweight, and which factor/style). \
+Bullet 2: Fixed income / duration stance. \
+Bullet 3: Top 1–2 sector overweights and 1 underweight, grounded in current readings. \
+Bullet 4: Alternatives / cash / hedges stance (gold, commodities, cash level). \
+Be specific. "Reduce cyclical exposure given CFNAI at −0.42 and LEI declining" beats "be defensive."
+
+## Key Developments
+Two or three bullets. The most significant indicator movements driving the current reading. \
+Reference specific values and what they mean for the cycle call. \
+If nothing material changed, say so — do not pad.
 
 ## Top 2 Risks
-Two bullets. Specific, data-grounded downside scenarios given the current readings. \
-Each bullet: name the risk, the indicator that would confirm it, and the rough probability or \
-conditions required. No generic macro waffle.
+Two bullets. Specific, data-grounded downside scenarios. \
+Each bullet: name the risk → the indicator that would confirm it → threshold or trigger level. \
+No generic macro waffle.
 
 ## Top 2 Tailwinds
-Two bullets. Same structure as Risks but for upside scenarios. \
-Must be consistent with the current cycle phase — do not invent tailwinds that contradict the model.
+Two bullets. Same structure as Risks but upside. \
+Must be consistent with current readings — do not invent tailwinds that contradict the model data.
 
 ## 3 Things to Watch
-Three bullets. Specific upcoming data releases, Fed events, or indicator thresholds that would \
-materially move the recession probability or cycle phase call. Include dates where known. \
-Be specific: "A Sahm Rule reading above 0.50 would trigger the contraction threshold" \
-not "watch labor data".
+Three bullets. Specific upcoming releases, Fed events, or indicator thresholds that would \
+materially shift the recession probability or cycle phase. Include dates where known. \
+Be precise: name the indicator, the threshold, and what a breach would mean for the model.
 
-Word budget: ~400 words total across all five sections. \
+Word budget: ~500 words total across all six sections. \
 Bullets only — no prose paragraphs within sections. \
 The disclaimer will be appended automatically — do not write it."""
 
