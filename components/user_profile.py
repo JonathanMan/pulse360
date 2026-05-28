@@ -178,6 +178,7 @@ def get_nav_pages(profile_key: str | None = None) -> dict[str, list]:
 
     settings_pages = [
         st.Page("pages/12_Alerts.py",   title="Alerts",   icon="🔔"),
+        st.Page("pages/14_Friends.py",  title="Friends",  icon="👥"),
         st.Page("pages/10_Settings.py", title="Settings", icon="⚙️"),
     ]
 
