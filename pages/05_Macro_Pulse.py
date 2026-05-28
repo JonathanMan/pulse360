@@ -3,6 +3,8 @@ import anthropic
 import json
 from datetime import date, datetime
 from components.supabase_client import get_client
+from components.pulse360_theme import inject_theme
+inject_theme()
 
 from assets.logo_helper import header_with_logo
 header_with_logo("Macro Pulse", "Real-time Forecaster Signals & Consensus Tracking")

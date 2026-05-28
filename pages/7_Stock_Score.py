@@ -48,6 +48,8 @@ from components.stock_score_utils import (
 )
 
 from assets.logo_helper import header_with_logo
+from components.pulse360_theme import inject_theme
+inject_theme()
 header_with_logo("Stock Score", "AI-Powered Stock Scoring & Cycle Alignment")
 
 

@@ -27,6 +27,8 @@ import pandas as pd
 import streamlit as st
 
 from components.user_profile import feature_visible
+from components.pulse360_theme import inject_theme
+inject_theme()
 
 from components.stock_score_utils import (
 

@@ -33,7 +33,6 @@ Usage (in 0_Dashboard.py sidebar):
 from __future__ import annotations
 
 import logging
-import textwrap
 from datetime import date
 from typing import Optional
 
@@ -164,7 +163,7 @@ _EMAIL_TEMPLATE = """\
   </div>
 
   <div class="footer">
-    Pie360 · Personal macro dashboard · <a href="https://pulse360.streamlit.app" style="color:#555">Open app</a>
+    Pie360 · Personal macro dashboard · <a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app" style="color:#555">Open app</a>
   </div>
 
 </div>

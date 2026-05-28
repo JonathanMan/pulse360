@@ -23,6 +23,8 @@ from components.auth import (
     get_google_oauth_url,
 )
 from components.supabase_client import get_client
+from components.pulse360_theme import inject_theme
+inject_theme()
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.markdown("""

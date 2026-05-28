@@ -21,6 +21,8 @@ from components.cycle_engine import detect_cycle_phase, CycleResult
 from components.observability import init_page, log, track, capture_exception
 from components.user_profile import get_profile_key
 from assets.logo_helper import header_with_logo
+from components.pulse360_theme import inject_theme
+inject_theme()
 
 init_page("Macro Playbook")
 

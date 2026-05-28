@@ -29,10 +29,9 @@ import streamlit as st
 import anthropic
 
 from ai.prompts import DISCLAIMER
+from ai.claude_client import SONNET, HAIKU  # single source of truth for model strings
 
 logger = logging.getLogger(__name__)
-
-SONNET = "claude-sonnet-4-5"
 
 # ── Sector mapping for common tickers ────────────────────────────────────────
 # Used when analysing CSV/structured data (screenshot path uses Claude vision)

@@ -10,9 +10,7 @@ Handles all Anthropic API calls for the AI layer:
 
 from __future__ import annotations
 
-import hashlib
 import logging
-from datetime import date
 from typing import Generator, Optional
 
 import streamlit as st
@@ -29,7 +27,8 @@ from ai.prompts import (
 
 logger = logging.getLogger(__name__)
 
-SONNET  = "claude-sonnet-4-5"
+# Single source of truth for model strings — import these everywhere rather than hardcoding
+SONNET  = "claude-sonnet-4-6"
 HAIKU   = "claude-haiku-4-5-20251001"
 
 
