@@ -159,16 +159,22 @@ def _traffic_light(prob: float) -> str:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 BRIEFING_SYSTEM = """You are the analytical engine behind Pie360, an AI-powered economic cycle \
-dashboard. Your job is to write a concise, high-signal daily macro briefing for a sophisticated \
-personal investor (Jonathan) who monitors the economic cycle daily.
+dashboard. Your job is to write a concise, investment-actionable daily macro briefing for a \
+sophisticated personal investor (Jonathan) who monitors the economic cycle daily and makes \
+active asset allocation decisions.
 
-RULES:
-1. Write in plain analyst English. No jargon for its own sake. No hype.
-2. Every claim must be grounded in the data provided. Do not invent figures.
-3. Be specific: name indicators, values, and thresholds.
-4. Bullets only within sections. No prose paragraphs inside sections.
-5. ~400 words total. Do not exceed this.
-6. Do not write a disclaimer — it will be appended automatically."""
+RULES — follow all of them precisely:
+1. Write in plain analyst English. No jargon for its own sake. No hype. No clickbait headlines.
+2. Be probabilistic. Say "risk is elevated" not "recession is coming". Name the degree of uncertainty.
+3. Be specific and quantitative wherever possible — name indicators, exact values, and thresholds.
+4. Never fabricate data. Only cite numbers explicitly provided in the input. If a figure is missing, say "N/A".
+5. Keep the total output under ~900 words across all sections.
+6. Use the section headers exactly as specified. Do not add, rename, or remove any section.
+7. Bullets only within sections that call for bullets. The Tail Risks and Confidence Score sections are single paragraphs.
+8. The Asset Class Tilts section must use the exact signal labels: OVERWEIGHT, NEUTRAL, or UNDERWEIGHT. Format as a plain-text aligned table (no markdown table syntax).
+9. Never give personalised investment advice ("you should buy X"). Frame all signals in general, historical, cycle-framework terms.
+10. End every briefing with this exact disclaimer on its own line: "This is educational macro commentary, not investment advice."
+11. Do not write any other disclaimer — only the one specified in rule 10."""
 
 
 def build_briefing_prompt(
@@ -194,7 +200,7 @@ def build_briefing_prompt(
 
     return f"""Date: {today}
 
-═══ MODEL OUTPUT ═══════════════════════════════════════
+═══ MODEL OUTPUT ════════════════════════════════════════════
 Cycle Phase:           {phase} ({confidence} confidence)
 Recession Probability: {recession_prob:.1f}%  →  {tl_text}
 
@@ -207,24 +213,75 @@ Key Indicators (latest FRED readings):
 
 Cycle model signal breakdown:
 {signals_summary}
-════════════════════════════════════════════════════════
+═════════════════════════════════════════════════════════════
 
-Write the Pie360 daily briefing with EXACTLY these five sections (use headers verbatim):
+Using ONLY the data above, write the Pie360 daily macro briefing with EXACTLY these seven \
+sections in this order. Use the section headers verbatim. Do not add, rename, or remove any section.
 
-## Economic Cycle Summary
-One or two sentences. State the current phase and probability plainly. Name the confidence level.
+## Cycle Phase Declaration
+State the current cycle phase, a confidence percentage (0–100%), and which 2–3 specific \
+indicators drove the phase call. Reference exact values from the data provided. \
+Flag any indicator that is near a phase-transition threshold and what crossing it would mean. \
+Format: one sentence declaring the phase + confidence, then 2–3 bullets naming the driving indicators.
 
-## What Changed
-Two or three bullets. Most significant indicator movements. If nothing material changed, say so.
+## Recession Probability
+State the current recession probability score and its traffic-light status. Describe the trend \
+direction (rising / falling / stable) based on the signal breakdown provided. Then state \
+2 specific things that would need to change in the indicator readings to move the probability \
+materially higher (toward RED) and 1 thing that would move it materially lower (toward GREEN). \
+Reference specific indicator thresholds. One compact paragraph.
 
-## Top 2 Risks
-Two bullets. Specific, data-grounded downside scenarios. Name the indicator and threshold.
+## Asset Class Tilts
+Based on the current cycle phase and indicator readings, provide an explicit positioning signal \
+for each asset class below. Format as a plain-text table with three aligned columns — \
+Asset Class | Signal | Rationale — where Signal must be exactly one of: OVERWEIGHT, NEUTRAL, \
+or UNDERWEIGHT. One concise rationale sentence per row, grounded in the provided data. \
+Use exactly these rows in this order:
+  US Large Cap Equities
+  US Small Cap Equities
+  International Developed Equities
+  Emerging Market Equities
+  Long-Duration Bonds
+  Investment-Grade Credit
+  High-Yield Credit
+  Commodities — Energy
+  Commodities — Metals
+  Cash
+Base every call on the provided data and well-established historical cycle patterns for this phase. \
+Do not invent signals that contradict the indicators.
 
-## Top 2 Tailwinds
-Two bullets. Upside scenarios consistent with the current phase.
+## Sector Rotation Signals
+Apply the standard economic-cycle sector rotation framework to the current phase and indicator \
+readings. List the top 2 sectors to favour and the top 2 sectors to avoid. \
+One bullet per sector. Each bullet: sector name, signal (FAVOUR / AVOID), and the single \
+indicator from the data above that most strongly drives the call. \
+Reference the phase-framework rationale (e.g. early cycle → financials/industrials favour; \
+late cycle → energy/materials favour; contraction → utilities/staples favour). \
+Example: "- FAVOUR Industrials: INDPRO at {fmt(indpro, ' index')} and LEI at {fmt(lei)} signal early-cycle expansion."
 
-## 3 Things to Watch
-Three bullets. Specific upcoming data releases or thresholds that would move the call. Include dates where known."""
+## Top 3 Macro Observations
+The three most important data points or signals from the provided readings, ranked by investment \
+significance. One bullet per observation. Each bullet: name the data point with its exact value, \
+describe why it matters in the current cycle context, then add one explicit investment implication \
+sentence (what this historically suggests for positioning). Be specific — "yield curve at \
+{fmt(t10y2y, ' pp')} implies historically that duration extension has outperformed over the \
+next 6 months" is good; "the yield curve is concerning" is not.
+
+## Tail Risks
+One paragraph of 3–4 sentences. Identify 2–3 specific, named risks that could cause a cycle \
+phase reassessment within 30 days. For each risk: name it explicitly, identify the indicator \
+that would confirm it is materialising, and state the threshold or reading that would trigger \
+a phase downgrade. Conclude with which of these risks currently has the highest probability \
+of occurring based on the data provided.
+
+## Confidence Score
+State the overall confidence in the current cycle call as exactly one of: HIGH, MEDIUM, or LOW. \
+Follow with one sentence justifying the rating by citing the degree of agreement or conflict \
+across the model signals provided (e.g. how many indicators align vs conflict with the declared \
+phase, whether recent trends support or contradict the call). One sentence only — be direct.
+
+---
+This is educational macro commentary, not investment advice."""
 
 
 def generate_briefing(
@@ -253,7 +310,7 @@ def generate_briefing(
 
     response = client.messages.create(
         model      = "claude-sonnet-4-6",
-        max_tokens = 1200,
+        max_tokens = 2200,
         system     = BRIEFING_SYSTEM,
         messages   = [{"role": "user", "content": prompt}],
     )
