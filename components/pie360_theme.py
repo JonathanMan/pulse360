@@ -453,6 +453,120 @@ div, section, article, aside, nav, header, footer, main {{
     border-radius: 0 !important;
     box-shadow: none !important;
 }}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE — 390px  (iPhone-width viewport)
+   Streamlit's flex column grid does NOT auto-stack on small screens.
+   These rules plug the three real overflow scenarios:
+     1. Tab pill strip  — 8 tabs overflow at 390px → horizontal scroll
+     2. 5-column scorecard → horizontal scroll with min-width per tile
+     3. 3-column parallels → horizontal scroll
+     4. Block-container gutters → trimmed from 3rem → 0.75rem
+     5. Plotly charts → max-width guard
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {{
+
+    /* 1. Block container — shrink gutters for usable reading width */
+    .block-container,
+    [data-testid="stMainBlockContainer"] {{
+        padding-left:  0.75rem !important;
+        padding-right: 0.75rem !important;
+        padding-top:   0.75rem !important;
+        max-width: 100% !important;
+    }}
+
+    /* 2. Tab pill strip — single row, swipeable, no wrapping */
+    .stTabs [data-baseweb="tab-list"] {{
+        overflow-x: auto    !important;
+        flex-wrap:  nowrap  !important;
+        /* hide scrollbar visually but keep scroll behaviour */
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+    }}
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{
+        display: none !important;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        white-space: nowrap  !important;
+        flex-shrink: 0       !important;
+        padding:     5px 10px !important;
+        font-size:   0.62rem !important;
+    }}
+
+    /* 3a. 5-column scorecard — horizontal scroll row */
+    /*     Streamlit wraps st.columns(5) in stHorizontalBlock.
+           :has(:nth-child(5)) matches only rows with ≥ 5 columns.
+           (Chrome 105+, Safari 15.4+, Firefox 121+ — all current mobile) */
+    [data-testid="stHorizontalBlock"]:has(
+        > [data-testid="stColumn"]:nth-child(5)
+    ) {{
+        overflow-x: auto     !important;
+        flex-wrap:  nowrap   !important;
+        gap:        6px      !important;
+    }}
+    [data-testid="stHorizontalBlock"]:has(
+        > [data-testid="stColumn"]:nth-child(5)
+    ) > [data-testid="stColumn"] {{
+        flex:      0 0 auto  !important;
+        min-width: 130px     !important;
+    }}
+
+    /* 3b. 3-column historical parallels — horizontal scroll */
+    [data-testid="stHorizontalBlock"]:has(
+        > [data-testid="stColumn"]:nth-child(3)
+    ):not(:has(
+        > [data-testid="stColumn"]:nth-child(4)
+    )) {{
+        overflow-x: auto     !important;
+        flex-wrap:  nowrap   !important;
+        gap:        8px      !important;
+    }}
+    [data-testid="stHorizontalBlock"]:has(
+        > [data-testid="stColumn"]:nth-child(3)
+    ):not(:has(
+        > [data-testid="stColumn"]:nth-child(4)
+    )) > [data-testid="stColumn"] {{
+        flex:      0 0 auto  !important;
+        min-width: 260px     !important;
+    }}
+
+    /* 4. Plotly charts — cap width, allow horizontal scroll on overflow */
+    [data-testid="stPlotlyChart"] {{
+        max-width:  100%     !important;
+        overflow-x: auto     !important;
+    }}
+    [data-testid="stPlotlyChart"] > div {{
+        max-width: 100% !important;
+    }}
+
+    /* 5. Metric value — reduce size so tile doesn't clip on narrow column */
+    [data-testid="stMetricValue"] {{
+        font-size: 1.35rem !important;
+    }}
+
+    /* 6. DataFrames — horizontal scroll when table wider than viewport */
+    [data-testid="stDataFrame"] > div {{
+        overflow-x: auto !important;
+    }}
+
+    /* 7. Sidebar collapse button — ensure it stays visible (not hidden by theme) */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapsedControl"] {{
+        display:    flex       !important;
+        visibility: visible    !important;
+        opacity:    1          !important;
+    }}
+
+    /* 8. Page header h1 — slightly smaller so it fits without wrapping */
+    h1, [data-testid="stHeadingWithActionElements"] h1 {{
+        font-size: 1.2rem !important;
+    }}
+
+    /* 9. Overview row 2-column section labels — full width on narrow screen */
+    [data-testid="stVerticalBlockBorderWrapper"] {{
+        width: 100% !important;
+    }}
+}}
 </style>
 """
 
