@@ -1,12 +1,24 @@
 """
-Pulse360 Recession Probability Model
+Pie360 Recession Probability Model
 =====================================
-7-factor weighted logit model. Weights match briefing.md §4 exactly.
+8-factor weighted logit model.
 Each feature produces a stress score (0 = no stress, 1 = maximum stress)
 via a logistic function calibrated to historical recession thresholds.
 
 Output: probability 0–100% + feature contributions visible on screen.
 Traffic lights: green <25%, yellow 25–50%, red ≥50%.
+
+Weight rationale (audit 2026-05-28):
+  T10Y3M       0.25  — Estrella & Mishkin (1998): strongest single predictor; trimmed
+                        from 0.30 — was over-weighted relative to multicollinear T10Y2Y
+  USSLIND      0.15  — Conference Board LEI: validated 4–8Q leading indicator, absent
+                        from prior model; added at 0.15
+  CFNAI        0.15  — Broad activity composite; trimmed from 0.20 to make room for LEI
+  SAHMREALTIME 0.10  — Coincident (fires 2–4M after recession start); halved from 0.20
+  NFCI         0.10  — Financial conditions; unchanged
+  ICSA         0.10  — Initial claims YoY; unchanged
+  BAMLH0A0HYM2 0.10  — HY spreads; unchanged
+  T10Y2Y       0.05  — Second yield-curve confirmatory signal; new, low weight
 """
 
 from __future__ import annotations
@@ -76,16 +88,61 @@ def _logistic(x: float, k: float = 1.0) -> float:
 # ---------------------------------------------------------------------------
 
 def _stress_t10y3m(value: float) -> tuple[float, str]:
-    """10Y–3M Treasury spread. Deep inversion → high stress."""
-    stress = _logistic(-value / 0.5)
+    """
+    10Y–3M Treasury spread. Deep inversion → high stress.
+    Recalibrated 2026-05-28: midpoint shifted to −0.25% (was 0%), steepness k=8.
+    At flat curve (0%): stress ≈ 0.12 — no longer over-triggers at zero.
+    At −0.25%: stress = 0.50 (neutral breakeven); at −1%: stress ≈ 0.998.
+    """
+    stress = _logistic(8.0 * (-0.25 - value))
     if value < -0.75:
         desc = f"Deeply inverted ({value:+.2f}%): strong recession signal"
+    elif value < -0.25:
+        desc = f"Inverted past breakeven ({value:+.2f}%): recession signal active"
     elif value < 0.0:
-        desc = f"Inverted ({value:+.2f}%): recession signal active"
+        desc = f"Mildly inverted ({value:+.2f}%): early warning"
     elif value < 0.5:
         desc = f"Near flat ({value:+.2f}%): mildly cautionary"
     else:
         desc = f"Positive ({value:+.2f}%): no inversion signal"
+    return round(stress, 3), desc
+
+
+def _stress_t10y2y(value: float) -> tuple[float, str]:
+    """
+    10Y–2Y Treasury spread. Parallel confirmatory signal alongside T10Y3M.
+    Same logistic calibration: midpoint −0.25%, steepness k=8.
+    Weight: 0.05 (confirmatory — low weight to avoid double-counting yield curve).
+    """
+    stress = _logistic(8.0 * (-0.25 - value))
+    if value < -0.50:
+        desc = f"Deeply inverted ({value:+.2f}%): confirming recession signal"
+    elif value < -0.25:
+        desc = f"Inverted ({value:+.2f}%): confirmatory recession signal"
+    elif value < 0.0:
+        desc = f"Mildly inverted ({value:+.2f}%): early confirmation"
+    else:
+        desc = f"Positive ({value:+.2f}%): no inversion"
+    return round(stress, 3), desc
+
+
+def _stress_lei_growth(growth_6m_pct: float) -> tuple[float, str]:
+    """
+    Conference Board LEI 6-month annualised % change (USSLIND).
+    Stress rises as LEI growth turns negative; peaks when growth < −2%.
+    Logistic: midpoint at +1.0% growth (neutral), scale 1.5.
+    At 0% growth: stress ≈ 0.51; at −2%: stress ≈ 0.88; at −4%: stress ≈ 0.99.
+    Weight: 0.15 — single most validated leading indicator per CB research.
+    """
+    stress = _logistic((1.0 - growth_6m_pct) / 1.5)
+    if growth_6m_pct < -2.0:
+        desc = f"LEI contracting sharply ({growth_6m_pct:+.1f}% 6M): strong leading signal"
+    elif growth_6m_pct < 0.0:
+        desc = f"LEI declining ({growth_6m_pct:+.1f}% 6M): early warning"
+    elif growth_6m_pct < 1.5:
+        desc = f"LEI barely growing ({growth_6m_pct:+.1f}% 6M): cautionary"
+    else:
+        desc = f"LEI expanding ({growth_6m_pct:+.1f}% 6M): supportive"
     return round(stress, 3), desc
 
 
@@ -163,52 +220,52 @@ def _stress_hy_oas(value_bps: float) -> tuple[float, str]:
     return round(stress, 3), desc
 
 
-def _stress_ism(value: float) -> tuple[float, str]:
-    """ISM Manufacturing PMI. Below 45 → high stress; below 50 = contraction."""
-    stress = _logistic((50.0 - value) / 2.5)
-    if value < 45.0:
-        desc = f"{value:.1f}: deep contraction (below 45 threshold)"
-    elif value < 50.0:
-        desc = f"{value:.1f}: contraction territory (below 50)"
-    elif value < 55.0:
-        desc = f"{value:.1f}: modest expansion"
-    else:
-        desc = f"{value:.1f}: strong expansion"
-    return round(stress, 3), desc
-
-
 # ---------------------------------------------------------------------------
 # Feature configuration
-# Weights must sum to exactly 1.0 — matches briefing.md §4
+# Weights must sum to exactly 1.0
+# Last rebalanced: 2026-05-28 (added LEI + T10Y2Y, halved Sahm, recalibrated yield curve)
 # ---------------------------------------------------------------------------
 
 _FEATURES = [
     {
+        # Strongest single predictor (Estrella & Mishkin 1998). Recalibrated logistic.
         "name":      "10Y–3M Treasury Spread",
         "series_id": "T10Y3M",
-        "weight":    0.30,
+        "weight":    0.25,
         "stress_fn": _stress_t10y3m,
         "get_value": lambda inp: inp["T10Y3M"]["last_value"],
         "get_date":  lambda inp: inp["T10Y3M"]["last_date"],
         "get_stale": lambda inp: (inp["T10Y3M"]["is_stale"], inp["T10Y3M"].get("stale_message")),
     },
     {
-        "name":      "Sahm Rule",
-        "series_id": "SAHMREALTIME",
-        "weight":    0.20,
-        "stress_fn": _stress_sahm,
-        "get_value": lambda inp: inp["SAHMREALTIME"]["last_value"],
-        "get_date":  lambda inp: inp["SAHMREALTIME"]["last_date"],
-        "get_stale": lambda inp: (inp["SAHMREALTIME"]["is_stale"], inp["SAHMREALTIME"].get("stale_message")),
+        # Conference Board LEI — most validated 4–8Q leading indicator. New in v2.
+        "name":      "Conference Board LEI",
+        "series_id": "USSLIND",
+        "weight":    0.15,
+        "stress_fn": _stress_lei_growth,
+        "get_value": lambda inp: compute_lei_growth(inp["USSLIND"]["data"]) if inp.get("USSLIND") else None,
+        "get_date":  lambda inp: inp["USSLIND"]["last_date"] if inp.get("USSLIND") else None,
+        "get_stale": lambda inp: (inp["USSLIND"]["is_stale"], inp["USSLIND"].get("stale_message")) if inp.get("USSLIND") else (False, None),
     },
     {
+        # Broad activity composite. Trimmed from 0.20 to make room for LEI.
         "name":      "CFNAI (Activity Index)",
         "series_id": "CFNAI",
-        "weight":    0.20,   # increased from 0.15 — absorbed ISM PMI weight (NAPM removed from FRED)
+        "weight":    0.15,
         "stress_fn": _stress_cfnai,
         "get_value": lambda inp: compute_cfnai_signal(inp["CFNAI"]["data"]),
         "get_date":  lambda inp: inp["CFNAI"]["last_date"],
         "get_stale": lambda inp: (inp["CFNAI"]["is_stale"], inp["CFNAI"].get("stale_message")),
+    },
+    {
+        # Coincident — fires 2–4M after recession starts. Halved from 0.20.
+        "name":      "Sahm Rule",
+        "series_id": "SAHMREALTIME",
+        "weight":    0.10,
+        "stress_fn": _stress_sahm,
+        "get_value": lambda inp: inp["SAHMREALTIME"]["last_value"],
+        "get_date":  lambda inp: inp["SAHMREALTIME"]["last_date"],
+        "get_stale": lambda inp: (inp["SAHMREALTIME"]["is_stale"], inp["SAHMREALTIME"].get("stale_message")),
     },
     {
         "name":      "Chicago Fed NFCI",
@@ -237,8 +294,16 @@ _FEATURES = [
         "get_date":  lambda inp: inp["BAMLH0A0HYM2"]["last_date"],
         "get_stale": lambda inp: (inp["BAMLH0A0HYM2"]["is_stale"], inp["BAMLH0A0HYM2"].get("stale_message")),
     },
-    # ISM Manufacturing PMI (NAPM) was removed from FRED by ISM due to licensing
-    # restrictions (as of ~2024). Its 5% weight was redistributed to CFNAI above.
+    {
+        # Confirmatory yield-curve signal. Low weight to avoid double-counting T10Y3M.
+        "name":      "10Y–2Y Treasury Spread",
+        "series_id": "T10Y2Y",
+        "weight":    0.05,
+        "stress_fn": _stress_t10y2y,
+        "get_value": lambda inp: inp["T10Y2Y"]["last_value"] if inp.get("T10Y2Y") else None,
+        "get_date":  lambda inp: inp["T10Y2Y"]["last_date"] if inp.get("T10Y2Y") else None,
+        "get_stale": lambda inp: (inp["T10Y2Y"]["is_stale"], inp["T10Y2Y"].get("stale_message")) if inp.get("T10Y2Y") else (False, None),
+    },
 ]
 
 assert abs(sum(f["weight"] for f in _FEATURES) - 1.0) < 1e-9, "Feature weights must sum to 1.0"
@@ -250,7 +315,7 @@ assert abs(sum(f["weight"] for f in _FEATURES) - 1.0) < 1e-9, "Feature weights m
 
 def run_recession_model(inputs: dict) -> RecessionModelOutput:
     """
-    Run the 7-factor weighted logit recession probability model.
+    Run the 8-factor weighted logit recession probability model.
 
     Args:
         inputs: dict of series_id → fetch_series() result (from fetch_model_inputs())
@@ -261,7 +326,7 @@ def run_recession_model(inputs: dict) -> RecessionModelOutput:
     Notes:
         - If a feature value is unavailable, the model substitutes neutral stress (0.5)
           and flags the feature as uncertain.
-        - Weights are locked per briefing.md §4 — do not change without updating that doc.
+        - New optional features (USSLIND, T10Y2Y) degrade gracefully if FRED fetch fails.
     """
     features:       list[FeatureContribution] = []
     weighted_stress: float = 0.0

@@ -69,6 +69,7 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "DGS10":            ("10Y Treasury Yield",                     "daily",     5),
     "DGS30":            ("30Y Treasury Yield",                     "daily",     5),
     "T10Y2Y":           ("10Y–2Y Treasury Spread",                 "daily",     5),
+    "USSLIND":          ("Conference Board LEI",                   "monthly",  65),
     "BAMLC0A0CM":       ("IG OAS (bps)",                          "daily",     5),
     "DFII10":           ("10Y TIPS Real Yield",                    "daily",     5),
     "MORTGAGE30US":     ("30Y Mortgage Rate",                      "weekly",   14),
@@ -237,7 +238,7 @@ def compute_icsa_yoy(icsa_data: pd.Series) -> Optional[float]:
 
 # Series needed with full history for the recession model and NBER shading
 _PREFETCH_LONG: list[str] = [
-    "T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA",
+    "T10Y3M", "T10Y2Y", "USSLIND", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA",
     "BAMLH0A0HYM2", "UNRATE", "USREC",
 ]
 
@@ -307,7 +308,7 @@ def fetch_model_inputs() -> dict:
     All series are pre-warmed by prefetch_all_series() at cold start, so these
     calls are guaranteed cache hits — no thread pool needed.
     """
-    model_ids = ["T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA", "BAMLH0A0HYM2"]
+    model_ids = ["T10Y3M", "T10Y2Y", "USSLIND", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA", "BAMLH0A0HYM2"]
     return {sid: fetch_series(sid, "1990-01-01") for sid in model_ids}
 
 
