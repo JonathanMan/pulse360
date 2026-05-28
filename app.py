@@ -1,5 +1,5 @@
 """
-Pulse360 — Navigation Router
+Pie360 — Navigation Router
 ==============================
 Entry point for Streamlit Cloud. Defines all pages explicitly via
 st.navigation() so page discovery works regardless of repo layout.

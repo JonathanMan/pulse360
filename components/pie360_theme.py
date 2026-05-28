@@ -1,7 +1,7 @@
 """
 components/pie360_theme.py
 ============================
-Pulse360 — Terminal Light v2 visual theme.
+Pie360 — Terminal Light v2 visual theme.
 
 Drop-in replacement for taplox_theme.py. Same public API:
     inject_theme()       — call once near top of each page

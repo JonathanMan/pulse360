@@ -1,5 +1,5 @@
 """
-Pulse360 — Historical Parallels Engine
+Pie360 — Historical Parallels Engine
 ========================================
 Finds the 3 historical months (1997-present) whose macro stress profile most
 closely resembles the current environment, then reports the forward asset-class

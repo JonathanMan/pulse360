@@ -1,5 +1,5 @@
 """
-Pulse360 Overview Row Component
+Pie360 Overview Row Component
 =================================
 Persistent top-of-page summary rendered on every tab:
   • Cycle phase badge

@@ -41,10 +41,15 @@ _LS_KEY = "pie360_watchlist"
 _LS_KEY_LEGACY = "pulse360_watchlist"   # renamed 2026-05-26; migration runs on first read
 _MAX_TICKERS = 50
 
-# Path where the scheduled briefing agent reads the watchlist
-_EXPORT_PATH = (
+# Path where the scheduled briefing agent reads the watchlist.
+# Set WATCHLIST_EXPORT_PATH in the environment or st.secrets to enable local export.
+# On Streamlit Cloud this will be None and _sync_export() silently skips.
+import os as _os
+_EXPORT_PATH: str | None = _os.environ.get(
+    "WATCHLIST_EXPORT_PATH",
+    # Local Mac default — silently ignored if the path doesn't exist
     "/Users/jonathanman/Library/CloudStorage/"
-    "GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/watchlist.json"
+    "GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360/watchlist.json",
 )
 
 
@@ -113,7 +118,10 @@ def _sync_export(tickers: list[str]) -> None:
     Write the watchlist to a JSON file so the scheduled briefing agent
     can read it without needing browser localStorage access.
     Silently swallows errors — export failure must never break the UI.
+    Skipped entirely when WATCHLIST_EXPORT_PATH is not set (e.g. Streamlit Cloud).
     """
+    if not _EXPORT_PATH:
+        return
     try:
         import os
         os.makedirs(os.path.dirname(_EXPORT_PATH), exist_ok=True)
