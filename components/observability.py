@@ -3,22 +3,28 @@ components/observability.py
 ============================
 T3-5: Centralised observability for Pie360.
 
-Three layers
-------------
+Four layers
+-----------
 1. Structured logging  — Python stdlib logging with JSON formatter
                          (writes to stderr so Streamlit Cloud captures it)
 2. Sentry              — optional; activated when SENTRY_DSN env var is set
                          wraps exceptions at key call sites
 3. Usage analytics     — fire-and-forget writes to the `user_analytics`
                          Supabase table; degraded gracefully when unavailable
+4. Error email alerts  — real-time Resend email on unhandled exceptions;
+                         rate-limited to 1 email per error type per 5 minutes
 
 Public API
 ----------
-    from components.observability import log, track, capture_exception
+    from components.observability import log, track, capture_exception, error_boundary
 
     log.info("cycle_engine", "phase detected", phase="Mid / Expansion", conf=87)
     track("watchlist_rebalanced", {"cycle_phase": "Mid / Expansion"})
     capture_exception(exc, context={"page": "11_Watchlist"})
+
+    # Wrap page content to auto-report + email on crash:
+    with error_boundary("Dashboard"):
+        render_dashboard()
 """
 
 from __future__ import annotations
@@ -29,8 +35,9 @@ import os
 import sys
 import time
 import traceback
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Generator
 
 import streamlit as st
 
@@ -186,7 +193,129 @@ def capture_exception(
         raise exc
 
 
-# ── 3. Usage analytics ────────────────────────────────────────────────────────
+# ── 3. Error email alerts ─────────────────────────────────────────────────────
+
+# Rate-limit: track last email time per error type to avoid floods.
+# Key: exc type name, Value: unix timestamp of last email sent.
+_error_email_cooldowns: dict[str, float] = {}
+_ERROR_EMAIL_COOLDOWN_SECS = 300  # 5 minutes per error type
+
+# Streamlit-internal exceptions that must never trigger alerts.
+_STREAMLIT_INTERNAL_EXCEPTIONS = {
+    "RerunException",
+    "StopException",
+    "StopIteration",
+    "ScriptRunner",
+}
+
+
+def _send_error_email(
+    exc: Exception,
+    tb: str,
+    context: dict[str, Any],
+) -> None:
+    """
+    Fire-and-forget error notification via Resend.
+
+    Rate-limited: same exception type can only trigger one email per
+    _ERROR_EMAIL_COOLDOWN_SECS seconds. Runs in a daemon thread so it
+    never blocks the render loop.
+    """
+    import threading
+
+    exc_type = type(exc).__name__
+
+    # Skip Streamlit-internal control-flow exceptions
+    if any(name in exc_type for name in _STREAMLIT_INTERNAL_EXCEPTIONS):
+        return
+
+    # Rate-limit check
+    now = time.time()
+    last_sent = _error_email_cooldowns.get(exc_type, 0)
+    if now - last_sent < _ERROR_EMAIL_COOLDOWN_SECS:
+        log.info("observability", "error email suppressed (cooldown)", exc_type=exc_type)
+        return
+    _error_email_cooldowns[exc_type] = now
+
+    def _send() -> None:
+        try:
+            import resend  # type: ignore[import]
+
+            api_key = st.secrets.get("RESEND_API_KEY", "") or os.environ.get("RESEND_API_KEY", "")
+            if not api_key:
+                log.warning("observability", "RESEND_API_KEY not set — error email skipped")
+                return
+
+            resend.api_key = api_key
+            from_addr = st.secrets.get("RESEND_FROM", "onboarding@resend.dev")
+            page = context.get("page", "unknown")
+            subject = f"[Pie360 🚨] {exc_type} on {page}: {str(exc)[:80]}"
+
+            html_body = f"""
+<div style="font-family:monospace;max-width:700px;">
+  <h2 style="color:#d92626;">🚨 Pie360 Error Alert</h2>
+  <table style="border-collapse:collapse;width:100%;">
+    <tr><td style="padding:4px 8px;font-weight:bold;">Time</td>
+        <td style="padding:4px 8px;">{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</td></tr>
+    <tr><td style="padding:4px 8px;font-weight:bold;">Page</td>
+        <td style="padding:4px 8px;">{page}</td></tr>
+    <tr><td style="padding:4px 8px;font-weight:bold;">Error</td>
+        <td style="padding:4px 8px;color:#d92626;">{exc_type}: {exc}</td></tr>
+    <tr><td style="padding:4px 8px;font-weight:bold;">Context</td>
+        <td style="padding:4px 8px;">{json.dumps(context, default=str)}</td></tr>
+  </table>
+  <h3 style="margin-top:16px;">Traceback</h3>
+  <pre style="background:#f4f4f4;padding:12px;border-radius:4px;overflow-x:auto;font-size:12px;">{tb}</pre>
+  <p style="color:#6a6a6a;font-size:12px;">
+    Live app: <a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app">
+    pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app</a>
+  </p>
+</div>
+"""
+            resend.Emails.send({
+                "from": from_addr,
+                "to": ["jonathancyman@gmail.com"],
+                "subject": subject,
+                "html": html_body,
+            })
+            log.info("observability", "error email sent", exc_type=exc_type, page=page)
+
+        except Exception as email_exc:
+            # Never let error reporting crash the app
+            log.warning("observability", "error email failed", error=str(email_exc))
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
+@contextmanager
+def error_boundary(page_name: str) -> Generator[None, None, None]:
+    """
+    Context manager that catches unhandled exceptions in a page, reports them
+    via capture_exception + Resend email, then re-raises so Streamlit still
+    shows the error UI to the user.
+
+    Usage (add to every page after init_page()):
+        from components.observability import init_page, error_boundary
+
+        init_page("Dashboard")
+        with error_boundary("Dashboard"):
+            # all page rendering code here
+            render_overview()
+            render_charts()
+
+    The page name is included in the email subject for fast triage.
+    """
+    try:
+        yield
+    except Exception as exc:
+        tb = traceback.format_exc()
+        ctx = {"page": page_name}
+        capture_exception(exc, context=ctx)
+        _send_error_email(exc, tb, ctx)
+        raise  # re-raise so Streamlit renders its normal error UI
+
+
+# ── 4. Usage analytics ────────────────────────────────────────────────────────
 
 _ANALYTICS_TABLE = "user_analytics"
 _SESSION_KEY     = "_obs_session_start"
@@ -268,18 +397,52 @@ def track(
 
 # ── 4. Page-view auto-tracker ─────────────────────────────────────────────────
 
+def _install_exception_reporter() -> None:
+    """
+    Monkey-patch st.exception so every unhandled page exception triggers
+    a Resend email alert automatically — no per-page changes required.
+
+    Streamlit calls st.exception(e) whenever a page script raises an
+    unhandled exception, so patching it here gives global coverage.
+    Safe to call multiple times (guarded by attribute flag).
+    """
+    if getattr(st, "_pie360_exc_reporter_installed", False):
+        return
+
+    _original_st_exception = st.exception
+
+    def _patched_exception(exc: Exception) -> None:  # type: ignore[override]
+        exc_type = type(exc).__name__
+        if not any(name in exc_type for name in _STREAMLIT_INTERNAL_EXCEPTIONS):
+            tb = traceback.format_exc()
+            # Best-effort page name from query params
+            try:
+                page = st.query_params.get("page", "unknown")
+            except Exception:
+                page = "unknown"
+            capture_exception(exc, context={"page": page, "source": "st.exception"})
+            _send_error_email(exc, tb, {"page": page})
+        return _original_st_exception(exc)
+
+    st.exception = _patched_exception  # type: ignore[assignment]
+    st._pie360_exc_reporter_installed = True  # type: ignore[attr-defined]
+    log.info("observability", "exception reporter installed")
+
+
 def init_app() -> None:
     """
     Call once in app.py (the navigation router) immediately after inject_theme().
     - Initialises Sentry globally so all pages benefit from error capture
+    - Installs st.exception patch for automatic Resend email alerts
     - Does NOT fire a page_view event (use init_page() per page for that)
-    - Safe to call multiple times — Sentry init is guarded by _sentry_initialised
+    - Safe to call multiple times — all inits are guarded by flags
 
     Usage (app.py):
         from components.observability import init_app
         init_app()
     """
     _init_sentry()
+    _install_exception_reporter()
 
 
 def init_page(page_name: str) -> None:
