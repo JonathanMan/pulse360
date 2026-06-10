@@ -397,6 +397,110 @@ def track(
 
 # ── 4. Page-view auto-tracker ─────────────────────────────────────────────────
 
+def _send_new_user_email(user_id: str, user_email: str | None) -> None:
+    """
+    Fire-and-forget notification email when a new user is detected.
+    Runs in a daemon thread — never blocks the render loop.
+    """
+    import threading
+
+    def _send() -> None:
+        try:
+            import resend  # type: ignore[import]
+
+            api_key = st.secrets.get("RESEND_API_KEY", "") or os.environ.get("RESEND_API_KEY", "")
+            if not api_key:
+                return
+
+            resend.api_key = api_key
+            from_addr = st.secrets.get("RESEND_FROM", "onboarding@resend.dev")
+            display = user_email or user_id
+            subject = f"[Pie360 🎉] New user: {display}"
+
+            html_body = f"""
+<div style="font-family:sans-serif;max-width:600px;">
+  <h2 style="color:#00a35a;">🎉 New Pie360 User</h2>
+  <table style="border-collapse:collapse;width:100%;">
+    <tr><td style="padding:6px 8px;font-weight:bold;">Time</td>
+        <td style="padding:6px 8px;">{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</td></tr>
+    <tr><td style="padding:6px 8px;font-weight:bold;">Email</td>
+        <td style="padding:6px 8px;">{user_email or '—'}</td></tr>
+    <tr><td style="padding:6px 8px;font-weight:bold;">User ID</td>
+        <td style="padding:6px 8px;font-size:12px;color:#6a6a6a;">{user_id}</td></tr>
+  </table>
+  <p style="margin-top:16px;">
+    <a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app">Open Pie360</a>
+  </p>
+</div>
+"""
+            resend.Emails.send({
+                "from": from_addr,
+                "to": ["jonathancyman@gmail.com"],
+                "subject": subject,
+                "html": html_body,
+            })
+            log.info("observability", "new user notification sent", user_id=user_id)
+
+        except Exception as exc:
+            log.warning("observability", "new user email failed", error=str(exc))
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
+def _check_and_notify_new_user(user_id: str) -> None:
+    """
+    Check whether this authenticated user has been seen before.
+    If not: insert a 'first_visit' event and send a notification email.
+    Runs in a daemon thread. Session-state guards prevent duplicate checks
+    within the same browser session.
+    """
+    import threading
+
+    # Deduplicate within the same browser session
+    if st.session_state.get("_obs_new_user_checked"):
+        return
+    st.session_state["_obs_new_user_checked"] = True
+
+    def _check() -> None:
+        try:
+            from components.supabase_client import get_client
+            from components.auth import get_session_user
+
+            sb = get_client()
+
+            # Check for any prior first_visit event for this user
+            result = (
+                sb.table(_ANALYTICS_TABLE)
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("event", "first_visit")
+                .limit(1)
+                .execute()
+            )
+
+            if result.data:
+                return  # returning user — nothing to do
+
+            # New user: record it and notify
+            sb.table(_ANALYTICS_TABLE).insert({
+                "event":      "first_visit",
+                "user_id":    user_id,
+                "session_id": _get_session_id(),
+                "properties": json.dumps({"source": "init_page"}),
+                "occurred_at": datetime.now(timezone.utc).isoformat(),
+            }).execute()
+
+            user = get_session_user()
+            user_email = user.get("email") if user else None
+            _send_new_user_email(user_id, user_email)
+            log.info("observability", "new user detected", user_id=user_id)
+
+        except Exception as exc:
+            log.warning("observability", "new user check failed", error=str(exc))
+
+    threading.Thread(target=_check, daemon=True).start()
+
+
 def _install_exception_reporter() -> None:
     """
     Monkey-patch st.exception so every unhandled page exception triggers
@@ -463,3 +567,8 @@ def init_page(page_name: str) -> None:
     if not st.session_state.get(seen_key):
         st.session_state[seen_key] = True
         track("page_view", page=page_name)
+
+    # New-user detection: runs once per session for authenticated users
+    user_id = _get_user_id()
+    if user_id:
+        _check_and_notify_new_user(user_id)
