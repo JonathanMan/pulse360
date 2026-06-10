@@ -283,6 +283,9 @@ def prefetch_all_series(
     for sid in set(_PREFETCH_TABS):
         calls.add((sid, tab_start))
 
+    for sid in _PREFETCH_YIELD_CURVE:
+        calls.add((sid, tab_start))
+
     def _safe_fetch(sid: str, start: str) -> None:
         try:
             fetch_series(sid, start_date=start)

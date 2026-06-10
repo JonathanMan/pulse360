@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import io
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 
 import anthropic
@@ -316,13 +317,18 @@ earnings_map: dict[str, str | None] = {}
 today = date.today()
 
 with st.spinner(f"Scoring {len(watchlist)} ticker(s)…"):
-    for ticker in watchlist:
-        result = score_ticker_cached(ticker)
-        if result:
-            scored.append(result)
-        else:
-            failed.append(ticker)
-        earnings_map[ticker] = _earnings_date_cached(ticker)
+    def _score_one(ticker: str) -> tuple[str, dict | None, str | None]:
+        return ticker, score_ticker_cached(ticker), _earnings_date_cached(ticker)
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = {pool.submit(_score_one, t): t for t in watchlist}
+        for fut in as_completed(futures):
+            ticker, result, ed = fut.result()
+            if result:
+                scored.append(result)
+            else:
+                failed.append(ticker)
+            earnings_map[ticker] = ed
 
 if failed:
     st.warning(

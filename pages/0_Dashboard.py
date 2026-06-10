@@ -166,48 +166,61 @@ render_weekly_diff(
 )
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
-tabs = st.tabs([
-    "1 · Macro Overview",
-    "2 · Growth",
-    "3 · Labor",
-    "4 · Inflation",
-    "5 · Monetary Policy",
-    "6 · Markets",
-    "7 · Housing & Consumer",
-    "8 · Global",
-])
+# on_change="rerun" enables lazy execution: only the open tab's content runs.
+# tabs[i].open is True only for the currently selected tab.
+tabs = st.tabs(
+    [
+        "1 · Macro Overview",
+        "2 · Growth",
+        "3 · Labor",
+        "4 · Inflation",
+        "5 · Monetary Policy",
+        "6 · Markets",
+        "7 · Housing & Consumer",
+        "8 · Global",
+    ],
+    on_change="rerun",
+)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — Macro Overview & Cycle Phase
+# TAB 1 — Macro Overview & Cycle Phase (always open on first load)
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tabs[0]:
-    render_tab1(model_output, phase_output, lei_growth=lei_growth)
+    if tabs[0].open:
+        render_tab1(model_output, phase_output, lei_growth=lei_growth)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TABS 2–8 — Full tab renders
+# TABS 2–8 — Lazy: only render when the tab is open
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tabs[1]:
-    render_tab2(model_output, phase_output)
+    if tabs[1].open:
+        render_tab2(model_output, phase_output)
 
 with tabs[2]:
-    render_tab3(model_output, phase_output)
+    if tabs[2].open:
+        render_tab3(model_output, phase_output)
 
 with tabs[3]:
-    render_tab4(model_output, phase_output)
+    if tabs[3].open:
+        render_tab4(model_output, phase_output)
 
 with tabs[4]:
-    render_tab5(model_output, phase_output)
+    if tabs[4].open:
+        render_tab5(model_output, phase_output)
 
 with tabs[5]:
-    render_tab6(model_output, phase_output)
+    if tabs[5].open:
+        render_tab6(model_output, phase_output)
 
 with tabs[6]:
-    render_tab7(model_output, phase_output)
+    if tabs[6].open:
+        render_tab7(model_output, phase_output)
 
 with tabs[7]:
-    render_tab8(model_output, phase_output)
+    if tabs[7].open:
+        render_tab8(model_output, phase_output)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR — Quick Stats + AI Daily Briefing + Chat
