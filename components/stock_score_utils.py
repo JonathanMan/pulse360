@@ -703,7 +703,7 @@ def fetch_stock_data(ticker: str) -> dict:
 
         except Exception as exc:
             if attempt < MAX_RETRIES:
-                wait = (3 * (2 ** (attempt - 1))) + (random.random() * 2)
+                wait = min(1 * (2 ** (attempt - 1)), 5) + (random.random() * 1)
                 time.sleep(wait)
             else:
                 result["error"] = str(exc)

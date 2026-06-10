@@ -96,7 +96,7 @@ with st.spinner("Loading economic data…"):
     model_inputs = fetch_model_inputs()
 
 model_output = run_recession_model(model_inputs)
-lei_growth   = compute_cfnai_signal(model_inputs["CFNAI"]["data"])
+lei_growth   = compute_lei_growth(model_inputs["USSLIND"]["data"])
 
 unrate_result = fetch_series("UNRATE", start_date="2010-01-01")
 unrate_data   = unrate_result["data"] if not unrate_result["data"].empty else None
