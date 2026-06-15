@@ -503,6 +503,28 @@ def render_overview_row(
                 use_container_width=True,
                 key="overview_gauge",
             )
+            # ── Data-availability guard ──────────────────────────────────────
+            # When inputs are missing the model falls back to neutral 0.5 stress,
+            # so the probability drifts toward a mechanical ~50%. Never present
+            # that as a confident reading — flag it explicitly.
+            _dq = getattr(model_output, "data_quality", "ok")
+            if _dq == "unavailable":
+                _n_un  = getattr(model_output, "n_unavailable", 0)
+                _n_tot = getattr(model_output, "n_features", 0) or len(model_output.features) or 8
+                st.markdown(
+                    f'<div style="background:#f4f4f5;border:1px solid #9aa0aa;border-radius:8px;'
+                    f'padding:8px 12px;margin:4px 0;font-size:0.78rem;color:#475569;text-align:center;">'
+                    f'⚪ <strong>Data unavailable</strong> — {_n_un} of {_n_tot} model inputs are missing. '
+                    f'This {model_output.probability:.0f}% is a neutral-fallback artefact, not a real reading.</div>',
+                    unsafe_allow_html=True,
+                )
+            elif _dq == "partial":
+                _n_un = getattr(model_output, "n_unavailable", 0)
+                st.markdown(
+                    f'<div style="text-align:center;font-size:0.72rem;color:#c98800;margin-bottom:2px;">'
+                    f'⚠️ {_n_un} input(s) missing — reduced confidence</div>',
+                    unsafe_allow_html=True,
+                )
             if prob_delta is not None:
                 delta_color  = "#d92626" if prob_delta > 0 else "#28a745"
                 delta_neutral = "#6a6a6a"

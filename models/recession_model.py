@@ -9,16 +9,16 @@ Output: probability 0–100% + feature contributions visible on screen.
 Traffic lights: green <25%, yellow 25–50%, red ≥50%.
 
 Weight rationale (audit 2026-05-28):
-  T10Y3M     0.25  — Estrella & Mishkin (1998): strongest single predictor; trimmed
-                      from 0.30 — was over-weighted relative to multicollinear T10Y2Y
-  USSLIND    0.15  — Conference Board LEI: validated 4–8Q leading indicator, absent
-                      from prior model; added at 0.15
-  CFNAI      0.15  — Broad activity composite; trimmed from 0.20 to add LEI
-  SAHMREALTIME 0.10 — Coincident (fires 2–4M after recession start); halved from 0.20
-  NFCI       0.10  — Financial conditions; unchanged
-  ICSA       0.10  — Initial claims YoY; unchanged
-  BAMLH0A0HYM2 0.10 — HY spreads; unchanged
-  T10Y2Y     0.05  — Second yield-curve confirmatory signal; new, low weight
+  T10Y3M       0.25  — Estrella & Mishkin (1998): strongest single predictor; trimmed
+                        from 0.30 — was over-weighted relative to multicollinear T10Y2Y
+  USSLIND      0.15  — Conference Board LEI: validated 4–8Q leading indicator, absent
+                        from prior model; added at 0.15
+  CFNAI        0.15  — Broad activity composite; trimmed from 0.20 to make room for LEI
+  SAHMREALTIME 0.10  — Coincident (fires 2–4M after recession start); halved from 0.20
+  NFCI         0.10  — Financial conditions; unchanged
+  ICSA         0.10  — Initial claims YoY; unchanged
+  BAMLH0A0HYM2 0.10  — HY spreads; unchanged
+  T10Y2Y       0.05  — Second yield-curve confirmatory signal; new, low weight
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from typing import Optional
 
 import numpy as np
 
-from data.fred_client import compute_cfnai_signal, compute_icsa_yoy, compute_lei_growth  # noqa: F401
+from data.fred_client import compute_cfnai_signal, compute_icsa_yoy, compute_lei_growth
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ def _stress_t10y3m(value: float) -> tuple[float, str]:
     """
     10Y–3M Treasury spread. Deep inversion → high stress.
     Recalibrated 2026-05-28: midpoint shifted to −0.25% (was 0%), steepness k=8.
-    At 0% spread (flat curve): stress ≈ 0.86 → was over-triggering at zero.
+    At flat curve (0%): stress ≈ 0.12 — no longer over-triggers at zero.
     At −0.25%: stress = 0.50 (neutral breakeven); at −1%: stress ≈ 0.998.
     """
     stress = _logistic(8.0 * (-0.25 - value))
@@ -131,7 +131,7 @@ def _stress_t10y2y(value: float) -> tuple[float, str]:
     """
     10Y–2Y Treasury spread. Parallel confirmatory signal alongside T10Y3M.
     Same logistic calibration: midpoint −0.25%, steepness k=8.
-    Weight: 0.05 (confirmatory, low weight to avoid double-counting yield curve).
+    Weight: 0.05 (confirmatory — low weight to avoid double-counting yield curve).
     """
     stress = _logistic(8.0 * (-0.25 - value))
     if value < -0.50:
@@ -151,7 +151,7 @@ def _stress_lei_growth(growth_6m_pct: float) -> tuple[float, str]:
     Stress rises as LEI growth turns negative; peaks when growth < −2%.
     Logistic: midpoint at +1.0% growth (neutral), scale 1.5.
     At 0% growth: stress ≈ 0.51; at −2%: stress ≈ 0.88; at −4%: stress ≈ 0.99.
-    Weight: 0.15 — the single most validated leading indicator per CB research.
+    Weight: 0.15 — single most validated leading indicator per CB research.
     """
     stress = _logistic((1.0 - growth_6m_pct) / 1.5)
     if growth_6m_pct < -2.0:
@@ -239,24 +239,10 @@ def _stress_hy_oas(value_bps: float) -> tuple[float, str]:
     return round(stress, 3), desc
 
 
-def _stress_ism(value: float) -> tuple[float, str]:
-    """ISM Manufacturing PMI. Below 45 → high stress; below 50 = contraction."""
-    stress = _logistic((50.0 - value) / 2.5)
-    if value < 45.0:
-        desc = f"{value:.1f}: deep contraction (below 45 threshold)"
-    elif value < 50.0:
-        desc = f"{value:.1f}: contraction territory (below 50)"
-    elif value < 55.0:
-        desc = f"{value:.1f}: modest expansion"
-    else:
-        desc = f"{value:.1f}: strong expansion"
-    return round(stress, 3), desc
-
-
 # ---------------------------------------------------------------------------
 # Feature configuration
 # Weights must sum to exactly 1.0
-# Last rebalanced: 2026-05-28 (audit — added LEI + T10Y2Y, halved Sahm, recalibrated yield curve)
+# Last rebalanced: 2026-05-28 (added LEI + T10Y2Y, halved Sahm, recalibrated yield curve)
 # ---------------------------------------------------------------------------
 
 _FEATURES = [
@@ -271,7 +257,7 @@ _FEATURES = [
         "get_stale": lambda inp: (inp["T10Y3M"]["is_stale"], inp["T10Y3M"].get("stale_message")),
     },
     {
-        # Conference Board LEI — most validated 4–8Q leading indicator. New.
+        # Conference Board LEI — most validated 4–8Q leading indicator. New in v2.
         "name":      "Conference Board LEI",
         "series_id": "USSLIND",
         "weight":    0.15,
@@ -291,7 +277,7 @@ _FEATURES = [
         "get_stale": lambda inp: (inp["CFNAI"]["is_stale"], inp["CFNAI"].get("stale_message")),
     },
     {
-        # Coincident indicator — fires 2–4M after recession starts. Halved from 0.20.
+        # Coincident — fires 2–4M after recession starts. Halved from 0.20.
         "name":      "Sahm Rule",
         "series_id": "SAHMREALTIME",
         "weight":    0.10,
@@ -359,7 +345,7 @@ def run_recession_model(inputs: dict) -> RecessionModelOutput:
     Notes:
         - If a feature value is unavailable, the model substitutes neutral stress (0.5)
           and flags the feature as uncertain.
-        - Weights are locked per briefing.md §4 — do not change without updating that doc.
+        - New optional features (USSLIND, T10Y2Y) degrade gracefully if FRED fetch fails.
     """
     features:       list[FeatureContribution] = []
     weighted_stress: float = 0.0
