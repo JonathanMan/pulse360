@@ -1,29 +1,17 @@
+#!/usr/bin/env python3
 """
 scripts/daily_briefing_runner.py
-=================================
-Standalone daily briefing runner — no Streamlit dependency.
+---------------------------------
+Runs in GitHub Actions at 07:00 UTC weekdays.
 
-Runs outside the Streamlit app (from cron / Claude scheduled task):
-  1. Reads secrets from .streamlit/secrets.toml
-  2. Fetches live FRED data for all model inputs (falls back to cache on network failure)
-  3. Runs the recession model + cycle classifier
-  4. Generates briefing text via Claude API (falls back to template when API unavailable)
-  5. Saves briefing as .md to the Drive workspace folder
-  6. Sends HTML email via Resend (non-fatal on failure)
+Steps:
+  1. Fetch 5 FRED indicators
+  2. Detect cycle phase + recession probability (via cycle_engine)
+  3. Generate briefing via Claude Sonnet
+  4. Send HTML email via Resend
+  5. Post to Confluence (optional — skipped if CONFLUENCE_API_TOKEN not set)
 
-Sandbox-resilient design
--------------------------
-The Cowork scheduler sandbox blocks outbound HTTPS to external APIs (FRED, Anthropic, Resend).
-This script is designed to degrade gracefully in that environment:
-  - FRED fetch failure  → load last-known values from scripts/fred_cache.json
-  - Claude API failure  → generate structured template briefing from model outputs
-  - Email failure       → log warning, set exit_code=1 (not 2)
-  - Cache update        → saved after every successful live FRED fetch
-
-Exit codes:
-    0 — full success (live data + Claude briefing + email sent)
-    1 — partial success (briefing generated and .md saved; email or live data unavailable)
-    2 — critical failure (model crashed; secrets missing; .md could not be saved)
+All config comes from environment variables (GitHub Actions secrets).
 """
 
 from __future__ import annotations
@@ -34,414 +22,650 @@ import os
 import sys
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
+from types import ModuleType, SimpleNamespace
 
-# ── Path setup (run from pulse360-app/ directory) ─────────────────────────────
-ROOT = Path(__file__).resolve().parent.parent   # pulse360-app/
-CACHE_PATH = Path(__file__).resolve().parent / "fred_cache.json"
-sys.path.insert(0, str(ROOT))
-
+# ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
-    level  = logging.INFO,
-    format = "%(asctime)s  %(levelname)-8s  %(message)s",
-    datefmt= "%H:%M:%S",
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
 )
-log = logging.getLogger("briefing_runner")
+log = logging.getLogger(__name__)
+
+# ── Required env vars ─────────────────────────────────────────────────────────
+def _require(key: str) -> str:
+    val = os.environ.get(key, "")
+    if not val:
+        log.error("Missing required env var: %s", key)
+        sys.exit(1)
+    return val
+
+ANTHROPIC_KEY    = _require("ANTHROPIC_API_KEY")
+FRED_KEY         = _require("FRED_API_KEY")
+RESEND_KEY       = _require("RESEND_API_KEY")
+# Supabase creds are not used by this script — kept as optional for future use
+SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY     = os.environ.get("SUPABASE_KEY", "")
+CONFLUENCE_TOKEN = os.environ.get("CONFLUENCE_API_TOKEN", "")
+
+BRIEFING_EMAIL = os.environ.get("BRIEFING_EMAIL", "jonathancyman@gmail.com")
+RESEND_FROM    = os.environ.get("RESEND_FROM", "onboarding@resend.dev")
+
+# Confluence config (mono360.atlassian.net)
+CONFLUENCE_BASE    = "https://mono360.atlassian.net/wiki"
+CONFLUENCE_USER    = os.environ.get("CONFLUENCE_USER", "jonathancyman@gmail.com")
+CONFLUENCE_PAGE_ID = os.environ.get("CONFLUENCE_BRIEFING_PAGE_ID", "23101690")
+
+# ── Stub streamlit so cycle_engine can be imported without a running app ──────
+def _make_st_stub() -> ModuleType:
+    stub = ModuleType("streamlit")
+    stub.secrets  = {}   # not used in detect_cycle_phase() body
+    stub.session_state = {}
+    def _passthrough(*a, **kw):
+        """Decorator that returns the function unchanged."""
+        if a and callable(a[0]):
+            return a[0]
+        return lambda f: f
+    stub.cache_data     = _passthrough
+    stub.cache_resource = _passthrough
+    stub.error = lambda *a, **kw: None
+    stub.warning = lambda *a, **kw: None
+    stub.info = lambda *a, **kw: None
+    return stub
+
+sys.modules.setdefault("streamlit", _make_st_stub())
+
+# Add repo root to path so components/ is importable
+_REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO))
+
+# ── Import repo modules (after st stub is in place) ───────────────────────────
+try:
+    from components.cycle_engine import detect_cycle_phase, CycleResult
+    from components.fred_utils import safe_get_series
+except Exception as exc:
+    log.error("Failed to import cycle_engine: %s", exc)
+    sys.exit(1)
 
 
-# ── Load secrets without Streamlit ───────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1. FETCH MACRO DATA
+# ═══════════════════════════════════════════════════════════════════════════════
 
-def _load_secrets() -> dict:
-    """Read .streamlit/secrets.toml from the pulse360-app directory."""
-    secrets_path = ROOT / ".streamlit" / "secrets.toml"
-    if not secrets_path.exists():
-        log.error("secrets.toml not found at %s", secrets_path)
-        sys.exit(2)
-    try:
-        import tomllib  # Python 3.11+
-    except ImportError:
+def fetch_macro_data() -> dict:
+    """Fetch key FRED indicators. Returns dict with latest values."""
+    log.info("Fetching FRED macro data…")
+    start = "2020-01-01"
+    data  = {}
+
+    for sid in ["UNRATE", "T10Y2Y", "USSLIND", "CPIAUCSL", "INDPRO"]:
         try:
-            import tomli as tomllib  # pip install tomli --break-system-packages
-        except ImportError:
-            log.error("Install tomli: pip install tomli --break-system-packages")
-            sys.exit(2)
-    with open(secrets_path, "rb") as f:
-        return tomllib.load(f)
-
-
-# ── FRED cache helpers ────────────────────────────────────────────────────────
-
-def _load_fred_cache() -> dict:
-    """Load last-known FRED values from scripts/fred_cache.json."""
-    if CACHE_PATH.exists():
-        try:
-            with open(CACHE_PATH) as f:
-                data = json.load(f)
-            log.info("  Loaded FRED cache from %s (as of %s)",
-                     CACHE_PATH, data.get("cached_at", "unknown"))
-            return data.get("series", {})
+            s = safe_get_series(sid, FRED_KEY, observation_start=start, warn=False)
+            if s is not None and not s.empty:
+                data[sid] = float(s.dropna().iloc[-1])
+                log.info("  %s = %.2f", sid, data[sid])
         except Exception as exc:
-            log.warning("  Could not read FRED cache: %s", exc)
-    return {}
+            log.warning("  %s unavailable: %s", sid, exc)
+
+    return data
 
 
-def _save_fred_cache(series: dict) -> None:
-    """Persist successfully fetched FRED values to cache for future use."""
-    import pandas as pd
-    cache = {"cached_at": datetime.now().isoformat(), "series": {}}
-    for sid, s in series.items():
-        if isinstance(s, pd.Series) and not s.empty:
-            cache["series"][sid] = {
-                "last_value": float(s.iloc[-1]),
-                "last_date":  str(s.index[-1].date()),
-            }
-    if cache["series"]:
-        try:
-            with open(CACHE_PATH, "w") as f:
-                json.dump(cache, f, indent=2)
-            log.info("  FRED cache updated: %s series saved", len(cache["series"]))
-        except Exception as exc:
-            log.warning("  Could not save FRED cache: %s", exc)
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2. DETECT CYCLE PHASE
+# ═══════════════════════════════════════════════════════════════════════════════
 
-
-def _series_from_cache(cached: dict, series_id: str):
-    """Reconstruct a minimal pd.Series from a cache entry (single-value, dated index)."""
-    import pandas as pd
-    entry = cached.get(series_id)
-    if not entry:
-        return pd.Series(dtype=float)
+def get_cycle(fred_data: dict) -> CycleResult:
+    """Run cycle detection. Falls back gracefully on FRED errors."""
+    log.info("Running cycle engine…")
     try:
-        idx = pd.DatetimeIndex([entry["last_date"]])
-        s   = pd.Series([entry["last_value"]], index=idx)
-        log.info("  %-20s  (from cache) last: %s = %.3f",
-                 series_id, entry["last_date"], entry["last_value"])
-        return s
-    except Exception:
-        return pd.Series(dtype=float)
-
-
-# ── Fetch FRED data without @st.cache_data ───────────────────────────────────
-
-def _fetch_fred(series_id: str, fred_api_key: str, start: str = "1990-01-01"):
-    """
-    Fetch a single FRED series.
-    Returns pd.Series on success, or empty pd.Series on failure.
-    Does NOT fall back to cache here — cache fallback is done in main() after
-    all fetches, so we can decide to save cache only when any live data arrived.
-    """
-    import pandas as pd
-    try:
-        from fredapi import Fred
-        fred = Fred(api_key=fred_api_key)
-        raw  = fred.get_series(series_id, observation_start=start).dropna()
-        log.info("  %-20s  %d obs, last: %s = %.3f",
-                 series_id, len(raw),
-                 raw.index[-1].date() if not raw.empty else "N/A",
-                 float(raw.iloc[-1]) if not raw.empty else 0)
-        return raw
+        result = detect_cycle_phase(FRED_KEY)
+        log.info(
+            "  Phase: %s | Confidence: %d | Recession prob: %.1f%%",
+            result.phase, result.confidence, _recession_prob(result),
+        )
+        return result
     except Exception as exc:
-        log.warning("  %-20s  FAILED: %s", series_id, exc)
-        return pd.Series(dtype=float)
+        log.warning("Cycle engine failed (%s) — using fallback", exc)
+        # Return a minimal stub so the briefing still generates
+        from components.cycle_engine import CycleResult
+        from datetime import datetime
+        return CycleResult(
+            phase="Unknown",
+            confidence=0,
+            scores={},
+            signals={},
+            as_of=datetime.now(),
+            summary="Cycle engine unavailable — live economic data could not be retrieved.",
+            data_quality="unavailable",
+        )
 
 
-# ── Template briefing generator (no LLM required) ────────────────────────────
+def _recession_prob(result: CycleResult) -> float:
+    """Derive a 0–100 recession probability from cycle scores."""
+    contraction_score = result.scores.get("Contraction", 0)
+    total = sum(result.scores.values()) or 1
+    return round(100.0 * contraction_score / total, 1)
 
-def _generate_template_briefing(
-    today,
-    phase_output,
-    model_output,
-    lei_growth: Optional[float],
-    unrate_latest: Optional[float],
-    nber_active: bool,
-    used_cache: bool,
+
+def _traffic_light(prob: float) -> str:
+    if prob >= 50:
+        return "red"
+    if prob >= 25:
+        return "yellow"
+    return "green"
+
+
+def _is_data_unavailable(result: "CycleResult", fred_data: dict) -> bool:
+    """True when we lack the inputs to make a genuine cycle / recession call.
+
+    Guards against the failure mode where the cycle engine falls back to an
+    empty-scores stub: _recession_prob() would then return a spurious 0.0%
+    and _traffic_light() a falsely reassuring GREEN. In that state the phase
+    and recession risk must be surfaced as N/A, never as a confident reading.
+    """
+    if getattr(result, "data_quality", "") == "unavailable":
+        return True
+    if not getattr(result, "scores", None):
+        return True
+    if not fred_data:
+        return True
+    return False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 3. GENERATE BRIEFING VIA CLAUDE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+BRIEFING_SYSTEM = """You are the analytical engine behind Pie360, an AI-powered economic cycle \
+dashboard. Your job is to write a concise, investment-actionable daily macro briefing for a \
+sophisticated personal investor (Jonathan) who monitors the economic cycle daily and makes \
+active asset allocation decisions.
+
+RULES — follow all of them precisely:
+1. Write in plain analyst English. No jargon for its own sake. No hype. No clickbait headlines.
+2. Be probabilistic. Say "risk is elevated" not "recession is coming". Name the degree of uncertainty.
+3. Be specific and quantitative wherever possible — name indicators, exact values, and thresholds.
+4. Never fabricate data. Only cite numbers explicitly provided in the input. If a figure is missing, say "N/A".
+5. Keep the total output under ~900 words across all sections.
+6. Use the section headers exactly as specified. Do not add, rename, or remove any section.
+7. Bullets only within sections that call for bullets. The Tail Risks and Confidence Score sections are single paragraphs.
+8. The Asset Class Tilts section must use the exact signal labels: OVERWEIGHT, NEUTRAL, or UNDERWEIGHT. Format as a plain-text aligned table (no markdown table syntax).
+9. Never give personalised investment advice ("you should buy X"). Frame all signals in general, historical, cycle-framework terms.
+10. End every briefing with this exact disclaimer on its own line: "This is educational macro commentary, not investment advice."
+11. Do not write any other disclaimer — only the one specified in rule 10."""
+
+
+def build_briefing_prompt(
+    today: str,
+    phase: str,
+    confidence: str,
+    recession_prob: float,
+    traffic_light: str,
+    fred_data: dict,
+    signals_summary: str,
 ) -> str:
-    """
-    Generate a structured briefing from model outputs when the Claude API is
-    unavailable. Covers all required sections with real model numbers.
-    Not as nuanced as the LLM version, but fully data-driven and always accurate.
-    """
-    from ai.prompts import DISCLAIMER
+    tl_text = {"green": "GREEN (<25%)", "yellow": "YELLOW (25–50%)", "red": "RED (≥50%)"}.get(
+        traffic_light, traffic_light
+    )
+    unrate = fred_data.get("UNRATE")
+    t10y2y = fred_data.get("T10Y2Y")
+    cpi    = fred_data.get("CPIAUCSL")
+    indpro = fred_data.get("INDPRO")
+    lei    = fred_data.get("USSLIND")
 
-    tl_labels = {"green": "LOW", "yellow": "MODERATE", "red": "HIGH"}
-    risk_label = tl_labels.get(model_output.traffic_light, "UNKNOWN")
-    tl_emoji   = {"green": "🟢", "yellow": "🟡", "red": "🔴"}.get(model_output.traffic_light, "⚪")
+    def fmt(v, suffix=""):
+        return f"{v:.2f}{suffix}" if v is not None else "N/A"
 
-    data_note = (
-        "⚠️ *Quantitative inputs loaded from cache (live FRED fetch blocked in scheduler sandbox). "
-        "Values carry forward from last successful fetch. Narrative reflects model state only.*\n\n"
-        if used_cache else ""
+    return f"""Date: {today}
+
+═══ MODEL OUTPUT ════════════════════════════════════════════
+Cycle Phase:           {phase} ({confidence} confidence)
+Recession Probability: {recession_prob:.1f}%  →  {tl_text}
+
+Key Indicators (latest FRED readings):
+  Unemployment Rate (UNRATE):     {fmt(unrate, '%')}
+  Yield Curve 10Y−2Y (T10Y2Y):   {fmt(t10y2y, ' pp')}
+  Industrial Production (INDPRO): {fmt(indpro, ' index')}
+  CPI (CPIAUCSL):                 {fmt(cpi, ' index')}
+  LEI (USSLIND):                  {fmt(lei)}
+
+Cycle model signal breakdown:
+{signals_summary}
+═════════════════════════════════════════════════════════════
+
+Using ONLY the data above, write the Pie360 daily macro briefing with EXACTLY these seven \
+sections in this order. Use the section headers verbatim. Do not add, rename, or remove any section.
+
+## Cycle Phase Declaration
+State the current cycle phase, a confidence percentage (0–100%), and which 2–3 specific \
+indicators drove the phase call. Reference exact values from the data provided. \
+Flag any indicator that is near a phase-transition threshold and what crossing it would mean. \
+Format: one sentence declaring the phase + confidence, then 2–3 bullets naming the driving indicators.
+
+## Recession Probability
+State the current recession probability score and its traffic-light status. Describe the trend \
+direction (rising / falling / stable) based on the signal breakdown provided. Then state \
+2 specific things that would need to change in the indicator readings to move the probability \
+materially higher (toward RED) and 1 thing that would move it materially lower (toward GREEN). \
+Reference specific indicator thresholds. One compact paragraph.
+
+## Asset Class Tilts
+Based on the current cycle phase and indicator readings, provide an explicit positioning signal \
+for each asset class below. Format as a plain-text table with three aligned columns — \
+Asset Class | Signal | Rationale — where Signal must be exactly one of: OVERWEIGHT, NEUTRAL, \
+or UNDERWEIGHT. One concise rationale sentence per row, grounded in the provided data. \
+Use exactly these rows in this order:
+  US Large Cap Equities
+  US Small Cap Equities
+  International Developed Equities
+  Emerging Market Equities
+  Long-Duration Bonds
+  Investment-Grade Credit
+  High-Yield Credit
+  Commodities — Energy
+  Commodities — Metals
+  Cash
+Base every call on the provided data and well-established historical cycle patterns for this phase. \
+Do not invent signals that contradict the indicators.
+
+## Sector Rotation Signals
+Apply the standard economic-cycle sector rotation framework to the current phase and indicator \
+readings. List the top 2 sectors to favour and the top 2 sectors to avoid. \
+One bullet per sector. Each bullet: sector name, signal (FAVOUR / AVOID), and the single \
+indicator from the data above that most strongly drives the call. \
+Reference the phase-framework rationale (e.g. early cycle → financials/industrials favour; \
+late cycle → energy/materials favour; contraction → utilities/staples favour). \
+Example: "- FAVOUR Industrials: INDPRO at {fmt(indpro, ' index')} and LEI at {fmt(lei)} signal early-cycle expansion."
+
+## Top 3 Macro Observations
+The three most important data points or signals from the provided readings, ranked by investment \
+significance. One bullet per observation. Each bullet: name the data point with its exact value, \
+describe why it matters in the current cycle context, then add one explicit investment implication \
+sentence (what this historically suggests for positioning). Be specific — "yield curve at \
+{fmt(t10y2y, ' pp')} implies historically that duration extension has outperformed over the \
+next 6 months" is good; "the yield curve is concerning" is not.
+
+## Tail Risks
+One paragraph of 3–4 sentences. Identify 2–3 specific, named risks that could cause a cycle \
+phase reassessment within 30 days. For each risk: name it explicitly, identify the indicator \
+that would confirm it is materialising, and state the threshold or reading that would trigger \
+a phase downgrade. Conclude with which of these risks currently has the highest probability \
+of occurring based on the data provided.
+
+## Confidence Score
+State the overall confidence in the current cycle call as exactly one of: HIGH, MEDIUM, or LOW. \
+Follow with one sentence justifying the rating by citing the degree of agreement or conflict \
+across the model signals provided (e.g. how many indicators align vs conflict with the declared \
+phase, whether recent trends support or contradict the call). One sentence only — be direct.
+
+---
+This is educational macro commentary, not investment advice."""
+
+
+def generate_briefing(
+    phase: str,
+    confidence: str,
+    recession_prob: float,
+    traffic_light: str,
+    fred_data: dict,
+    signals_summary: str,
+) -> str:
+    log.info("Generating briefing via Claude…")
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+    today  = date.today().isoformat()
+
+    prompt = build_briefing_prompt(
+        today          = today,
+        phase          = phase,
+        confidence     = confidence,
+        recession_prob = recession_prob,
+        traffic_light  = traffic_light,
+        fred_data      = fred_data,
+        signals_summary = signals_summary,
     )
 
-    # Feature contributions summary
-    feat_lines = []
-    for feat in (model_output.features or [])[:6]:
-        name  = getattr(feat, "name", "Unknown")
-        val   = getattr(feat, "current_value", None)
-        score = getattr(feat, "stress_score", 0.0)
-        desc  = getattr(feat, "signal_description", "")
-        val_str = f"{val:.3f}" if val is not None else "N/A"
-        stress_bar = "▓" * int(score * 5) + "░" * (5 - int(score * 5))
-        feat_lines.append(f"- **{name}:** {val_str} [{stress_bar}] — {desc}")
-    feat_block = "\n".join(feat_lines) if feat_lines else "- No feature data available"
+    response = client.messages.create(
+        model      = "claude-sonnet-4-6",
+        max_tokens = 2200,
+        system     = BRIEFING_SYSTEM,
+        messages   = [{"role": "user", "content": prompt}],
+    )
+    text = response.content[0].text.strip()
+    log.info("  Briefing generated (%d chars)", len(text))
+    return text
 
-    # Investment implication based on traffic light
-    if model_output.traffic_light == "green":
-        implication = (
-            "Risk-on bias supported. Yield curve and financial conditions are not "
-            "signalling stress. Maintain equity exposure; credit spreads constructive."
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 4. COMPOSE HTML EMAIL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_TL_COLORS = {"green": "#00a35a", "yellow": "#c98800", "red": "#d92626", "gray": "#9aa0aa"}
+_TL_BG     = {"green": "#0e2a1a", "yellow": "#2a1e00", "red": "#2a0a0a", "gray": "#1f2127"}
+
+
+def _md_to_html(md: str) -> str:
+    """Convert simple markdown briefing to HTML (no external deps)."""
+    import re
+    lines    = md.split("\n")
+    out      = []
+    in_list  = False
+    in_code  = False
+    code_buf = []
+
+    def _flush_code():
+        body = "\n".join(code_buf)
+        body = body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        out.append(
+            '<pre style="background:#0f172a;color:#e2e8f0;border-radius:8px;'
+            'padding:12px 14px;overflow-x:auto;font-size:0.72rem;line-height:1.45;'
+            'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;'
+            'white-space:pre;margin:8px 0;">' + body + '</pre>'
         )
-    elif model_output.traffic_light == "yellow":
-        implication = (
-            "Balanced positioning warranted. Recession probability is elevated but below "
-            "the 50% threshold. Monitor leading indicators — especially Sahm Rule and "
-            "initial claims — before adding risk. Duration neutral to mild overweight."
+        code_buf.clear()
+
+    for raw in lines:
+        line = raw.rstrip()
+        # Fenced code block (e.g. the Asset Class Tilts aligned table)
+        if line.lstrip().startswith("```"):
+            if in_code:
+                _flush_code()
+                in_code = False
+            else:
+                if in_list:
+                    out.append("</ul>")
+                    in_list = False
+                in_code = True
+            continue
+        if in_code:
+            code_buf.append(raw)
+            continue
+        # H2 section header
+        if line.startswith("## "):
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            heading = line[3:].strip()
+            out.append(
+                f'<h3 style="color:#c8d3f0;font-size:0.95rem;font-weight:700;'
+                f'margin:20px 0 6px 0;letter-spacing:.03em;">{heading}</h3>'
+            )
+        # Bullet
+        elif line.startswith("- ") or line.startswith("• "):
+            if not in_list:
+                out.append('<ul style="margin:0;padding-left:18px;color:#c0c8d8;">')
+                in_list = True
+            content = line[2:].strip()
+            # Bold **text**
+            content = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", content)
+            out.append(f'<li style="margin-bottom:5px;line-height:1.5;">{content}</li>')
+        # Blank line
+        elif not line:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+        # Plain paragraph
+        else:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            line = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", line)
+            out.append(f'<p style="margin:6px 0;color:#c0c8d8;line-height:1.6;">{line}</p>')
+
+    if in_code and code_buf:
+        _flush_code()
+    if in_list:
+        out.append("</ul>")
+
+    return "\n".join(out)
+
+
+def compose_html_email(
+    briefing_md: str,
+    phase: str,
+    recession_prob: float,
+    traffic_light: str,
+    unavailable: bool = False,
+) -> str:
+    if unavailable:
+        # No real inputs — never show a confident phase or a green 0%.
+        traffic_light = "gray"
+        phase_display = "DATA UNAVAILABLE"
+        prob_pct      = "N/A"
+    else:
+        phase_display = phase
+        prob_pct      = f"{recession_prob:.0f}%"
+
+    tl_color = _TL_COLORS.get(traffic_light, "#6b7280")
+    tl_bg    = _TL_BG.get(traffic_light, "#1a1a2a")
+    body_html = _md_to_html(briefing_md)
+    today_str = date.today().strftime("%A, %d %B %Y")
+
+    warning_html = ""
+    if unavailable:
+        warning_html = (
+            "<div style=\"background:#2a0a0a;border:1px solid #d92626;border-radius:8px;"
+            "padding:12px 16px;margin-bottom:16px;color:#ffb3b3;font-size:0.85rem;line-height:1.55;\">"
+            "⚠️ <strong>Live economic data was unavailable when this briefing ran.</strong> "
+            "Cycle phase and recession risk could not be computed and are shown as N/A. "
+            "Do not act on this briefing — it will refresh once data access is restored."
+            "</div>"
+        )
+
+    disclaimer = (
+        "<p style='color:#555;font-size:0.75rem;margin-top:24px;line-height:1.5;'>"
+        "This briefing is generated by an AI model and is for informational purposes only. "
+        "It is not financial advice. Always do your own research before making investment decisions."
+        "</p>"
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pie360 Daily Briefing · {today_str}</title>
+</head>
+<body style="margin:0;padding:0;background:#0e1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#e0e0e0;">
+<div style="max-width:640px;margin:0 auto;padding:24px 16px;">
+
+  <!-- Header -->
+  <div style="background:#1a1a2e;border-left:4px solid {tl_color};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+    <p style="margin:0 0 2px 0;font-size:0.72rem;color:#888;text-transform:uppercase;letter-spacing:.08em;">PIE360 · DAILY BRIEFING</p>
+    <h1 style="margin:0 0 4px 0;font-size:1.3rem;font-weight:700;color:#fff;">{today_str}</h1>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:4px;background:#2a2a4a;color:#a0a0ff;">{phase_display}</span>
+      <span style="font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:4px;background:{tl_bg};color:{tl_color};">Recession Risk {prob_pct}</span>
+    </div>
+  </div>
+
+  <!-- Briefing body -->
+  <div style="background:#151520;border-radius:8px;padding:20px 22px;margin-bottom:20px;">
+    {warning_html}
+    {body_html}
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;padding:12px 0;">
+    <a href="https://pulse360-4qnaz6vcs7txp6prpkksg3.streamlit.app"
+       style="display:inline-block;padding:10px 24px;background:#1f6feb;color:#fff;
+              font-weight:600;font-size:0.85rem;border-radius:6px;text-decoration:none;">
+      Open Pie360 Dashboard →
+    </a>
+  </div>
+
+  {disclaimer}
+</div>
+</body>
+</html>"""
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 5. SEND EMAIL VIA RESEND
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def send_email(html: str, phase: str, recession_prob: float, unavailable: bool = False) -> None:
+    import resend
+
+    resend.api_key = RESEND_KEY
+    today_str = date.today().strftime("%d %b %Y")
+    if unavailable:
+        subject = f"Pie360 · {today_str} · DATA UNAVAILABLE — phase & recession risk N/A"
+    else:
+        subject = f"Pie360 · {today_str} · {phase} · Recession Risk {recession_prob:.0f}%"
+
+    log.info("Sending email to %s via Resend…", BRIEFING_EMAIL)
+    resp = resend.Emails.send({
+        "from":    RESEND_FROM,
+        "to":      [BRIEFING_EMAIL],
+        "subject": subject,
+        "html":    html,
+    })
+    log.info("  Email sent — ID: %s", resp.get("id", "unknown"))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6. POST TO CONFLUENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def post_to_confluence(
+    briefing_md: str,
+    phase: str,
+    recession_prob: float,
+    unavailable: bool = False,
+) -> None:
+    """Append today's briefing as a new child page under CONFLUENCE_PAGE_ID."""
+    if not CONFLUENCE_TOKEN:
+        log.info("CONFLUENCE_API_TOKEN not set — skipping Confluence post")
+        return
+
+    import base64
+    import requests
+
+    today_str = date.today().strftime("%d %B %Y")
+    title     = f"Daily Briefing · {today_str}"
+
+    # Convert markdown to Confluence storage format (simple HTML subset)
+    html_body = _md_to_html(briefing_md).replace("\n", "")
+    if unavailable:
+        meta_html = (
+            "<p><strong>Phase:</strong> DATA UNAVAILABLE | "
+            "<strong>Recession Risk:</strong> N/A | "
+            f"<strong>Generated:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>"
+            "<p><em>Live economic data was unavailable when this briefing ran; "
+            "cycle phase and recession risk could not be computed.</em></p>"
+            "<hr/>"
         )
     else:
-        implication = (
-            "Defensive positioning indicated. Recession probability above 50% threshold. "
-            "Review equity and credit overweights; consider extending duration as a hedge. "
-            "Cash and short-duration Treasuries offer asymmetric protection at current levels."
+        meta_html = (
+            f"<p><strong>Phase:</strong> {phase} | "
+            f"<strong>Recession Risk:</strong> {recession_prob:.0f}% | "
+            f"<strong>Generated:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>"
+            "<hr/>"
         )
+    full_body = meta_html + html_body
 
-    lei_str   = f"{lei_growth:.2f}" if lei_growth is not None else "N/A"
-    urate_str = f"{unrate_latest:.1f}%" if unrate_latest is not None else "N/A"
-    nber_str  = "**Yes — official recession declared**" if nber_active else "No"
+    auth = base64.b64encode(f"{CONFLUENCE_USER}:{CONFLUENCE_TOKEN}".encode()).decode()
+    headers = {
+        "Authorization": f"Basic {auth}",
+        "Content-Type":  "application/json",
+    }
 
-    briefing = f"""{data_note}## Economic Cycle Summary
-
-{tl_emoji} Pie360 reads **{phase_output.phase}** ({phase_output.confidence} confidence) with recession probability at **{model_output.probability:.1f}% ({risk_label} risk)**. {nber_str if nber_active else 'No NBER recession declared.'} This briefing was generated from model outputs. {'Live Claude analysis unavailable today (sandbox network restriction).' if used_cache or True else ''}
-
-## Key Model Readings
-
-- **Recession Probability:** {model_output.probability:.1f}% ({model_output.traffic_light.upper()}) {tl_emoji}
-- **Cycle Phase:** {phase_output.phase} ({phase_output.confidence} confidence)
-- **CFNAI / LEI signal:** {lei_str}
-- **Unemployment Rate:** {urate_str}
-- **NBER Recession Active:** {nber_str}
-
-## Feature Contributions
-
-{feat_block}
-
-## Investment Implication
-
-{implication}"""
-
-    return briefing.strip() + DISCLAIMER
-
-
-# ── Main ──────────────────────────────────────────────────────────────────────
-
-def main() -> int:
-    today = date.today()
-    log.info("=== Pulse360 Daily Briefing Runner — %s ===", today)
-
-    # 1. Secrets
-    log.info("Loading secrets…")
-    secrets = _load_secrets()
-    fred_key      = secrets.get("FRED_API_KEY", "")
-    anthropic_key = secrets.get("ANTHROPIC_API_KEY", "")
-    resend_key    = secrets.get("RESEND_API_KEY", "")
-    resend_from   = secrets.get("RESEND_FROM", "onboarding@resend.dev")
-    recipient     = secrets.get("BRIEFING_EMAIL", "jonathancyman@gmail.com")
-
-    if not fred_key:
-        log.error("FRED_API_KEY missing from secrets.toml — cannot run model")
-        return 2
-
-    # 2. Fetch FRED model inputs (live, with cache fallback)
-    log.info("Fetching FRED model inputs…")
-    SERIES_IDS = ["T10Y3M", "SAHMREALTIME", "CFNAI", "NFCI", "ICSA",
-                  "BAMLH0A0HYM2", "UNRATE", "USREC"]
-
-    live_series = {sid: _fetch_fred(sid, fred_key) for sid in SERIES_IDS}
-    any_live    = any(not s.empty for s in live_series.values())
-    used_cache  = False
-
-    if any_live:
-        # Save cache whenever we got at least some live data
-        _save_fred_cache(live_series)
-        series = live_series
-    else:
-        # All fetches failed — load from cache
-        log.warning("All FRED fetches failed. Loading from cache…")
-        cached = _load_fred_cache()
-        if not cached:
-            log.error("No FRED cache available and live fetch failed — cannot run model")
-            return 2
-        import pandas as pd
-        series    = {sid: _series_from_cache(cached, sid) for sid in SERIES_IDS}
-        used_cache = True
-
-    # 3. Run recession model
-    log.info("Running recession model…")
-    try:
-        from models.recession_model import run_recession_model
-
-        model_inputs = {
-            sid: {
-                "data":          s,
-                "last_value":    float(s.iloc[-1]) if not s.empty else None,
-                "last_date":     s.index[-1].date() if not s.empty else None,
-                "is_stale":      used_cache,
-                "stale_message": "Loaded from cache" if used_cache else None,
+    payload = {
+        "type":      "page",
+        "title":     title,
+        "ancestors": [{"id": CONFLUENCE_PAGE_ID}],
+        "space":     {"key": "PULSE360"},
+        "body": {
+            "storage": {
+                "value":          full_body,
+                "representation": "storage",
             }
-            for sid, s in series.items()
-        }
-        model_output = run_recession_model(model_inputs)
-        log.info("  Recession probability: %.1f%%  (%s)",
-                 model_output.probability, model_output.traffic_light)
-    except Exception as exc:
-        log.error("Recession model failed: %s", exc)
-        return 2
+        },
+    }
 
-    # 4. Run cycle classifier
-    log.info("Running cycle classifier…")
-    try:
-        from data.fred_client import compute_cfnai_signal
-        from models.cycle_classifier import classify_cycle_phase
+    url  = f"{CONFLUENCE_BASE}/rest/api/content"
+    resp = requests.post(url, headers=headers, json=payload, timeout=15)
 
-        lei_growth    = compute_cfnai_signal(series["CFNAI"])
-        unrate_data   = series["UNRATE"] if not series["UNRATE"].empty else None
-        nber_active   = (not series["USREC"].empty and bool(series["USREC"].iloc[-1] == 1))
-        unrate_latest = float(series["UNRATE"].iloc[-1]) if not series["UNRATE"].empty else None
-
-        phase_output = classify_cycle_phase(
-            model_output = model_output,
-            lei_growth   = lei_growth,
-            unrate_data  = unrate_data,
-            nber_active  = nber_active,
-        )
-        log.info("  Cycle phase: %s (%s confidence)", phase_output.phase, phase_output.confidence)
-    except Exception as exc:
-        log.error("Cycle classifier failed: %s", exc)
-        return 2
-
-    # 5. Generate briefing — try Claude API first, fall back to template
-    log.info("Generating briefing…")
-    briefing_md   = None
-    used_template = False
-
-    if anthropic_key:
-        try:
-            import anthropic
-            from ai.prompts import build_briefing_prompt, BRIEFING_SYSTEM, DISCLAIMER
-            from ai.claude_client import format_features_for_prompt
-
-            feature_dicts = format_features_for_prompt(model_output.features)
-            user_prompt   = build_briefing_prompt(
-                date_str              = today.strftime("%Y-%m-%d"),
-                cycle_phase           = phase_output.phase,
-                phase_confidence      = phase_output.confidence,
-                recession_probability = model_output.probability,
-                traffic_light         = model_output.traffic_light,
-                feature_contributions = feature_dicts,
-                lei_growth            = lei_growth,
-                unrate                = unrate_latest,
-                nber_active           = nber_active,
-            )
-            client   = anthropic.Anthropic(api_key=anthropic_key)
-            response = client.messages.create(
-                model      = "claude-sonnet-4-5",
-                max_tokens = 1024,
-                system     = BRIEFING_SYSTEM,
-                messages   = [{"role": "user", "content": user_prompt}],
-            )
-            briefing_md = response.content[0].text.strip() + DISCLAIMER
-            log.info("  Claude briefing generated (%d chars)", len(briefing_md))
-        except ImportError:
-            log.warning("  anthropic package not installed — using template briefing")
-        except Exception as exc:
-            log.warning("  Claude API unavailable (%s) — using template briefing", exc)
-
-    if briefing_md is None:
-        # Template fallback — always works, no external calls required
-        briefing_md   = _generate_template_briefing(
-            today, phase_output, model_output,
-            lei_growth, unrate_latest, nber_active, used_cache,
-        )
-        used_template = True
-        log.info("  Template briefing generated (%d chars)", len(briefing_md))
-
-    exit_code = 0
-
-    # 6. Save .md to Drive workspace
-    log.info("Saving briefing .md to Drive…")
-    try:
-        # Derive the Drive folder from the script's own location so this works
-        # both on the Mac (real path) and inside the Cowork sandbox (mounted path).
-        # Script: pulse360-app/scripts/daily_briefing_runner.py
-        # ROOT:   pulse360-app/
-        # Target: pulse360-app/../  →  the Pulse360 workspace folder
-        mac_drive = Path(
-            "/Users/jonathanman/Library/CloudStorage/"
-            "GoogleDrive-jonathancyman@gmail.com/My Drive/Business/Claude/Pulse360"
-        )
-        drive_dir = mac_drive if mac_drive.exists() else ROOT.parent
-        log.info("  Drive dir resolved to: %s", drive_dir)
-        filename  = f"daily-briefing-{today}.md"
-        out_path  = drive_dir / filename
-
-        data_source_note = (
-            "**Data source:** Cache (live FRED fetch unavailable in scheduler sandbox)  \n"
-            if used_cache else ""
-        )
-        briefing_source_note = (
-            "**Briefing source:** Template (Claude API unavailable in scheduler sandbox)  \n"
-            if used_template else ""
-        )
-
-        out_path.write_text(
-            f"# Pie360 Daily Briefing — {today:%d %b %Y}\n\n"
-            f"**Phase:** {phase_output.phase} ({phase_output.confidence} confidence)  \n"
-            f"**Recession Probability:** {model_output.probability:.1f}% ({model_output.traffic_light})  \n"
-            f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M HKT')}  \n"
-            f"{data_source_note}"
-            f"{briefing_source_note}"
-            f"\n---\n\n{briefing_md}\n",
-            encoding="utf-8",
-        )
-        log.info("  Saved: %s", out_path)
-    except Exception as exc:
-        log.error("Could not save .md — critical: %s", exc)
-        return 2   # .md save failure IS critical (Confluence step depends on it)
-
-    # 7. Send email via Resend (non-fatal)
-    if resend_key:
-        log.info("Sending email via Resend to %s…", recipient)
-        try:
-            import resend as resend_lib
-            from ai.email_briefing import compose_briefing_html
-
-            html = compose_briefing_html(
-                briefing_md           = briefing_md,
-                cycle_phase           = phase_output.phase,
-                recession_probability = model_output.probability,
-                traffic_light         = model_output.traffic_light,
-            )
-            resend_lib.api_key = resend_key
-            resend_lib.Emails.send({
-                "from":    resend_from,
-                "to":      [recipient],
-                "subject": (
-                    f"Pie360 · {today:%-d %b %Y} · "
-                    f"{phase_output.phase} · {model_output.probability:.0f}% risk"
-                ),
-                "html": html,
-            })
-            log.info("  Email sent ✓")
-        except ImportError:
-            log.warning("  resend package not installed — email skipped (exit 1)")
-            exit_code = 1
-        except Exception as exc:
-            log.warning("  Email failed: %s (exit 1)", exc)
-            exit_code = 1
+    if resp.status_code in (200, 201):
+        page_id = resp.json().get("id", "?")
+        log.info("  Confluence page created — ID: %s | Title: %s", page_id, title)
     else:
-        log.info("RESEND_API_KEY not set — skipping email")
+        log.warning(
+            "  Confluence post failed (%d): %s",
+            resp.status_code, resp.text[:200],
+        )
 
-    log.info("=== Done (exit code %d) ===", exit_code)
-    return exit_code
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def main() -> None:
+    log.info("=== Pie360 Daily Briefing Runner — %s ===", date.today().isoformat())
+
+    # 1. Fetch FRED data
+    fred_data = fetch_macro_data()
+
+    # 2. Detect cycle
+    result      = get_cycle(fred_data)
+    unavailable = _is_data_unavailable(result, fred_data)
+    phase    = result.phase
+    conf_lbl = result.confidence_label
+    rec_prob = _recession_prob(result)
+    tl       = _traffic_light(rec_prob)
+    if unavailable:
+        log.warning(
+            "Data unavailable — phase/recession risk will be rendered as N/A, "
+            "not as a confident reading."
+        )
+
+    # Build signal summary for the prompt
+    signals_summary = result.summary or "No detailed signal breakdown available."
+    if result.signals:
+        lines = []
+        for sig in result.signals.values():
+            lines.append(
+                f"  {sig.name}: {sig.formatted} ({sig.trend})"
+                + (f" → {sig.implied_phase}" if sig.implied_phase else "")
+                + (f" — {sig.note}" if sig.note else "")
+            )
+        signals_summary = "\n".join(lines)
+
+    # 3. Generate briefing
+    briefing_md = generate_briefing(
+        phase          = phase,
+        confidence     = conf_lbl,
+        recession_prob = rec_prob,
+        traffic_light  = tl,
+        fred_data      = fred_data,
+        signals_summary= signals_summary,
+    )
+
+    # 4. Compose HTML email
+    html = compose_html_email(
+        briefing_md    = briefing_md,
+        phase          = phase,
+        recession_prob = rec_prob,
+        traffic_light  = tl,
+        unavailable    = unavailable,
+    )
+
+    # 5. Send email
+    try:
+        send_email(html, phase, rec_prob, unavailable=unavailable)
+    except Exception as exc:
+        log.error("Email send failed: %s", exc)
+        sys.exit(1)
+
+    # 6. Post to Confluence (optional — never fails the job)
+    try:
+        post_to_confluence(briefing_md, phase, rec_prob, unavailable=unavailable)
+    except Exception as exc:
+        log.warning("Confluence post failed (non-fatal): %s", exc)
+
+    log.info("=== Daily briefing complete ===")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
