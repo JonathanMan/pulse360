@@ -472,6 +472,38 @@ class TestRunRecessionModelGracefulDegradation:
         icsa_feat = next(f for f in out.features if f.series_id == "ICSA")
         assert abs(icsa_feat.stress_score - 0.5) < 1e-9
 
+    # ── Data-availability flag (added 2026-06-15) ────────────────────────────
+    # When inputs are missing the model falls back to neutral 0.5 stress; the
+    # probability then drifts to a mechanical ~50% that must NOT be presented as
+    # a confident reading. These lock the data_quality / is_reliable contract.
+
+    def test_data_quality_ok_when_all_inputs_present(self):
+        out = run_recession_model(_build_inputs())
+        assert out.data_quality == "ok"
+        assert out.n_unavailable == 0
+        assert out.is_reliable is True
+
+    def test_data_quality_partial_when_one_input_missing(self):
+        inputs = _build_inputs()
+        inputs["T10Y3M"]["last_value"] = None
+        out = run_recession_model(inputs)
+        assert out.data_quality == "partial"
+        assert out.n_unavailable == 1
+        assert out.color != "#95a5a6"   # partial keeps a real traffic-light colour
+
+    def test_data_quality_unavailable_when_all_inputs_missing(self):
+        inputs = _build_inputs()
+        for key in ["T10Y3M", "T10Y2Y", "SAHMREALTIME", "NFCI", "BAMLH0A0HYM2"]:
+            inputs[key]["last_value"] = None
+        for key in ["CFNAI", "ICSA", "USSLIND"]:
+            inputs[key]["data"] = pd.Series(dtype=float)
+        out = run_recession_model(inputs)
+        assert out.n_unavailable == 8
+        assert out.data_quality == "unavailable"
+        assert out.is_reliable is False
+        assert out.color == "#95a5a6"          # neutral grey, not green/red
+        assert abs(out.probability - 50.0) < 0.6
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SECTION 2 — data/fred_client.py derived calculations
