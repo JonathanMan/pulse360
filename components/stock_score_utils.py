@@ -697,13 +697,13 @@ def fetch_stock_data(ticker: str) -> dict:
             result["financials"]    = t.financials
             result["balance_sheet"] = t.balance_sheet
             result["cashflow"]      = t.cashflow
-            result["history"]       = t.history(period="1y")
+            result["history"]       = t.history(period="2y")
             result["error"]         = None
             return result
 
         except Exception as exc:
             if attempt < MAX_RETRIES:
-                wait = min(1 * (2 ** (attempt - 1)), 5) + (random.random() * 1)
+                wait = (3 * (2 ** (attempt - 1))) + (random.random() * 2)
                 time.sleep(wait)
             else:
                 result["error"] = str(exc)

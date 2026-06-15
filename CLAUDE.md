@@ -44,6 +44,3 @@ Commit convention: `style:` CSS/visual · `fix:` bugs · `feat:` features
 - **`st_javascript`**: returns `0` on first render (don't cache); `rerun()` after write = race condition; no duplicate `key=` per cycle.
 - **`st.cache_data` in tests**: conftest stubs as passthrough — call decorated functions directly, no `.__wrapped__` needed.
 
-## Confluence docs (mono360.atlassian.net — PULSE360 space)
-- Change log + validation: `/wiki/spaces/PULSE360/pages/23101690`
-- Dev workflow: `/wiki/spaces/PULSE360/pages/23036064`

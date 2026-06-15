@@ -13,7 +13,7 @@ from components.tabs.tab9_buffett import render_tab9
 from data.fred_client import fetch_model_inputs
 from models.recession_model import run_recession_model
 from models.cycle_classifier import classify_cycle_phase
-from data.fred_client import compute_lei_growth
+from data.fred_client import compute_cfnai_signal
 
 # ── Dark-theme CSS (mirrors Dashboard) ───────────────────────────────────────
 from components.pulse360_theme import inject_theme
@@ -41,7 +41,7 @@ with st.spinner("Loading macro context…"):
     model_inputs = fetch_model_inputs()
 
 model_output = run_recession_model(model_inputs)
-lei_growth   = compute_lei_growth(model_inputs["USSLIND"]["data"])
+lei_growth   = compute_cfnai_signal(model_inputs["CFNAI"]["data"])
 
 from data.fred_client import fetch_series
 

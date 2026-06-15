@@ -23,6 +23,7 @@ Features
 from __future__ import annotations
 
 import io
+import time
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -482,6 +483,7 @@ if run_btn:
             scored_list.append(result)
         else:
             failed.append(tk)
+        time.sleep(0.05)
     progress.empty()
 
     if failed:
