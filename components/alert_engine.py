@@ -76,8 +76,12 @@ SERIES_PRESETS: dict[str, str] = {
 
 # ── Persistence ───────────────────────────────────────────────────────────────
 
+_RULES_LOAD_WARNED = False  # module-level guard so a persistent failure logs ONCE
+
+
 def load_rules() -> list[dict]:
     """Load the current user's rules from Supabase."""
+    global _RULES_LOAD_WARNED
     try:
         rows = (
             get_client()
@@ -87,9 +91,19 @@ def load_rules() -> list[dict]:
             .order("created_at")
             .execute()
         )
+        _RULES_LOAD_WARNED = False  # recovered — re-arm the warning
         return rows.data or []
     except Exception as exc:
-        logger.warning("alert_engine: could not load rules: %s", exc)
+        # Typically a Supabase config issue ("Invalid API key" when SUPABASE_KEY
+        # in Streamlit secrets is wrong/rotated, or in a key format the pinned
+        # supabase-py version doesn't accept). It fires on every render, so log
+        # it only ONCE to avoid flooding the logs.
+        if not _RULES_LOAD_WARNED:
+            logger.warning(
+                "alert_engine: could not load rules (alerts disabled until fixed): %s "
+                "— check SUPABASE_KEY in Streamlit secrets.", exc,
+            )
+            _RULES_LOAD_WARNED = True
         return []
 
 
@@ -347,7 +361,10 @@ def check_rules(
 
         rule["last_value"] = current
 
-    save_rules(rules)
+    # Nothing to persist when there are no rules (or they failed to load) —
+    # skip the write so a Supabase auth failure doesn't re-raise every render.
+    if rules:
+        save_rules(rules)
     return triggered
 
 
