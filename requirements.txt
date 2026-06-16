@@ -11,5 +11,5 @@ openpyxl>=3.1.0
 matplotlib>=3.7.0
 markdown>=3.5.0
 streamlit-javascript>=0.1.5
-supabase==2.10.0
+supabase>=2.15.0,<3   # >=2.15 required to accept the new sb_secret_ / sb_publishable_ API key formats (2.10 rejected them as "Invalid API key")
 resend>=2.0.0
