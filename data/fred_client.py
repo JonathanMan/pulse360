@@ -25,7 +25,7 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     # ── Recession model inputs ───────────────────────────────────────────────
     "T10Y3M":           ("10Y–3M Treasury Spread",                "daily",     5),
     "SAHMREALTIME":     ("Sahm Rule Recession Indicator",          "monthly",  45),
-    "CFNAI":            ("Chicago Fed National Activity Index",      "monthly",  65),
+    "CFNAI":            ("Chicago Fed National Activity Index",      "monthly",  92),  # CB releases ~3-4wk after month-end
     "NFCI":             ("Chicago Fed NFCI",                       "weekly",   14),
     "ICSA":             ("Initial Jobless Claims (weekly)",        "weekly",   14),
     "BAMLH0A0HYM2":     ("HY OAS (bps)",                          "daily",     5),
@@ -46,7 +46,7 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "PAYEMS":           ("Nonfarm Payrolls",                       "monthly",  45),
     "IC4WSA":           ("Initial Claims 4-Week Avg",              "weekly",   14),
     "CCSA":             ("Continuing Claims",                      "weekly",   14),
-    "JTSJOL":           ("JOLTS Job Openings",                     "monthly",  60),
+    "JTSJOL":           ("JOLTS Job Openings",                     "monthly", 100),  # ~6wk publication lag
     "CES0500000003":    ("Avg Hourly Earnings",                    "monthly",  45),
     # ── Tab 4 – Inflation & Prices ───────────────────────────────────────────
     "CPIAUCSL":         ("CPI All Items",                          "monthly",  45),
@@ -82,7 +82,7 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     # ── Tab 7 – Housing, Consumer & Sentiment ───────────────────────────────
     "HOUST":            ("Housing Starts (000s)",                  "monthly",  45),
     "PERMIT":           ("Building Permits (000s)",                "monthly",  45),
-    "CSUSHPISA":        ("Case-Shiller National HPI",              "monthly",  60),
+    "CSUSHPISA":        ("Case-Shiller National HPI",              "monthly", 135),  # ~2-month publication lag
     "RSXFS":            ("Retail Sales ex-Food Services",          "monthly",  45),
     "RSFSXMV":          ("Retail Sales ex-Autos & Gas",            "monthly",  45),
     "UMCSENT":          ("U of Michigan Consumer Sentiment",       "monthly",  45),
@@ -106,7 +106,13 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
 _FREQ_STALE_FLOOR: dict[str, int] = {
     "daily":      7,    # allow for weekends + market holidays
     "weekly":    14,
-    "monthly":   63,    # ~31d month + ~2-3wk publication lag + buffer to next release
+    # A monthly series dated to the 1st is already ~1 month old at month-end, then
+    # waits on a publication lag (mid-month for INDPRO/CPI), and stays the latest
+    # print until the NEXT month's release ~30 days later — so a healthy monthly
+    # series can be ~75-80 days old just before its next release. 80 keeps those
+    # from false-flagging; genuinely long-lag series (CFNAI, JOLTS, Case-Shiller)
+    # set their own higher value in SERIES_META below.
+    "monthly":   80,
     "quarterly": 220,
 }
 
