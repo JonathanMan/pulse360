@@ -324,6 +324,22 @@ with st.spinner(f"Scoring {len(watchlist)} ticker(s)…"):
             failed.append(ticker)
         earnings_map[ticker] = _earnings_date_cached(ticker)
 
+# Graceful rate-limit handling: when Yahoo throttles (429), the circuit breaker
+# in fetch_stock_data bails fast and scores fall back to cache instead of hanging
+# for minutes. Surface that clearly rather than silently showing stale numbers.
+from components.stock_score_utils import rate_limit_active
+_stale_n = sum(1 for s in scored if s.get("_stale"))
+if rate_limit_active():
+    _live_n = len(scored) - _stale_n
+    st.info(
+        f"⏱️ Yahoo Finance is rate-limiting live quotes right now — showing "
+        f"**{_stale_n} cached** and **{_live_n} live** score(s). Cached rows are "
+        "marked below; click **Refresh scores** again in a minute for fresh data.",
+        icon="📦",
+    )
+elif _stale_n:
+    st.caption(f"📦 {_stale_n} of {len(scored)} score(s) served from cache (live fetch unavailable).")
+
 if failed:
     st.warning(
         f"Could not score: **{', '.join(failed)}** — "

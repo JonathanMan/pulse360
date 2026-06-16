@@ -670,17 +670,49 @@ def _fundamentals_trend(raw_data: dict) -> tuple[str, str, str]:
 
 # ── Data fetching ─────────────────────────────────────────────────────────────
 
+# Process-wide rate-limit circuit breaker. Once Yahoo returns a 429, every
+# subsequent live call from this IP will also 429, so retrying is futile and a
+# batch (e.g. scoring a 12-ticker watchlist) would otherwise hang for minutes.
+# When tripped, fetch_stock_data skips the live call for a cooldown window and
+# returns immediately so callers fall back to cache.
+_RATE_LIMIT_UNTIL: float = 0.0
+_RATE_LIMIT_COOLDOWN = 60  # seconds
+
+
+def rate_limit_active() -> bool:
+    """True while the Yahoo rate-limit cooldown is in effect."""
+    return time.time() < _RATE_LIMIT_UNTIL
+
+
+def _is_rate_limit_error(exc) -> bool:
+    msg = str(exc).lower()
+    return any(s in msg for s in (
+        "429", "too many", "rate limit", "rate-limited",
+        "expecting value", "line 1 column 1", "char 0",
+        "jsondecode", "incomplete info",
+    ))
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_stock_data(ticker: str) -> dict:
     """
     Pull all fundamentals + price history from yfinance.
-    Uses exponential-backoff retry to avoid Yahoo rate limits.
+    Uses exponential-backoff retry + a process-wide 429 circuit breaker.
     Returns a normalised dict: info, financials, balance_sheet, cashflow, history, error.
     """
+    global _RATE_LIMIT_UNTIL
     result: dict = {
         "info": {}, "financials": None, "balance_sheet": None,
         "cashflow": None, "history": pd.DataFrame(), "error": None,
     }
+
+    # Circuit breaker — don't hammer an IP Yahoo is already throttling.
+    if rate_limit_active():
+        result["error"] = (
+            "Rate-limited by Yahoo Finance (429) — cooling down to avoid further "
+            "throttling; using cached data where available."
+        )
+        return result
 
     MAX_RETRIES = 4
     for attempt in range(1, MAX_RETRIES + 1):
@@ -702,26 +734,22 @@ def fetch_stock_data(ticker: str) -> dict:
             return result
 
         except Exception as exc:
+            # Rate-limit (429 / empty-response JSON error / incomplete info) is NOT
+            # a ticker problem and won't recover in seconds — trip the breaker and
+            # bail immediately so the batch falls back to cache fast.
+            if _is_rate_limit_error(exc):
+                _RATE_LIMIT_UNTIL = time.time() + _RATE_LIMIT_COOLDOWN
+                result["error"] = (
+                    f"Rate-limited by Yahoo Finance (429) — the data source is "
+                    f"throttling requests, not a ticker problem. Original: {exc}"
+                )
+                return result
+            # Transient/other error — retry with backoff.
             if attempt < MAX_RETRIES:
                 wait = (3 * (2 ** (attempt - 1))) + (random.random() * 2)
                 time.sleep(wait)
             else:
-                # Normalise the failure. When Yahoo rate-limits, yfinance gets an
-                # empty/HTML response and raises a JSON decode error ("Expecting
-                # value: line 1 column 1 (char 0)") or returns an incomplete info
-                # dict — NOT a ticker problem. Label these as rate-limiting so the
-                # UI shows the right message instead of "check the ticker".
-                msg = str(exc).lower()
-                rate_limited = any(s in msg for s in (
-                    "429", "too many", "rate limit", "rate-limited",
-                    "expecting value", "line 1 column 1", "char 0",
-                    "jsondecode", "incomplete info",
-                ))
-                result["error"] = (
-                    f"Rate-limited by Yahoo Finance (429) — the data source is "
-                    f"throttling requests, not a ticker problem. Original: {exc}"
-                    if rate_limited else str(exc)
-                )
+                result["error"] = str(exc)
 
     return result
 
