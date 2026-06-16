@@ -95,6 +95,21 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "PALLFNFINDEXQ":    ("Global Commodity Index",                 "quarterly",100),
 }
 
+# Minimum staleness threshold by publication frequency. A series' "age" is
+# measured from its observation period-start date, but most series are released
+# with a lag (e.g. monthly figures are dated to the 1st but published ~2–3 weeks
+# later, and remain the latest print until the next month's release ~30 days
+# after that). A flat per-series day count therefore false-flags freshly-released
+# but naturally-lagged data as "stale". These floors are applied with max() so a
+# deliberately-higher per-series value is never tightened — only under-calibrated
+# series are raised to a sane minimum for their cadence.
+_FREQ_STALE_FLOOR: dict[str, int] = {
+    "daily":      7,    # allow for weekends + market holidays
+    "weekly":    14,
+    "monthly":   63,    # ~31d month + ~2-3wk publication lag + buffer to next release
+    "quarterly": 220,
+}
+
 # ---------------------------------------------------------------------------
 # FRED client (cached as a resource — one connection, shared across sessions)
 # ---------------------------------------------------------------------------
@@ -131,6 +146,8 @@ def fetch_series(
     Never raises. Always returns the dict.
     """
     desc, _freq, stale_threshold = SERIES_META.get(series_id, (series_id, "daily", 30))
+    # Never flag a series stale tighter than its publication cadence allows.
+    stale_threshold = max(stale_threshold, _FREQ_STALE_FLOOR.get(_freq, 0))
 
     result: dict = {
         "series_id":     series_id,
