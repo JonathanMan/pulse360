@@ -706,7 +706,22 @@ def fetch_stock_data(ticker: str) -> dict:
                 wait = (3 * (2 ** (attempt - 1))) + (random.random() * 2)
                 time.sleep(wait)
             else:
-                result["error"] = str(exc)
+                # Normalise the failure. When Yahoo rate-limits, yfinance gets an
+                # empty/HTML response and raises a JSON decode error ("Expecting
+                # value: line 1 column 1 (char 0)") or returns an incomplete info
+                # dict — NOT a ticker problem. Label these as rate-limiting so the
+                # UI shows the right message instead of "check the ticker".
+                msg = str(exc).lower()
+                rate_limited = any(s in msg for s in (
+                    "429", "too many", "rate limit", "rate-limited",
+                    "expecting value", "line 1 column 1", "char 0",
+                    "jsondecode", "incomplete info",
+                ))
+                result["error"] = (
+                    f"Rate-limited by Yahoo Finance (429) — the data source is "
+                    f"throttling requests, not a ticker problem. Original: {exc}"
+                    if rate_limited else str(exc)
+                )
 
     return result
 
