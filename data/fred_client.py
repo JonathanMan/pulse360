@@ -36,8 +36,8 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "GDPC1":            ("Real GDP Level",                         "quarterly",220),
     "USREC":            ("NBER Recession Indicator",               "monthly",   60),
     # ── Tab 2 – Growth & Business Activity ──────────────────────────────────
-    "INDPRO":           ("Industrial Production",                  "monthly",  45),
-    "TCU":              ("Capacity Utilization",                   "monthly",  45),
+    "INDPRO":           ("Industrial Production",                  "monthly",  63),
+    "TCU":              ("Capacity Utilization",                   "monthly",  63),
     # Note: NMFCI (ISM Services PMI) was never a valid FRED series / removed.
     "ADXTNO":           ("Durable Goods ex-def ex-aircraft",       "monthly",  45),
     # ── Tab 3 – Labor Market ─────────────────────────────────────────────────
