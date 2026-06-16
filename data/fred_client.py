@@ -56,7 +56,7 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "PPIFIS":           ("PPI Final Demand",                       "monthly",  45),
     "T5YIE":            ("5Y Breakeven Inflation",                 "daily",     5),
     "T10YIE":           ("10Y Breakeven Inflation",                "daily",     5),
-    "DCOILWTICO":       ("WTI Crude Oil ($/bbl)",                  "daily",     5),
+    "DCOILWTICO":       ("WTI Crude Oil ($/bbl)",                  "daily",    14),  # EIA source lags ~1wk despite daily freq
     "PCETRIM12M159SFRBDAL": ("Trimmed Mean PCE",                   "monthly",  45),
     # ── Tab 5 – Monetary Policy & Financial Conditions ───────────────────────
     "FEDFUNDS":         ("Effective Fed Funds Rate",               "monthly",  45),
@@ -91,7 +91,7 @@ SERIES_META: dict[str, tuple[str, str, int]] = {
     "DTWEXBGS":         ("Trade-Weighted USD (Broad)",             "daily",     5),
     "DEXUSEU":          ("USD/EUR",                                "daily",     5),
     "DEXJPUS":          ("USD/JPY",                                "daily",     5),
-    "DCOILBRENTEU":     ("Brent Crude ($/bbl)",                    "daily",     5),
+    "DCOILBRENTEU":     ("Brent Crude ($/bbl)",                    "daily",    14),  # EIA source lags ~1wk despite daily freq
     "PALLFNFINDEXQ":    ("Global Commodity Index",                 "quarterly",100),
 }
 
