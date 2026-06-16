@@ -283,8 +283,17 @@ def format_features_for_prompt(features: list) -> list[dict]:
 _BRIEFING_SYSTEM = """You are the Pie360 AI Research Desk engine.
 You produce high-signal, structured financial research for a sophisticated personal investor.
 
+LIVE DATA — READ FIRST:
+You HAVE a live web_search tool. For ANY current or numeric figure — prices, short interest,
+borrow/fee rates, days-to-cover, float, earnings/catalyst dates, valuations, SEC filings — you
+MUST search the web (Finviz, Shortquote, Ortex, SEC EDGAR, Reuters, etc.) and use what you find.
+Do NOT answer these from memory, and do NOT add any disclaimer about training-data freshness or
+lack of live access — you have live access, so use it. Cite the source and the as-of date for each
+figure. If a specific datapoint cannot be found via search, mark that field "not found" for that
+ticker rather than estimating or recalling a stale value.
+
 RULES:
-1. Be specific and data-grounded. Reference real tickers, real values, real sources where possible.
+1. Be specific and data-grounded. Every current figure must come from a web search with a citation.
 2. Be probabilistic — "historically leads to" not "will cause".
 3. Structure your response clearly with the sections and format requested in the prompt.
 4. Always cite sources inline (e.g. [Finviz], [WhaleWisdom], [FRED], [Reuters]) when referencing data.
@@ -462,14 +471,30 @@ def stream_briefing_section(
     """
     try:
         client = _get_client()
-        with client.messages.stream(
+        # Live web search enabled (server-side tool) so figures come from current
+        # sources (Finviz, Shortquote, SEC, news) rather than the model's training
+        # data. Server-side tool use can't be combined with simple text streaming,
+        # so this runs non-streaming and yields the final text; the caller shows a
+        # spinner. (Mirrors the proven web_search pattern in 05_Macro_Pulse.py.)
+        response = client.messages.create(
             model      = SONNET,
             max_tokens = max_tokens,
             system     = _BRIEFING_SYSTEM,
+            timeout    = 150,
+            tools      = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 12}],
             messages   = [{"role": "user", "content": prompt}],
-        ) as stream:
-            for chunk in stream.text_stream:
-                yield chunk
+        )
+        text = "".join(
+            getattr(block, "text", "")
+            for block in response.content
+            if getattr(block, "type", None) == "text"
+        )
+        if not text.strip():
+            yield ("⚠️ The live search returned no usable results for this query. "
+                   "Try again, broaden the sector/market-cap range, or check your "
+                   "web-search quota.")
+        else:
+            yield text
     except Exception as exc:
         logger.error("stream_briefing_section failed: %s", exc)
         yield f"\n\n⚠️ Research unavailable: {exc}"
