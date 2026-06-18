@@ -301,6 +301,21 @@ phase, whether recent trends support or contradict the call). One sentence only 
 This is educational macro commentary, not investment advice."""
 
 
+# Canonical body used when there are no live inputs. Never write a full sectioned
+# briefing (with a phase call / recession number) from stub data — that is the exact
+# failure mode the data-availability gate exists to prevent.
+DATA_UNAVAILABLE_BODY = (
+    "## Data Status\n"
+    "Live FRED economic data could not be retrieved for today's run, so cycle phase "
+    "and recession probability could not be computed and are reported as N/A. No phase "
+    "call, recession-risk number, asset tilt, or sector signal is provided today because "
+    "there are no inputs to base them on. This is not a market judgement — it is a "
+    "data-access failure. The briefing will resume normally once FRED access is restored.\n"
+    "\n"
+    "This is educational macro commentary, not investment advice."
+)
+
+
 def generate_briefing(
     phase: str,
     confidence: str,
@@ -543,7 +558,10 @@ def post_to_confluence(
     import requests
 
     today_str = date.today().strftime("%d %B %Y")
-    title     = f"Daily Briefing · {today_str}"
+    title     = (
+        f"Daily Briefing (DATA UNAVAILABLE) · {today_str}"
+        if unavailable else f"Daily Briefing · {today_str}"
+    )
 
     # Convert markdown to Confluence storage format (simple HTML subset)
     html_body = _md_to_html(briefing_md).replace("\n", "")
@@ -632,15 +650,22 @@ def main() -> None:
             )
         signals_summary = "\n".join(lines)
 
-    # 3. Generate briefing
-    briefing_md = generate_briefing(
-        phase          = phase,
-        confidence     = conf_lbl,
-        recession_prob = rec_prob,
-        traffic_light  = tl,
-        fred_data      = fred_data,
-        signals_summary= signals_summary,
-    )
+    # 3. Generate briefing — but never fabricate one when we have no inputs.
+    #    With no real data the LLM would still dutifully produce a confident
+    #    "Cycle Phase Declaration" (e.g. a default Late/Peak call) under the
+    #    DATA UNAVAILABLE banner. Skip generation entirely and emit the notice.
+    if unavailable:
+        log.warning("Skipping LLM briefing — no inputs; emitting DATA UNAVAILABLE notice.")
+        briefing_md = DATA_UNAVAILABLE_BODY
+    else:
+        briefing_md = generate_briefing(
+            phase          = phase,
+            confidence     = conf_lbl,
+            recession_prob = rec_prob,
+            traffic_light  = tl,
+            fred_data      = fred_data,
+            signals_summary= signals_summary,
+        )
 
     # 4. Compose HTML email
     html = compose_html_email(
