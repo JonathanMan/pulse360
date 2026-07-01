@@ -21,7 +21,7 @@ st.markdown(
 # ---------------------------------------------------------------------------
 
 _STALE_DAYS = 14            # show "⚠️ Review needed" if signal older than this
-_REFRESH_TIMEOUT_SECS = 25  # max seconds for Claude Opus web-search call
+_REFRESH_TIMEOUT_SECS = 90  # max seconds for Claude Opus web-search call (18 searches needs headroom)
 
 
 def _is_stale(statement_date_str: str) -> bool:
@@ -676,23 +676,24 @@ if "portfolio_review" not in st.session_state:
 
 signals = get_signals()
 
+_top_spacer, _top_refresh = st.columns([3, 1])
+with _top_refresh:
+    if st.button("↻ Refresh signals", width='stretch'):
+        refresh_signals()
+        st.session_state.portfolio_review = None  # clear stale review on signal refresh
+        signals = get_signals()  # pick up the freshly-saved data for this render
+        # NOTE: no st.rerun() here on purpose — an immediate rerun would wipe the
+        # st.success/st.error message from refresh_signals() before it's visible.
+
 render_macro_pulse(signals)
 
 st.divider()
 
-col1, col2 = st.columns([2, 1])
-with col2:
-    if st.button("↻ Refresh signals", width='stretch'):
-        refresh_signals()
-        st.session_state.portfolio_review = None  # clear stale review on signal refresh
-        st.rerun()
-
-with col1:
-    run_review = st.button(
-        "Run full macro-adjusted portfolio review ↗",
-        use_container_width=True,
-        type="primary",
-    )
+run_review = st.button(
+    "Run full macro-adjusted portfolio review ↗",
+    use_container_width=True,
+    type="primary",
+)
 
 if run_review:
     prompt = _build_review_prompt(signals)
